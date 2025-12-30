@@ -15,9 +15,6 @@ class AssetController extends Controller
     /**
      * Display the assets index with tabs.
      */
-    /**
-     * Display the assets index with tabs.
-     */
     public function index(Request $request)
     {
         $user = Auth::user();
