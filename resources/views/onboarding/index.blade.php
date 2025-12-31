@@ -35,7 +35,9 @@
                     <div class="space-y-3">
                         @foreach($goals as $key => $goal)
                             <label class="flex items-start p-4 border rounded-lg cursor-pointer transition-colors hover:border-primary/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                                <input type="checkbox" name="goals[]" value="{{ $key }}" class="checkbox checkbox-primary mt-1">
+                                <input type="checkbox" name="goals[]" value="{{ $key }}"
+                                       class="checkbox checkbox-primary mt-1"
+                                       {{ in_array($key, $tenant['goals'] ?? []) ? 'checked' : '' }}>
                                 <div class="ml-3">
                                     <div class="font-medium">{{ $goal['title'] }}</div>
                                     <div class="text-sm text-base-content/60">{{ $goal['description'] }}</div>
@@ -66,7 +68,7 @@
 
                         <div class="form-control">
                             <label class="label"><span class="label-text">Country *</span></label>
-                            <select name="country" class="select select-bordered w-full" required>
+                            <select name="country" id="country-select" class="select select-bordered w-full" required>
                                 <option value="">Select country</option>
                                 @foreach($countries as $code => $name)
                                     <option value="{{ $code }}" {{ old('country', $tenant['country'] ?? '') == $code ? 'selected' : '' }}>{{ $name }}</option>
@@ -76,21 +78,14 @@
 
                         <div class="form-control">
                             <label class="label"><span class="label-text">Timezone *</span></label>
-                            <select name="timezone" class="select select-bordered w-full" required>
-                                <option value="">Select timezone</option>
-                                @foreach($timezones as $region => $zones)
-                                    <optgroup label="{{ $region }}">
-                                        @foreach($zones as $zone)
-                                            <option value="{{ $zone }}" {{ old('timezone', $tenant['timezone'] ?? '') == $zone ? 'selected' : '' }}>{{ $zone }}</option>
-                                        @endforeach
-                                    </optgroup>
-                                @endforeach
+                            <select name="timezone" id="timezone-select" class="select select-bordered w-full" required disabled>
+                                <option value="">Select country first</option>
                             </select>
                         </div>
 
                         <div class="form-control">
                             <label class="label"><span class="label-text">Family type (optional)</span></label>
-                            <select name="family_type" class="select select-bordered w-full">
+                            <select name="family_type" id="family-type-select" class="select select-bordered w-full">
                                 <option value="">Select family type</option>
                                 @foreach($familyTypes as $key => $name)
                                     <option value="{{ $key }}" {{ old('family_type', $tenant['family_type'] ?? '') == $key ? 'selected' : '' }}>{{ $name }}</option>
@@ -105,6 +100,92 @@
                     </div>
                 </form>
                 <form id="back-form" action="/onboarding/back" method="POST" class="hidden">@csrf</form>
+
+                <script>
+                    const timezonesByCountry = {
+                        'US': [
+                            { value: 'America/New_York', label: 'Eastern (New York)' },
+                            { value: 'America/Chicago', label: 'Central (Chicago)' },
+                            { value: 'America/Denver', label: 'Mountain (Denver)' },
+                            { value: 'America/Phoenix', label: 'Arizona (Phoenix)' },
+                            { value: 'America/Los_Angeles', label: 'Pacific (Los Angeles)' },
+                            { value: 'America/Anchorage', label: 'Alaska (Anchorage)' },
+                            { value: 'Pacific/Honolulu', label: 'Hawaii (Honolulu)' }
+                        ],
+                        'GB': [
+                            { value: 'Europe/London', label: 'London' }
+                        ],
+                        'CA': [
+                            { value: 'America/Toronto', label: 'Eastern (Toronto)' },
+                            { value: 'America/Vancouver', label: 'Pacific (Vancouver)' },
+                            { value: 'America/Edmonton', label: 'Mountain (Edmonton)' },
+                            { value: 'America/Winnipeg', label: 'Central (Winnipeg)' },
+                            { value: 'America/Halifax', label: 'Atlantic (Halifax)' },
+                            { value: 'America/St_Johns', label: 'Newfoundland (St. John\'s)' }
+                        ],
+                        'AU': [
+                            { value: 'Australia/Sydney', label: 'Sydney' },
+                            { value: 'Australia/Melbourne', label: 'Melbourne' },
+                            { value: 'Australia/Brisbane', label: 'Brisbane' },
+                            { value: 'Australia/Perth', label: 'Perth' },
+                            { value: 'Australia/Adelaide', label: 'Adelaide' },
+                            { value: 'Australia/Darwin', label: 'Darwin' },
+                            { value: 'Australia/Hobart', label: 'Hobart' }
+                        ],
+                        'DE': [
+                            { value: 'Europe/Berlin', label: 'Berlin' }
+                        ],
+                        'FR': [
+                            { value: 'Europe/Paris', label: 'Paris' }
+                        ],
+                        'OTHER': [
+                            { value: 'UTC', label: 'UTC (Coordinated Universal Time)' }
+                        ]
+                    };
+
+                    const countrySelect = document.getElementById('country-select');
+                    const timezoneSelect = document.getElementById('timezone-select');
+                    const savedTimezone = "{{ old('timezone', $tenant['timezone'] ?? '') }}";
+
+                    function updateTimezones() {
+                        const country = countrySelect.value;
+                        timezoneSelect.innerHTML = '';
+
+                        if (!country) {
+                            timezoneSelect.innerHTML = '<option value="">Select country first</option>';
+                            timezoneSelect.disabled = true;
+                            return;
+                        }
+
+                        const timezones = timezonesByCountry[country] || [];
+                        timezoneSelect.disabled = false;
+
+                        if (timezones.length === 0) {
+                            timezoneSelect.innerHTML = '<option value="">No timezones available</option>';
+                            return;
+                        }
+
+                        timezoneSelect.innerHTML = '<option value="">Select timezone</option>';
+                        timezones.forEach(tz => {
+                            const option = document.createElement('option');
+                            option.value = tz.value;
+                            option.textContent = tz.label;
+                            if (tz.value === savedTimezone) {
+                                option.selected = true;
+                            }
+                            timezoneSelect.appendChild(option);
+                        });
+                    }
+
+                    countrySelect.addEventListener('change', updateTimezones);
+
+                    // Initialize on page load
+                    document.addEventListener('DOMContentLoaded', function() {
+                        if (countrySelect.value) {
+                            updateTimezones();
+                        }
+                    });
+                </script>
 
                 @elseif($step == 3)
                 <!-- Step 3: Role Selection -->
@@ -134,45 +215,18 @@
                 <form id="back-form" action="/onboarding/back" method="POST" class="hidden">@csrf</form>
 
                 @elseif($step == 4)
-                <!-- Step 4: Invite Members -->
-                <h2 class="card-title text-2xl mb-2">Invite family members</h2>
-                <p class="text-base-content/60 mb-6">You can skip this and add people later.</p>
-
-                <form action="/onboarding/step4" method="POST">
-                    @csrf
-                    <div class="p-4 border border-base-300 rounded-lg">
-                        <div class="grid gap-3">
-                            <input type="email" name="members[0][email]" placeholder="Email address" class="input input-bordered w-full">
-                            <select name="members[0][role]" class="select select-bordered w-full">
-                                <option value="">Select role</option>
-                                @foreach($roles as $key => $role)
-                                    <option value="{{ $key }}">{{ $role['title'] }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="card-actions justify-between mt-8">
-                        <a href="javascript:void(0)" onclick="document.getElementById('back-form').submit()" class="btn btn-ghost">Back</a>
-                        <div class="flex gap-2">
-                            <button type="submit" name="skip" value="1" class="btn btn-ghost">Skip</button>
-                            <button type="submit" class="btn btn-primary">Continue</button>
-                        </div>
-                    </div>
-                </form>
-                <form id="back-form" action="/onboarding/back" method="POST" class="hidden">@csrf</form>
-
-                @elseif($step == 5)
-                <!-- Step 5: Quick Setup -->
+                <!-- Step 4: Quick Setup -->
                 <h2 class="card-title text-2xl mb-2">What do you want to set up first?</h2>
                 <p class="text-base-content/60 mb-6">Select one or more to get started</p>
 
-                <form action="/onboarding/step5" method="POST">
+                <form action="/onboarding/step4" method="POST">
                     @csrf
-                    <div class="grid gap-3 sm:grid-cols-2">
+                    <div class="space-y-3">
                         @foreach($quickSetup as $key => $item)
                             <label class="flex items-start p-4 border rounded-lg cursor-pointer transition-colors hover:border-primary/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                                <input type="checkbox" name="quick_setup[]" value="{{ $key }}" class="checkbox checkbox-primary mt-1">
+                                <input type="checkbox" name="quick_setup[]" value="{{ $key }}"
+                                       class="checkbox checkbox-primary mt-1"
+                                       {{ in_array($key, $tenant['quick_setup'] ?? []) ? 'checked' : '' }}>
                                 <div class="ml-3">
                                     <div class="font-medium text-sm">{{ $item['title'] }}</div>
                                     <div class="text-xs text-base-content/60">{{ $item['description'] }}</div>
@@ -188,12 +242,12 @@
                 </form>
                 <form id="back-form" action="/onboarding/back" method="POST" class="hidden">@csrf</form>
 
-                @elseif($step == 6)
-                <!-- Step 6: Finish -->
+                @elseif($step == 5)
+                <!-- Step 5: Finish -->
                 <h2 class="card-title text-2xl mb-2">You're all set!</h2>
                 <p class="text-base-content/60 mb-6">Your account is ready to use</p>
 
-                <form action="/onboarding/step6" method="POST">
+                <form action="/onboarding/step5" method="POST">
                     @csrf
                     <div class="space-y-3">
                         <label class="flex items-center gap-3 cursor-pointer">

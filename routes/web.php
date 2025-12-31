@@ -278,6 +278,5 @@ Route::middleware(['security.code', 'auth'])->group(function () {
     Route::post('/onboarding/step3', [OnboardingController::class, 'step3']);
     Route::post('/onboarding/step4', [OnboardingController::class, 'step4']);
     Route::post('/onboarding/step5', [OnboardingController::class, 'step5']);
-    Route::post('/onboarding/step6', [OnboardingController::class, 'step6']);
     Route::post('/onboarding/back', [OnboardingController::class, 'back']);
 });

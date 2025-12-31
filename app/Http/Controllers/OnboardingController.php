@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Invitation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class OnboardingController extends Controller
 {
-    public const TOTAL_STEPS = 6;
+    public const TOTAL_STEPS = 5;
 
     public const GOALS = [
         'documents' => [
@@ -40,7 +39,6 @@ class OnboardingController extends Controller
         'AU' => 'Australia',
         'DE' => 'Germany',
         'FR' => 'France',
-        'IN' => 'India',
         'OTHER' => 'Other',
     ];
 
@@ -187,48 +185,6 @@ class OnboardingController extends Controller
 
     public function step4(Request $request)
     {
-        // Skip if user clicked skip button
-        if ($request->has('skip')) {
-            $request->user()->tenant->update(['onboarding_step' => 5]);
-            return redirect()->route('onboarding');
-        }
-
-        $request->validate([
-            'members' => 'nullable|array',
-            'members.*.email' => 'nullable|email',
-            'members.*.phone' => 'nullable|string',
-            'members.*.role' => 'nullable|string|in:' . implode(',', array_keys(self::ROLES)),
-            'members.*.relationship' => 'nullable|string|max:100',
-        ]);
-
-        $user = $request->user();
-        $tenant = $user->tenant;
-
-        if ($request->has('members')) {
-            foreach ($request->members as $member) {
-                // Only create invitation if email and role are provided
-                if (!empty($member['email']) && !empty($member['role'])) {
-                    Invitation::create([
-                        'tenant_id' => $tenant->id,
-                        'invited_by' => $user->id,
-                        'email' => $member['email'],
-                        'phone' => $member['phone'] ?? null,
-                        'role' => $member['role'],
-                        'relationship' => $member['relationship'] ?? null,
-                    ]);
-                }
-            }
-        }
-
-        $tenant->update(['onboarding_step' => 5]);
-
-        Log::info('Onboarding step 4 completed', ['tenant_id' => $tenant->id]);
-
-        return redirect()->route('onboarding');
-    }
-
-    public function step5(Request $request)
-    {
         $request->validate([
             'quick_setup' => 'required|array|min:1',
             'quick_setup.*' => 'string|in:' . implode(',', array_keys(self::QUICK_SETUP)),
@@ -237,15 +193,15 @@ class OnboardingController extends Controller
         $tenant = $request->user()->tenant;
         $tenant->update([
             'quick_setup' => $request->quick_setup,
-            'onboarding_step' => 6,
+            'onboarding_step' => 5,
         ]);
 
-        Log::info('Onboarding step 5 completed', ['tenant_id' => $tenant->id]);
+        Log::info('Onboarding step 4 completed', ['tenant_id' => $tenant->id]);
 
         return redirect()->route('onboarding');
     }
 
-    public function step6(Request $request)
+    public function step5(Request $request)
     {
         $user = $request->user();
         $tenant = $user->tenant;
@@ -283,23 +239,42 @@ class OnboardingController extends Controller
 
     private function getTimezones(): array
     {
-        $timezones = [];
-        $regions = [
-            'America' => \DateTimeZone::AMERICA,
-            'Europe' => \DateTimeZone::EUROPE,
-            'Asia' => \DateTimeZone::ASIA,
-            'Pacific' => \DateTimeZone::PACIFIC,
-            'Australia' => \DateTimeZone::AUSTRALIA,
-            'Africa' => \DateTimeZone::AFRICA,
+        return [
+            'United States' => [
+                'America/New_York',
+                'America/Chicago',
+                'America/Denver',
+                'America/Phoenix',
+                'America/Los_Angeles',
+                'America/Anchorage',
+                'Pacific/Honolulu',
+            ],
+            'United Kingdom' => [
+                'Europe/London',
+            ],
+            'Canada' => [
+                'America/Toronto',
+                'America/Vancouver',
+                'America/Edmonton',
+                'America/Winnipeg',
+                'America/Halifax',
+                'America/St_Johns',
+            ],
+            'Australia' => [
+                'Australia/Sydney',
+                'Australia/Melbourne',
+                'Australia/Brisbane',
+                'Australia/Perth',
+                'Australia/Adelaide',
+                'Australia/Darwin',
+                'Australia/Hobart',
+            ],
+            'Germany' => [
+                'Europe/Berlin',
+            ],
+            'France' => [
+                'Europe/Paris',
+            ],
         ];
-
-        foreach ($regions as $region => $mask) {
-            $zones = \DateTimeZone::listIdentifiers($mask);
-            foreach ($zones as $zone) {
-                $timezones[$region][] = $zone;
-            }
-        }
-
-        return $timezones;
     }
 }

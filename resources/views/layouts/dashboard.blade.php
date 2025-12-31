@@ -94,7 +94,7 @@
         <div class="sidebar-overlay fixed inset-0 bg-black/50 z-40 opacity-0 pointer-events-none lg:hidden" onclick="document.body.classList.remove('sidebar-open')"></div>
 
         <!-- Sidebar -->
-        <aside id="sidebar" class="sidebar fixed top-0 left-0 z-50 h-screen bg-slate-900 overflow-hidden">
+        <aside id="sidebar" class="sidebar expanded fixed top-0 left-0 z-50 h-screen bg-slate-900 overflow-hidden">
             <div class="flex flex-col h-full">
                 <!-- Logo/Brand -->
                 <div class="flex items-center h-16 px-4 border-b border-slate-800">
@@ -108,8 +108,8 @@
 
                 <!-- Toggle Button -->
                 <button onclick="toggleSidebar()" class="toggle-btn absolute top-4 right-2 w-6 h-6 rounded-md bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white hidden lg:flex">
-                    <svg id="expand-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-                    <svg id="collapse-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden"><path d="m15 18-6-6 6-6"/></svg>
+                    <svg id="expand-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden"><path d="m9 18 6-6-6-6"/></svg>
+                    <svg id="collapse-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                 </button>
 
                 <!-- Close button (mobile) -->
@@ -393,10 +393,11 @@
             const expandIcon = document.getElementById('expand-icon');
             const collapseIcon = document.getElementById('collapse-icon');
 
-            if (localStorage.getItem('sidebarExpanded') === 'true') {
-                sidebar.classList.add('expanded');
-                expandIcon.classList.add('hidden');
-                collapseIcon.classList.remove('hidden');
+            // Default is expanded, only collapse if explicitly set to false
+            if (localStorage.getItem('sidebarExpanded') === 'false') {
+                sidebar.classList.remove('expanded');
+                expandIcon.classList.remove('hidden');
+                collapseIcon.classList.add('hidden');
             }
         });
 
