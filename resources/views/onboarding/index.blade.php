@@ -16,20 +16,28 @@
             </div>
         </div>
 
-        <div>
-            <onboarding-wizard
-                :initial-step="{{ $step }}"
-                :total-steps="{{ $totalSteps }}"
-                :goals='@json($goals)'
-                :countries='@json($countries)'
-                :family-types='@json($familyTypes)'
-                :roles='@json($roles)'
-                :quick-setup='@json($quickSetup)'
-                :timezones='@json($timezones)'
-                :tenant='@json($tenant)'
-                :user='@json($user)'
-            ></onboarding-wizard>
+        <!-- Step Cards -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                @if($step === 1)
+                    @include('onboarding.steps.step1')
+                @elseif($step === 2)
+                    @include('onboarding.steps.step2')
+                @elseif($step === 3)
+                    @include('onboarding.steps.step3')
+                @elseif($step === 4)
+                    @include('onboarding.steps.step4')
+                @elseif($step === 5)
+                    @include('onboarding.steps.step5')
+                @elseif($step === 6)
+                    @include('onboarding.steps.step6')
+                @endif
+            </div>
         </div>
+
+        <p class="text-center text-sm text-base-content/50 mt-6">
+            You can always update these settings later.
+        </p>
     </div>
 </div>
 @endsection

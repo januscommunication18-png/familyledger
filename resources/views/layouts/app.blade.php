@@ -15,9 +15,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-base-200">
-    <div id="app">
-        @yield('content')
-    </div>
+    @yield('content')
 
     @stack('scripts')
 </body>

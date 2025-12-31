@@ -3,9 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Invitation;
-use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class OnboardingController extends Controller
@@ -118,8 +116,8 @@ class OnboardingController extends Controller
                 'country' => $tenant->country,
                 'timezone' => $tenant->timezone,
                 'family_type' => $tenant->family_type,
-                'goals' => $tenant->goals,
-                'quick_setup' => $tenant->quick_setup,
+                'goals' => $tenant->goals ?? [],
+                'quick_setup' => $tenant->quick_setup ?? [],
             ],
             'user' => [
                 'id' => $user->id,
@@ -146,10 +144,7 @@ class OnboardingController extends Controller
 
         Log::info('Onboarding step 1 completed', ['tenant_id' => $tenant->id]);
 
-        return response()->json([
-            'message' => 'Goals saved',
-            'step' => 2,
-        ]);
+        return redirect()->route('onboarding');
     }
 
     public function step2(Request $request)
@@ -172,10 +167,7 @@ class OnboardingController extends Controller
 
         Log::info('Onboarding step 2 completed', ['tenant_id' => $tenant->id]);
 
-        return response()->json([
-            'message' => 'Household setup saved',
-            'step' => 3,
-        ]);
+        return redirect()->route('onboarding');
     }
 
     public function step3(Request $request)
@@ -190,49 +182,49 @@ class OnboardingController extends Controller
 
         Log::info('Onboarding step 3 completed', ['user_id' => $user->id, 'role' => $request->role]);
 
-        return response()->json([
-            'message' => 'Role saved',
-            'step' => 4,
-        ]);
+        return redirect()->route('onboarding');
     }
 
     public function step4(Request $request)
     {
+        // Skip if user clicked skip button
+        if ($request->has('skip')) {
+            $request->user()->tenant->update(['onboarding_step' => 5]);
+            return redirect()->route('onboarding');
+        }
+
         $request->validate([
             'members' => 'nullable|array',
-            'members.*.email' => 'required|email',
+            'members.*.email' => 'nullable|email',
             'members.*.phone' => 'nullable|string',
-            'members.*.role' => 'required|string|in:' . implode(',', array_keys(self::ROLES)),
+            'members.*.role' => 'nullable|string|in:' . implode(',', array_keys(self::ROLES)),
             'members.*.relationship' => 'nullable|string|max:100',
         ]);
 
         $user = $request->user();
         $tenant = $user->tenant;
 
-        if ($request->has('members') && !empty($request->members)) {
+        if ($request->has('members')) {
             foreach ($request->members as $member) {
-                Invitation::create([
-                    'tenant_id' => $tenant->id,
-                    'invited_by' => $user->id,
-                    'email' => $member['email'],
-                    'phone' => $member['phone'] ?? null,
-                    'role' => $member['role'],
-                    'relationship' => $member['relationship'] ?? null,
-                ]);
+                // Only create invitation if email and role are provided
+                if (!empty($member['email']) && !empty($member['role'])) {
+                    Invitation::create([
+                        'tenant_id' => $tenant->id,
+                        'invited_by' => $user->id,
+                        'email' => $member['email'],
+                        'phone' => $member['phone'] ?? null,
+                        'role' => $member['role'],
+                        'relationship' => $member['relationship'] ?? null,
+                    ]);
+                }
             }
         }
 
         $tenant->update(['onboarding_step' => 5]);
 
-        Log::info('Onboarding step 4 completed', [
-            'tenant_id' => $tenant->id,
-            'invitations' => count($request->members ?? []),
-        ]);
+        Log::info('Onboarding step 4 completed', ['tenant_id' => $tenant->id]);
 
-        return response()->json([
-            'message' => 'Family members saved',
-            'step' => 5,
-        ]);
+        return redirect()->route('onboarding');
     }
 
     public function step5(Request $request)
@@ -250,28 +242,20 @@ class OnboardingController extends Controller
 
         Log::info('Onboarding step 5 completed', ['tenant_id' => $tenant->id]);
 
-        return response()->json([
-            'message' => 'Quick setup preferences saved',
-            'step' => 6,
-        ]);
+        return redirect()->route('onboarding');
     }
 
     public function step6(Request $request)
     {
-        $request->validate([
-            'email_notifications' => 'boolean',
-            'enable_2fa' => 'boolean',
-        ]);
-
         $user = $request->user();
         $tenant = $user->tenant;
 
-        // Store notification preferences in tenant data
-        $tenant->setSetting('email_notifications', $request->boolean('email_notifications'));
+        // Store notification preferences
+        $tenant->setSetting('email_notifications', $request->has('email_notifications'));
         $tenant->save();
 
-        // If 2FA is enabled, set the flag (actual 2FA setup happens after onboarding)
-        if ($request->boolean('enable_2fa')) {
+        // If 2FA is enabled
+        if ($request->has('enable_2fa')) {
             $user->update(['mfa_enabled' => true]);
         }
 
@@ -282,10 +266,7 @@ class OnboardingController extends Controller
 
         Log::info('Onboarding completed', ['tenant_id' => $tenant->id, 'user_id' => $user->id]);
 
-        return response()->json([
-            'message' => 'Setup complete!',
-            'redirect' => '/dashboard',
-        ]);
+        return redirect()->route('dashboard')->with('success', 'Welcome! Your account is all set up.');
     }
 
     public function back(Request $request)
@@ -297,9 +278,7 @@ class OnboardingController extends Controller
             $tenant->update(['onboarding_step' => $currentStep - 1]);
         }
 
-        return response()->json([
-            'step' => max(1, $currentStep - 1),
-        ]);
+        return redirect()->route('onboarding');
     }
 
     private function getTimezones(): array
