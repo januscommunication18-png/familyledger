@@ -113,10 +113,14 @@ class LoginController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return response()->json([
-            'message' => 'Logged out successfully',
-            'redirect' => '/',
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Logged out successfully',
+                'redirect' => '/login',
+            ]);
+        }
+
+        return redirect('/login');
     }
 
     /**
