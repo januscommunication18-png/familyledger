@@ -187,6 +187,25 @@ class DocumentController extends Controller
     }
 
     /**
+     * Show insurance details.
+     */
+    public function showInsurance(InsurancePolicy $insurance)
+    {
+        if ($insurance->tenant_id !== Auth::user()->tenant_id) {
+            abort(403);
+        }
+
+        $insurance->load(['policyholders', 'coveredMembers']);
+
+        return view('pages.documents.insurance-show', [
+            'insurance' => $insurance,
+            'insuranceTypes' => InsurancePolicy::INSURANCE_TYPES,
+            'statuses' => InsurancePolicy::STATUSES,
+            'paymentFrequencies' => InsurancePolicy::PAYMENT_FREQUENCIES,
+        ]);
+    }
+
+    /**
      * Show insurance edit form.
      */
     public function editInsurance(InsurancePolicy $insurance)
@@ -405,6 +424,26 @@ class DocumentController extends Controller
     }
 
     /**
+     * Show tax return details.
+     */
+    public function showTaxReturn(TaxReturn $taxReturn)
+    {
+        if ($taxReturn->tenant_id !== Auth::user()->tenant_id) {
+            abort(403);
+        }
+
+        $taxReturn->load('taxpayers');
+
+        return view('pages.documents.tax-return-show', [
+            'taxReturn' => $taxReturn,
+            'filingStatuses' => TaxReturn::FILING_STATUSES,
+            'statuses' => TaxReturn::STATUSES,
+            'jurisdictions' => TaxReturn::JURISDICTIONS,
+            'usStates' => TaxReturn::US_STATES,
+        ]);
+    }
+
+    /**
      * Show tax return edit form.
      */
     public function editTaxReturn(TaxReturn $taxReturn)
@@ -540,5 +579,34 @@ class DocumentController extends Controller
         }
 
         return Storage::disk('private')->response($path);
+    }
+
+    /**
+     * Download a tax return file.
+     */
+    public function downloadTaxReturnFile(TaxReturn $taxReturn, string $type, int $index)
+    {
+        if ($taxReturn->tenant_id !== Auth::user()->tenant_id) {
+            abort(403);
+        }
+
+        $files = match ($type) {
+            'federal' => $taxReturn->federal_returns,
+            'state' => $taxReturn->state_returns,
+            'supporting' => $taxReturn->supporting_documents,
+            default => null,
+        };
+
+        if (!$files || !isset($files[$index])) {
+            abort(404);
+        }
+
+        $path = $files[$index];
+
+        if (!Storage::disk('private')->exists($path)) {
+            abort(404);
+        }
+
+        return Storage::disk('private')->download($path, basename($path));
     }
 }

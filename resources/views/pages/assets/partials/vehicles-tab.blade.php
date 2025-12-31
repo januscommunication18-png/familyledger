@@ -37,7 +37,7 @@
                             </div>
                             @if($asset->owners->count() > 0)
                                 <p class="text-sm text-base-content/60 mt-1">
-                                    Owner: {{ $asset->owners->map(fn($o) => $o->owner_name)->join(', ') }}
+                                    {{ $asset->owners->count() > 1 ? 'Owners' : 'Owner' }}: {{ $asset->owners->map(fn($o) => $o->owner_name)->join(', ') }}
                                 </p>
                             @endif
                         </div>
@@ -50,6 +50,9 @@
                             </div>
                         @endif
                         <div class="flex items-center gap-2">
+                            <a href="{{ route('assets.show', $asset) }}" class="btn btn-ghost btn-sm btn-square" title="View">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </a>
                             <a href="{{ route('assets.edit', $asset) }}" class="btn btn-ghost btn-sm btn-square" title="Edit">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                             </a>

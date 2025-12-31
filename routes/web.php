@@ -13,6 +13,7 @@ use App\Http\Controllers\MemberMedicalController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\AssetController;
+use App\Http\Controllers\PersonController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
 
@@ -199,6 +200,7 @@ Route::middleware('auth')->group(function () {
     // Insurance Policies
     Route::get('/documents/insurance/create', [DocumentController::class, 'createInsurance'])->middleware('verified')->name('documents.insurance.create');
     Route::post('/documents/insurance', [DocumentController::class, 'storeInsurance'])->middleware('verified')->name('documents.insurance.store');
+    Route::get('/documents/insurance/{insurance}', [DocumentController::class, 'showInsurance'])->middleware('verified')->name('documents.insurance.show');
     Route::get('/documents/insurance/{insurance}/edit', [DocumentController::class, 'editInsurance'])->middleware('verified')->name('documents.insurance.edit');
     Route::put('/documents/insurance/{insurance}', [DocumentController::class, 'updateInsurance'])->middleware('verified')->name('documents.insurance.update');
     Route::delete('/documents/insurance/{insurance}', [DocumentController::class, 'destroyInsurance'])->middleware('verified')->name('documents.insurance.destroy');
@@ -207,9 +209,11 @@ Route::middleware('auth')->group(function () {
     // Tax Returns
     Route::get('/documents/tax-returns/create', [DocumentController::class, 'createTaxReturn'])->middleware('verified')->name('documents.tax-returns.create');
     Route::post('/documents/tax-returns', [DocumentController::class, 'storeTaxReturn'])->middleware('verified')->name('documents.tax-returns.store');
+    Route::get('/documents/tax-returns/{taxReturn}', [DocumentController::class, 'showTaxReturn'])->middleware('verified')->name('documents.tax-returns.show');
     Route::get('/documents/tax-returns/{taxReturn}/edit', [DocumentController::class, 'editTaxReturn'])->middleware('verified')->name('documents.tax-returns.edit');
     Route::put('/documents/tax-returns/{taxReturn}', [DocumentController::class, 'updateTaxReturn'])->middleware('verified')->name('documents.tax-returns.update');
     Route::delete('/documents/tax-returns/{taxReturn}', [DocumentController::class, 'destroyTaxReturn'])->middleware('verified')->name('documents.tax-returns.destroy');
+    Route::get('/documents/tax-returns/{taxReturn}/download/{type}/{index}', [DocumentController::class, 'downloadTaxReturnFile'])->middleware('verified')->name('documents.tax-returns.download');
 
     // Tasks (To Do List)
     Route::get('/tasks', function () {
@@ -235,6 +239,21 @@ Route::middleware('auth')->group(function () {
     Route::get('/journey', function () {
         return view('pages.journey.index');
     })->middleware('verified')->name('journey.index');
+
+    // People Directory (Personal CRM)
+    Route::middleware('verified')->prefix('people')->name('people.')->group(function () {
+        Route::get('/', [PersonController::class, 'index'])->name('index');
+        Route::get('/create', [PersonController::class, 'create'])->name('create');
+        Route::post('/', [PersonController::class, 'store'])->name('store');
+        Route::get('/{person}', [PersonController::class, 'show'])->name('show');
+        Route::get('/{person}/edit', [PersonController::class, 'edit'])->name('edit');
+        Route::put('/{person}', [PersonController::class, 'update'])->name('update');
+        Route::delete('/{person}', [PersonController::class, 'destroy'])->name('destroy');
+
+        // Attachments
+        Route::delete('/{person}/attachments/{attachment}', [PersonController::class, 'deleteAttachment'])->name('attachments.delete');
+        Route::get('/{person}/attachments/{attachment}/download', [PersonController::class, 'downloadAttachment'])->name('attachments.download');
+    });
 
     // Settings
     Route::get('/settings', [SettingsController::class, 'index'])->middleware('verified')->name('settings.index');

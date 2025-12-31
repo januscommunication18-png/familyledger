@@ -473,21 +473,38 @@ class AssetController extends Controller
         $asset->owners()->delete();
 
         $isPrimary = true;
+        $currentUser = Auth::user();
 
         // Handle family member owners
         foreach ($familyOwners as $memberId => $ownerData) {
-            // Skip if not selected or no percentage
+            // Skip if not selected
             if (empty($ownerData['selected'])) {
                 continue;
             }
 
-            // Skip pseudo-owner entries
-            if ($memberId === 'owner' || !is_numeric($memberId)) {
+            // Handle the 'owner' pseudo-member (current logged-in user)
+            if ($memberId === 'owner') {
+                AssetOwner::create([
+                    'tenant_id' => $currentUser->tenant_id,
+                    'asset_id' => $asset->id,
+                    'family_member_id' => null,
+                    'external_owner_name' => $currentUser->name ?? $currentUser->email,
+                    'external_owner_email' => $currentUser->email,
+                    'ownership_percentage' => $ownerData['percentage'] ?? null,
+                    'is_primary_owner' => $isPrimary,
+                ]);
+
+                $isPrimary = false;
+                continue;
+            }
+
+            // Skip non-numeric member IDs
+            if (!is_numeric($memberId)) {
                 continue;
             }
 
             AssetOwner::create([
-                'tenant_id' => Auth::user()->tenant_id,
+                'tenant_id' => $currentUser->tenant_id,
                 'asset_id' => $asset->id,
                 'family_member_id' => $memberId,
                 'ownership_percentage' => $ownerData['percentage'] ?? null,
@@ -507,7 +524,7 @@ class AssetController extends Controller
             $fullName = trim(($ownerData['first_name'] ?? '') . ' ' . ($ownerData['last_name'] ?? ''));
 
             AssetOwner::create([
-                'tenant_id' => Auth::user()->tenant_id,
+                'tenant_id' => $currentUser->tenant_id,
                 'asset_id' => $asset->id,
                 'family_member_id' => null,
                 'external_owner_name' => $fullName ?: null,

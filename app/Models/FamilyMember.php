@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -311,5 +312,34 @@ class FamilyMember extends Model
     public function getBirthCertificateAttribute(): ?MemberDocument
     {
         return $this->documents->where('document_type', MemberDocument::TYPE_BIRTH_CERTIFICATE)->first();
+    }
+
+    /**
+     * Get insurance policies where this member is covered.
+     */
+    public function insurancePolicies(): BelongsToMany
+    {
+        return $this->belongsToMany(InsurancePolicy::class, 'insurance_policy_members')
+            ->withPivot('member_type', 'relationship_to_policyholder')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get tax returns where this member is a taxpayer.
+     */
+    public function taxReturns(): BelongsToMany
+    {
+        return $this->belongsToMany(TaxReturn::class, 'tax_return_taxpayers')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get assets where this member is an owner.
+     */
+    public function assets(): BelongsToMany
+    {
+        return $this->belongsToMany(Asset::class, 'asset_owners')
+            ->withPivot('ownership_percentage', 'is_primary_owner', 'external_owner_name')
+            ->withTimestamps();
     }
 }

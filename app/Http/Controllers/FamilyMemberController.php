@@ -142,6 +142,26 @@ class FamilyMemberController extends Controller
                 ->latest()
                 ->limit(20)
                 ->get());
+
+            // Load insurance policies from all linked members
+            $insurancePolicies = \App\Models\InsurancePolicy::whereHas('coveredMembers', function ($query) use ($linkedMemberIds) {
+                $query->whereIn('family_member_id', $linkedMemberIds);
+            })->orWhereHas('policyholders', function ($query) use ($linkedMemberIds) {
+                $query->whereIn('family_member_id', $linkedMemberIds);
+            })->get();
+            $member->setRelation('insurancePolicies', $insurancePolicies);
+
+            // Load tax returns from all linked members
+            $taxReturns = \App\Models\TaxReturn::whereHas('taxpayers', function ($query) use ($linkedMemberIds) {
+                $query->whereIn('family_member_id', $linkedMemberIds);
+            })->get();
+            $member->setRelation('taxReturns', $taxReturns);
+
+            // Load assets from all linked members
+            $assets = \App\Models\Asset::whereHas('familyMemberOwners', function ($query) use ($linkedMemberIds) {
+                $query->whereIn('family_member_id', $linkedMemberIds);
+            })->get();
+            $member->setRelation('assets', $assets);
         } else {
             $member->load([
                 'documents',
@@ -155,6 +175,9 @@ class FamilyMemberController extends Controller
                 'auditLogs' => function ($query) {
                     $query->with('user')->latest()->limit(20);
                 },
+                'insurancePolicies',
+                'taxReturns',
+                'assets',
             ]);
         }
 

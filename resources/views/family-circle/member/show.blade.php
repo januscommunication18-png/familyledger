@@ -477,6 +477,161 @@
             </div>
         </div>
     </div>
+
+    <!-- Insurance, Tax Returns & Assets Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <!-- Insurance Policies Card -->
+        <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
+            <div class="card-body p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+                        </div>
+                        <h3 class="font-bold text-slate-800 text-sm">Insurance Policies</h3>
+                    </div>
+                    <a href="{{ route('documents.index', ['tab' => 'insurance']) }}" class="btn btn-ghost btn-xs text-blue-600">
+                        View All
+                    </a>
+                </div>
+
+                @if($member->insurancePolicies && $member->insurancePolicies->count() > 0)
+                    <div class="space-y-2">
+                        @foreach($member->insurancePolicies->take(3) as $policy)
+                            <a href="{{ route('documents.insurance.show', $policy) }}" class="flex items-center justify-between p-2 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors group">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                                        <span class="{{ $policy->getTypeIcon() }} size-4 text-blue-600"></span>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-slate-800 text-sm">{{ $policy->provider_name }}</p>
+                                        <p class="text-xs text-slate-400">{{ \App\Models\InsurancePolicy::INSURANCE_TYPES[$policy->insurance_type] ?? $policy->insurance_type }}</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="badge badge-sm badge-{{ $policy->getStatusColor() }}">{{ \App\Models\InsurancePolicy::STATUSES[$policy->status] ?? $policy->status }}</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 opacity-0 group-hover:opacity-100"><path d="m9 18 6-6-6-6"/></svg>
+                                </div>
+                            </a>
+                        @endforeach
+                        @if($member->insurancePolicies->count() > 3)
+                            <p class="text-xs text-slate-400 text-center pt-1">+{{ $member->insurancePolicies->count() - 3 }} more policies</p>
+                        @endif
+                    </div>
+                @else
+                    <div class="text-center py-4">
+                        <p class="text-xs text-slate-400 mb-2">No insurance policies linked</p>
+                        <a href="{{ route('documents.insurance.create') }}" class="btn btn-xs btn-primary gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                            Add Insurance
+                        </a>
+                    </div>
+                @endif
+            </div>
+        </div>
+
+        <!-- Tax Returns Card -->
+        <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
+            <div class="card-body p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-600"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M14 8H8"/><path d="M16 12H8"/><path d="M13 16H8"/></svg>
+                        </div>
+                        <h3 class="font-bold text-slate-800 text-sm">Tax Returns</h3>
+                    </div>
+                    <a href="{{ route('documents.index', ['tab' => 'tax-returns']) }}" class="btn btn-ghost btn-xs text-emerald-600">
+                        View All
+                    </a>
+                </div>
+
+                @if($member->taxReturns && $member->taxReturns->count() > 0)
+                    <div class="space-y-2">
+                        @foreach($member->taxReturns->sortByDesc('tax_year')->take(3) as $taxReturn)
+                            <a href="{{ route('documents.tax-returns.show', $taxReturn) }}" class="flex items-center justify-between p-2 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors group">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                                        <span class="text-emerald-700 font-bold text-xs">{{ substr($taxReturn->tax_year, -2) }}</span>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-slate-800 text-sm">{{ $taxReturn->tax_year }} Tax Return</p>
+                                        <p class="text-xs text-slate-400">{{ \App\Models\TaxReturn::JURISDICTIONS[$taxReturn->tax_jurisdiction] ?? $taxReturn->tax_jurisdiction }}</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="badge badge-sm badge-{{ $taxReturn->getStatusColor() }}">{{ \App\Models\TaxReturn::STATUSES[$taxReturn->status] ?? $taxReturn->status }}</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 opacity-0 group-hover:opacity-100"><path d="m9 18 6-6-6-6"/></svg>
+                                </div>
+                            </a>
+                        @endforeach
+                        @if($member->taxReturns->count() > 3)
+                            <p class="text-xs text-slate-400 text-center pt-1">+{{ $member->taxReturns->count() - 3 }} more returns</p>
+                        @endif
+                    </div>
+                @else
+                    <div class="text-center py-4">
+                        <p class="text-xs text-slate-400 mb-2">No tax returns linked</p>
+                        <a href="{{ route('documents.tax-returns.create') }}" class="btn btn-xs btn-primary gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                            Add Tax Return
+                        </a>
+                    </div>
+                @endif
+            </div>
+        </div>
+
+        <!-- Assets Card -->
+        <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
+            <div class="card-body p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-600"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        </div>
+                        <h3 class="font-bold text-slate-800 text-sm">Assets</h3>
+                    </div>
+                    <a href="{{ route('assets.index') }}" class="btn btn-ghost btn-xs text-amber-600">
+                        View All
+                    </a>
+                </div>
+
+                @if($member->assets && $member->assets->count() > 0)
+                    <div class="space-y-2">
+                        @foreach($member->assets->take(3) as $asset)
+                            <a href="{{ route('assets.show', $asset) }}" class="flex items-center justify-between p-2 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors group">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+                                        <span class="{{ $asset->getCategoryIcon() }} size-4 text-amber-600"></span>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-slate-800 text-sm">{{ Str::limit($asset->name, 20) }}</p>
+                                        <p class="text-xs text-slate-400">{{ $asset->category_name }}</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    @if($asset->current_value)
+                                        <span class="text-xs font-medium text-emerald-600">{{ $asset->formatted_current_value }}</span>
+                                    @endif
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 opacity-0 group-hover:opacity-100"><path d="m9 18 6-6-6-6"/></svg>
+                                </div>
+                            </a>
+                        @endforeach
+                        @if($member->assets->count() > 3)
+                            <p class="text-xs text-slate-400 text-center pt-1">+{{ $member->assets->count() - 3 }} more assets</p>
+                        @endif
+                    </div>
+                @else
+                    <div class="text-center py-4">
+                        <p class="text-xs text-slate-400 mb-2">No assets linked</p>
+                        <a href="{{ route('assets.create') }}" class="btn btn-xs btn-primary gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                            Add Asset
+                        </a>
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
 </div>
 
 @endsection
