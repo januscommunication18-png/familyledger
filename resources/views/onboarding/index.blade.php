@@ -19,18 +19,20 @@
         <!-- Step Cards -->
         <div class="card bg-base-100 shadow-xl">
             <div class="card-body">
-                @if($step === 1)
+                @if($step == 1)
                     @include('onboarding.steps.step1')
-                @elseif($step === 2)
+                @elseif($step == 2)
                     @include('onboarding.steps.step2')
-                @elseif($step === 3)
+                @elseif($step == 3)
                     @include('onboarding.steps.step3')
-                @elseif($step === 4)
+                @elseif($step == 4)
                     @include('onboarding.steps.step4')
-                @elseif($step === 5)
+                @elseif($step == 5)
                     @include('onboarding.steps.step5')
-                @elseif($step === 6)
+                @elseif($step == 6)
                     @include('onboarding.steps.step6')
+                @else
+                    @include('onboarding.steps.step1')
                 @endif
             </div>
         </div>
