@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Middleware aliases
         $middleware->alias([
             'honeypot' => \App\Http\Middleware\HoneypotProtection::class,
+            'security.code' => \App\Http\Middleware\SecurityCodeGate::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

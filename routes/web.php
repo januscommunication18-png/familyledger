@@ -14,26 +14,38 @@ use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\PersonController;
+use App\Http\Controllers\SecurityCodeController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Public Routes
+| Security Code Routes (No middleware - must be accessible)
 |--------------------------------------------------------------------------
 */
 
-Route::get('/', function () {
-    return view('welcome');
+Route::get('/security-code', [SecurityCodeController::class, 'show'])->name('security.code');
+Route::post('/security-code', [SecurityCodeController::class, 'verify'])->name('security.verify');
+
+/*
+|--------------------------------------------------------------------------
+| Public Routes (Protected by Security Code)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('security.code')->group(function () {
+    Route::get('/', function () {
+        return view('welcome');
+    });
 });
 
 /*
 |--------------------------------------------------------------------------
-| Authentication Routes - Guest Only
+| Authentication Routes - Guest Only (Protected by Security Code)
 |--------------------------------------------------------------------------
 */
 
-Route::middleware('guest')->group(function () {
+Route::middleware(['security.code', 'guest'])->group(function () {
     // Login
     Route::get('/login', [LoginController::class, 'show'])->name('login');
     Route::post('/login', [LoginController::class, 'login']);
@@ -68,11 +80,11 @@ Route::middleware('web')->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| Authenticated Routes
+| Authenticated Routes (Protected by Security Code)
 |--------------------------------------------------------------------------
 */
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['security.code', 'auth'])->group(function () {
     // Logout
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
