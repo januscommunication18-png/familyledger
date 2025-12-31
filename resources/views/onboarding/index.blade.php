@@ -19,6 +19,7 @@
         <!-- Step Cards -->
         <div class="card bg-base-100 shadow-xl">
             <div class="card-body">
+                <!-- DEBUG: Step value is: {{ $step }} -->
 
                 @if($step == 1)
                 <!-- Step 1: Goals -->
