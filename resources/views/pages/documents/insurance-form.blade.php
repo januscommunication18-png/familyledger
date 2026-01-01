@@ -314,8 +314,12 @@
                         <label class="block text-sm font-medium text-slate-700 mb-2">Front of Card</label>
                         <div id="front-preview" class="mb-3 p-2 bg-slate-50 rounded-lg border border-slate-200 {{ $insurance?->card_front_image ? '' : 'hidden' }}">
                             @if($insurance?->card_front_image)
-                                <img src="{{ route('documents.insurance.card', [$insurance, 'front']) }}"
-                                     alt="Card Front" class="max-h-32 rounded mx-auto" id="front-preview-img" />
+                                <x-protected-image
+                                    :src="route('documents.insurance.card', [$insurance, 'front'])"
+                                    alt="Card Front"
+                                    class="max-h-32 rounded mx-auto"
+                                    container-class="flex justify-center"
+                                />
                             @else
                                 <img src="" alt="Card Front" class="max-h-32 rounded mx-auto" id="front-preview-img" />
                             @endif
@@ -335,8 +339,12 @@
                         <label class="block text-sm font-medium text-slate-700 mb-2">Back of Card</label>
                         <div id="back-preview" class="mb-3 p-2 bg-slate-50 rounded-lg border border-slate-200 {{ $insurance?->card_back_image ? '' : 'hidden' }}">
                             @if($insurance?->card_back_image)
-                                <img src="{{ route('documents.insurance.card', [$insurance, 'back']) }}"
-                                     alt="Card Back" class="max-h-32 rounded mx-auto" id="back-preview-img" />
+                                <x-protected-image
+                                    :src="route('documents.insurance.card', [$insurance, 'back'])"
+                                    alt="Card Back"
+                                    class="max-h-32 rounded mx-auto"
+                                    container-class="flex justify-center"
+                                />
                             @else
                                 <img src="" alt="Card Back" class="max-h-32 rounded mx-auto" id="back-preview-img" />
                             @endif

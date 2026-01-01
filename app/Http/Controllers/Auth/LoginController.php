@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 
@@ -49,8 +50,10 @@ class LoginController extends Controller
 
         RateLimiter::hit($key, 300);
 
-        // Attempt authentication
-        if (!Auth::attempt(['email' => $email, 'password' => $request->password], $request->remember)) {
+        // Find user by email hash (email is encrypted, so we use hash for lookup)
+        $user = User::findByEmail($email);
+
+        if (!$user || !Hash::check($request->password, $user->password)) {
             $this->logLoginAttempt($email, $request, false, 'invalid_credentials');
 
             return response()->json([
@@ -58,7 +61,8 @@ class LoginController extends Controller
             ], 401);
         }
 
-        $user = Auth::user();
+        // Login the user
+        Auth::login($user, $request->remember);
 
         // Check if user is active
         if (!$user->is_active) {

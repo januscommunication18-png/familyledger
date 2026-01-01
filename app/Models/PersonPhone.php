@@ -29,6 +29,8 @@ class PersonPhone extends Model
 
     protected $casts = [
         'is_primary' => 'boolean',
+        // AES-256 encrypted PII fields
+        'phone' => 'encrypted',
     ];
 
     public function person(): BelongsTo

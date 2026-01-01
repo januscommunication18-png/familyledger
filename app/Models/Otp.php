@@ -32,6 +32,7 @@ class Otp extends Model
     public const TYPE_SMS_MFA = 'sms_mfa';
     public const TYPE_PHONE_VERIFY = 'phone_verify';
     public const TYPE_PASSWORD_RESET = 'password_reset';
+    public const TYPE_IMAGE_VERIFY = 'image_verify';
 
     /**
      * Maximum verification attempts.

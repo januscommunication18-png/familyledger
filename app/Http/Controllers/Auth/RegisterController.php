@@ -38,7 +38,7 @@ class RegisterController extends Controller
         try {
             $request->validate([
                 'name' => 'required|string|max:255',
-                'email' => 'required|email|max:255|unique:users,email',
+                'email' => 'required|email|max:255',
                 'password' => ['required', 'confirmed', Password::min(12)
                     ->mixedCase()
                     ->numbers()
@@ -47,6 +47,14 @@ class RegisterController extends Controller
                 // Honeypot fields
                 'website_url_hp' => 'max:0',
             ]);
+
+            // Check if email already exists using email_hash (email is encrypted)
+            $emailHash = hash('sha256', strtolower(trim($request->email)));
+            if (User::where('email_hash', $emailHash)->exists()) {
+                return response()->json([
+                    'errors' => ['email' => ['This email is already registered.']],
+                ], 422);
+            }
 
             // Rate limiting
             $key = 'register:' . $request->ip();

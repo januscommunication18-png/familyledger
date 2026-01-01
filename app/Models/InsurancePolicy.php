@@ -41,6 +41,17 @@ class InsurancePolicy extends Model
         'expiration_date' => 'date',
         'premium_amount' => 'decimal:2',
         'policy_documents' => 'array',
+        // AES-256 encrypted PII fields
+        'provider_name' => 'encrypted',
+        'policy_number' => 'encrypted',
+        'group_number' => 'encrypted',
+        'plan_name' => 'encrypted',
+        'agent_name' => 'encrypted',
+        'agent_phone' => 'encrypted',
+        'agent_email' => 'encrypted',
+        'claims_phone' => 'encrypted',
+        'coverage_details' => 'encrypted',
+        'notes' => 'encrypted',
     ];
 
     /**

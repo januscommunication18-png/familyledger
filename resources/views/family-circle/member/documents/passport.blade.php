@@ -118,7 +118,12 @@
                                     </div>
                                     <div id="frontPlaceholder" class="flex flex-col items-center justify-center py-4">
                                         @if($document?->front_image)
-                                            <img src="{{ route('member.documents.image', [$member, $document, 'front']) }}" alt="Current front" class="w-full h-32 object-contain rounded-lg mb-2">
+                                            <x-protected-image
+                                                :src="route('member.documents.image', [$member, $document, 'front'])"
+                                                alt="Current front"
+                                                class="w-full h-32 object-contain rounded-lg"
+                                                container-class="w-full h-32 rounded-lg mb-2"
+                                            />
                                             <span class="text-xs text-slate-500">Click to replace</span>
                                         @else
                                             <div class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center mb-2 group-hover:bg-indigo-200 transition-colors">
@@ -143,7 +148,12 @@
                                     </div>
                                     <div id="backPlaceholder" class="flex flex-col items-center justify-center py-4">
                                         @if($document?->back_image)
-                                            <img src="{{ route('member.documents.image', [$member, $document, 'back']) }}" alt="Current back" class="w-full h-32 object-contain rounded-lg mb-2">
+                                            <x-protected-image
+                                                :src="route('member.documents.image', [$member, $document, 'back'])"
+                                                alt="Current back"
+                                                class="w-full h-32 object-contain rounded-lg"
+                                                container-class="w-full h-32 rounded-lg mb-2"
+                                            />
                                             <span class="text-xs text-slate-500">Click to replace</span>
                                         @else
                                             <div class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center mb-2 group-hover:bg-indigo-200 transition-colors">

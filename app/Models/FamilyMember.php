@@ -91,6 +91,14 @@ class FamilyMember extends Model
         'date_of_birth' => 'date',
         'is_minor' => 'boolean',
         'co_parenting_enabled' => 'boolean',
+        // AES-256 encrypted PII fields
+        'first_name' => 'encrypted',
+        'last_name' => 'encrypted',
+        'email' => 'encrypted',
+        'phone' => 'encrypted',
+        'phone_country_code' => 'encrypted',
+        'father_name' => 'encrypted',
+        'mother_name' => 'encrypted',
     ];
 
     /**

@@ -26,6 +26,8 @@ class PersonEmail extends Model
 
     protected $casts = [
         'is_primary' => 'boolean',
+        // AES-256 encrypted PII fields
+        'email' => 'encrypted',
     ];
 
     public function person(): BelongsTo

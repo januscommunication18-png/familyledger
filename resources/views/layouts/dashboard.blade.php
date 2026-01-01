@@ -83,6 +83,39 @@
             opacity: 1;
             pointer-events: auto;
         }
+
+        /* Protected Image Styles */
+        .protected-image-container {
+            position: relative;
+            overflow: hidden;
+        }
+        .protected-image {
+            filter: blur(10px);
+            transition: filter 0.3s ease;
+        }
+        .protected-image.blur-none {
+            filter: blur(0);
+        }
+        .protected-image-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.4);
+            color: white;
+            cursor: pointer;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+        .protected-image-container.verified .protected-image-overlay {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .protected-image-container.verified .protected-image {
+            filter: blur(0);
+        }
     </style>
 </head>
 <body class="min-h-screen bg-slate-100">
@@ -454,6 +487,130 @@
 
         document.addEventListener('DOMContentLoaded', initTheme);
     </script>
+
+    {{-- Auto Logout After Inactivity --}}
+    <div id="idleWarningModal" class="fixed inset-0 z-[60] hidden">
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm"></div>
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="bg-base-100 rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center">
+                <div class="w-16 h-16 rounded-full bg-warning/20 flex items-center justify-center mx-auto mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-warning"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <h3 class="font-bold text-lg mb-2">Session Timeout Warning</h3>
+                <p class="text-base-content/60 text-sm mb-4">You will be logged out in <span id="idleCountdown" class="font-bold text-warning">60</span> seconds due to inactivity.</p>
+                <button type="button" onclick="resetIdleTimer()" class="btn btn-primary w-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                    Stay Logged In
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        const IDLE_TIMEOUT = 10 * 60 * 1000; // 10 minutes in milliseconds
+        const WARNING_TIME = 60 * 1000; // Show warning 60 seconds before logout
+
+        let idleTimer = null;
+        let warningTimer = null;
+        let countdownTimer = null;
+        let countdownSeconds = 60;
+
+        function showWarningModal() {
+            const modal = document.getElementById('idleWarningModal');
+            const countdownEl = document.getElementById('idleCountdown');
+            countdownSeconds = 60;
+            countdownEl.textContent = countdownSeconds;
+            modal.classList.remove('hidden');
+
+            // Start countdown
+            countdownTimer = setInterval(function() {
+                countdownSeconds--;
+                countdownEl.textContent = countdownSeconds;
+
+                if (countdownSeconds <= 0) {
+                    clearInterval(countdownTimer);
+                    performLogout();
+                }
+            }, 1000);
+        }
+
+        function hideWarningModal() {
+            const modal = document.getElementById('idleWarningModal');
+            modal.classList.add('hidden');
+            if (countdownTimer) {
+                clearInterval(countdownTimer);
+                countdownTimer = null;
+            }
+        }
+
+        function performLogout() {
+            // Create and submit logout form
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ route("logout") }}';
+
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = '_token';
+            csrfInput.value = document.querySelector('meta[name="csrf-token"]').content;
+            form.appendChild(csrfInput);
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        window.resetIdleTimer = function() {
+            // Clear existing timers
+            if (idleTimer) clearTimeout(idleTimer);
+            if (warningTimer) clearTimeout(warningTimer);
+
+            // Hide warning if visible
+            hideWarningModal();
+
+            // Set warning timer (fires 60 seconds before logout)
+            warningTimer = setTimeout(function() {
+                showWarningModal();
+            }, IDLE_TIMEOUT - WARNING_TIME);
+
+            // Set logout timer
+            idleTimer = setTimeout(function() {
+                performLogout();
+            }, IDLE_TIMEOUT);
+        };
+
+        // Activity events to track
+        const activityEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
+
+        // Throttle function to prevent too many resets
+        let lastActivity = Date.now();
+        function handleActivity() {
+            const now = Date.now();
+            // Only reset if more than 1 second has passed since last activity
+            if (now - lastActivity > 1000) {
+                lastActivity = now;
+                // Only reset if warning modal is not showing
+                const modal = document.getElementById('idleWarningModal');
+                if (modal && modal.classList.contains('hidden')) {
+                    resetIdleTimer();
+                }
+            }
+        }
+
+        // Add event listeners
+        activityEvents.forEach(function(event) {
+            document.addEventListener(event, handleActivity, { passive: true });
+        });
+
+        // Start the timer on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            resetIdleTimer();
+        });
+    })();
+    </script>
+
+    {{-- Image Verification Modal --}}
+    @include('partials.image-verification-modal')
 
     @stack('scripts')
 </body>

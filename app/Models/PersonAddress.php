@@ -31,6 +31,13 @@ class PersonAddress extends Model
 
     protected $casts = [
         'is_primary' => 'boolean',
+        // AES-256 encrypted PII fields
+        'street_address' => 'encrypted',
+        'street_address_2' => 'encrypted',
+        'city' => 'encrypted',
+        'state' => 'encrypted',
+        'zip_code' => 'encrypted',
+        'country' => 'encrypted',
     ];
 
     public function person(): BelongsTo

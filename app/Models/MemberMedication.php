@@ -34,6 +34,13 @@ class MemberMedication extends Model
         'notes',
     ];
 
+    protected $casts = [
+        // AES-256 encrypted PHI fields
+        'name' => 'encrypted',
+        'dosage' => 'encrypted',
+        'notes' => 'encrypted',
+    ];
+
     public function familyMember(): BelongsTo
     {
         return $this->belongsTo(FamilyMember::class);

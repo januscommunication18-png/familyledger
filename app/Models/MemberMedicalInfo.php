@@ -27,6 +27,19 @@ class MemberMedicalInfo extends Model
         'notes',
     ];
 
+    protected $casts = [
+        // AES-256 encrypted PHI fields
+        'medications' => 'encrypted',
+        'allergies' => 'encrypted',
+        'medical_conditions' => 'encrypted',
+        'primary_physician' => 'encrypted',
+        'physician_phone' => 'encrypted',
+        'insurance_provider' => 'encrypted',
+        'insurance_policy_number' => 'encrypted',
+        'insurance_group_number' => 'encrypted',
+        'notes' => 'encrypted',
+    ];
+
     /**
      * Blood type options.
      */

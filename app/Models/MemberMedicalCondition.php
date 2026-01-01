@@ -32,6 +32,9 @@ class MemberMedicalCondition extends Model
 
     protected $casts = [
         'diagnosed_date' => 'date',
+        // AES-256 encrypted PHI fields
+        'name' => 'encrypted',
+        'notes' => 'encrypted',
     ];
 
     public function familyMember(): BelongsTo

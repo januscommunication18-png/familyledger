@@ -83,6 +83,14 @@ class MemberHealthcareProvider extends Model
 
     protected $casts = [
         'is_primary' => 'boolean',
+        // AES-256 encrypted PII fields
+        'name' => 'encrypted',
+        'clinic_name' => 'encrypted',
+        'phone' => 'encrypted',
+        'phone_country_code' => 'encrypted',
+        'email' => 'encrypted',
+        'address' => 'encrypted',
+        'notes' => 'encrypted',
     ];
 
     public function familyMember(): BelongsTo

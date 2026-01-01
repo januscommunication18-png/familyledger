@@ -28,6 +28,13 @@ class MemberContact extends Model
     protected $casts = [
         'is_emergency_contact' => 'boolean',
         'priority' => 'integer',
+        // AES-256 encrypted PII fields
+        'name' => 'encrypted',
+        'email' => 'encrypted',
+        'phone' => 'encrypted',
+        'phone_country_code' => 'encrypted',
+        'address' => 'encrypted',
+        'notes' => 'encrypted',
     ];
 
     /**

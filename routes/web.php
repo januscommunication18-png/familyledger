@@ -15,6 +15,7 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\PersonController;
 use App\Http\Controllers\SecurityCodeController;
+use App\Http\Controllers\ImageVerificationController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
 
@@ -270,6 +271,11 @@ Route::middleware(['security.code', 'auth'])->group(function () {
     // Settings
     Route::get('/settings', [SettingsController::class, 'index'])->middleware('verified')->name('settings.index');
     Route::post('/settings/profile', [SettingsController::class, 'updateProfile'])->middleware('verified')->name('settings.profile.update');
+
+    // Image Verification (for viewing sensitive documents/images)
+    Route::get('/image-verify/status', [ImageVerificationController::class, 'status'])->name('image-verify.status');
+    Route::post('/image-verify/send', [ImageVerificationController::class, 'sendCode'])->name('image-verify.send');
+    Route::post('/image-verify/verify', [ImageVerificationController::class, 'verify'])->name('image-verify.verify');
 
     // Onboarding
     Route::get('/onboarding', [OnboardingController::class, 'show'])->name('onboarding');

@@ -242,10 +242,12 @@
                 <div>
                     <label class="block text-sm font-medium text-slate-500 mb-2">Front of Card</label>
                     <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                        <img src="{{ route('documents.insurance.card', [$insurance, 'front']) }}"
-                             alt="Insurance Card Front"
-                             class="max-w-full rounded cursor-pointer hover:opacity-90 transition-opacity"
-                             onclick="openImageModal(this.src, 'Insurance Card - Front')" />
+                        <x-protected-image
+                            :src="route('documents.insurance.card', [$insurance, 'front'])"
+                            alt="Insurance Card Front"
+                            class="max-w-full rounded cursor-pointer hover:opacity-90 transition-opacity"
+                            container-class="w-full"
+                        />
                     </div>
                 </div>
                 @endif
@@ -254,10 +256,12 @@
                 <div>
                     <label class="block text-sm font-medium text-slate-500 mb-2">Back of Card</label>
                     <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                        <img src="{{ route('documents.insurance.card', [$insurance, 'back']) }}"
-                             alt="Insurance Card Back"
-                             class="max-w-full rounded cursor-pointer hover:opacity-90 transition-opacity"
-                             onclick="openImageModal(this.src, 'Insurance Card - Back')" />
+                        <x-protected-image
+                            :src="route('documents.insurance.card', [$insurance, 'back'])"
+                            alt="Insurance Card Back"
+                            class="max-w-full rounded cursor-pointer hover:opacity-90 transition-opacity"
+                            container-class="w-full"
+                        />
                     </div>
                 </div>
                 @endif

@@ -43,6 +43,12 @@ class TaxReturn extends Model
         'federal_returns' => 'array',
         'state_returns' => 'array',
         'supporting_documents' => 'array',
+        // AES-256 encrypted PII fields
+        'cpa_name' => 'encrypted',
+        'cpa_phone' => 'encrypted',
+        'cpa_email' => 'encrypted',
+        'cpa_firm' => 'encrypted',
+        'notes' => 'encrypted',
     ];
 
     /**

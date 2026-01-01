@@ -72,6 +72,10 @@ class MemberAllergy extends Model
 
     protected $casts = [
         'symptoms' => 'array',
+        // AES-256 encrypted PHI fields
+        'allergen_name' => 'encrypted',
+        'emergency_instructions' => 'encrypted',
+        'notes' => 'encrypted',
     ];
 
     public function familyMember(): BelongsTo

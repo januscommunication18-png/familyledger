@@ -54,6 +54,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'first_name',
         'last_name',
         'email',
+        'email_hash',
         'backup_email',
         'country_code',
         'phone',
@@ -99,7 +100,41 @@ class User extends Authenticatable implements MustVerifyEmail
             'phone_2fa_enabled' => 'boolean',
             'recovery_codes' => 'encrypted:array',
             'password' => 'hashed',
+            // AES-256 encrypted PII fields
+            'name' => 'encrypted',
+            'first_name' => 'encrypted',
+            'last_name' => 'encrypted',
+            'email' => 'encrypted',
+            'backup_email' => 'encrypted',
+            'phone' => 'encrypted',
+            'country_code' => 'encrypted',
         ];
+    }
+
+    /**
+     * Boot the model.
+     */
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        // Auto-generate email_hash when email is set
+        static::saving(function (User $user) {
+            if ($user->isDirty('email') && $user->email) {
+                // Get the raw (decrypted) email value for hashing
+                $email = $user->email;
+                $user->email_hash = hash('sha256', strtolower(trim($email)));
+            }
+        });
+    }
+
+    /**
+     * Find a user by email using the hash.
+     */
+    public static function findByEmail(string $email): ?self
+    {
+        $hash = hash('sha256', strtolower(trim($email)));
+        return static::where('email_hash', $hash)->first();
     }
 
     /**

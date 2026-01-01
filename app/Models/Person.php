@@ -97,6 +97,13 @@ class Person extends Model
         'last_synced_at' => 'datetime',
         'tags' => 'array',
         'visible_to_members' => 'array',
+        // AES-256 encrypted PII fields
+        'full_name' => 'encrypted',
+        'nickname' => 'encrypted',
+        'company' => 'encrypted',
+        'job_title' => 'encrypted',
+        'how_we_know' => 'encrypted',
+        'notes' => 'encrypted',
     ];
 
     /**

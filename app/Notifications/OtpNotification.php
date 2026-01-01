@@ -40,6 +40,7 @@ class OtpNotification extends Notification
             'login' => 'Your Login Code',
             'verify' => 'Verify Your Email',
             'password_reset' => 'Reset Your Password',
+            'image_verify' => 'Document Verification Code',
             default => 'Your Verification Code',
         };
 
@@ -47,6 +48,7 @@ class OtpNotification extends Notification
             'login' => 'Sign in to your account',
             'verify' => 'Verify your email address',
             'password_reset' => 'Reset your password',
+            'image_verify' => 'Verify to view sensitive documents',
             default => 'Verification required',
         };
 
