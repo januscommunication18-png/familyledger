@@ -74,30 +74,17 @@
                                 placeholder="e.g., California">
                         </div>
 
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-2">Issue Date</label>
-                                <div class="relative">
-                                    <input type="text" name="issue_date" id="issue_date" value="{{ old('issue_date', $document?->issue_date?->format('m/d/Y')) }}" readonly
-                                        class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
-                                        placeholder="Select date">
-                                    <span class="absolute top-1/2 end-3 -translate-y-1/2 pointer-events-none text-slate-400">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
-                                    </span>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-2">Expiry Date</label>
-                                <div class="relative">
-                                    <input type="text" name="expiry_date" id="expiry_date" value="{{ old('expiry_date', $document?->expiry_date?->format('m/d/Y')) }}" readonly
-                                        class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
-                                        placeholder="Select date">
-                                    <span class="absolute top-1/2 end-3 -translate-y-1/2 pointer-events-none text-slate-400">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
+                        <x-date-select
+                            name="issue_date"
+                            label="Issue Date"
+                            :value="$document?->issue_date"
+                        />
+
+                        <x-date-select
+                            name="expiry_date"
+                            label="Expiry Date"
+                            :value="$document?->expiry_date"
+                        />
                     </div>
                 </div>
 
@@ -186,8 +173,6 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script>
 function previewFile(input, previewId) {
     const preview = document.getElementById(previewId);
@@ -203,18 +188,5 @@ function previewFile(input, previewId) {
         reader.readAsDataURL(input.files[0]);
     }
 }
-
-document.addEventListener('DOMContentLoaded', function() {
-    const dateConfig = {
-        dateFormat: 'm/d/Y',
-        altInput: true,
-        altFormat: 'F j, Y',
-        monthSelectorType: 'static',
-        disableMobile: true
-    };
-
-    flatpickr('#issue_date', { ...dateConfig, maxDate: 'today' });
-    flatpickr('#expiry_date', { ...dateConfig, minDate: 'today' });
-});
 </script>
 @endpush

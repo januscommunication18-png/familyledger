@@ -264,10 +264,10 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">Diagnosed Date</label>
-                                <input type="text" id="diagnosed_date" name="diagnosed_date" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20" placeholder="Select date">
-                            </div>
+                            <x-date-select
+                                name="diagnosed_date"
+                                label="Diagnosed Date"
+                            />
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">Notes</label>
@@ -333,10 +333,11 @@
                                                     @endforeach
                                                 </select>
                                             </div>
-                                            <div>
-                                                <label class="block text-sm font-medium text-slate-700 mb-1">Diagnosed Date</label>
-                                                <input type="text" name="diagnosed_date" value="{{ $condition->diagnosed_date ? $condition->diagnosed_date->format('m/d/Y') : '' }}" class="condition-date-edit w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20" placeholder="MM/DD/YYYY">
-                                            </div>
+                                            <x-date-select
+                                                name="diagnosed_date"
+                                                label="Diagnosed Date"
+                                                :value="$condition->diagnosed_date"
+                                            />
                                         </div>
                                     </div>
                                     <div class="flex gap-2 mt-3">
@@ -847,8 +848,6 @@
 @endsection
 
 @push('scripts')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
 function toggleMedicationForm() {
     const form = document.getElementById('medicationForm');
@@ -865,10 +864,6 @@ function toggleMedicationEdit(id) {
 function toggleConditionForm() {
     const form = document.getElementById('conditionForm');
     form.classList.toggle('hidden');
-    // Initialize flatpickr when form is shown
-    if (!form.classList.contains('hidden')) {
-        initDiagnosedDatePicker();
-    }
 }
 
 function toggleConditionEdit(id) {
@@ -876,21 +871,6 @@ function toggleConditionEdit(id) {
     const edit = document.getElementById('conditionEdit' + id);
     display.classList.toggle('hidden');
     edit.classList.toggle('hidden');
-    // Initialize flatpickr for the date field in edit mode
-    if (!edit.classList.contains('hidden')) {
-        const dateInput = edit.querySelector('.condition-date-edit');
-        if (dateInput && !dateInput._flatpickr) {
-            flatpickr(dateInput, {
-                dateFormat: 'm/d/Y',
-                altInput: true,
-                altFormat: 'F j, Y',
-                maxDate: 'today',
-                monthSelectorType: 'static',
-                disableMobile: true,
-                allowInput: true
-            });
-        }
-    }
 }
 
 function toggleAllergyForm() {
@@ -952,21 +932,6 @@ function toggleBloodTypeForm() {
     form.classList.toggle('hidden');
 }
 
-function initDiagnosedDatePicker() {
-    const dateInput = document.getElementById('diagnosed_date');
-    if (dateInput && !dateInput._flatpickr) {
-        flatpickr(dateInput, {
-            dateFormat: 'm/d/Y',
-            altInput: true,
-            altFormat: 'F j, Y',
-            maxDate: 'today',
-            monthSelectorType: 'static',
-            disableMobile: true,
-            allowInput: true
-        });
-    }
-}
-
 // Confirmation Modal Functions
 let pendingDeleteForm = null;
 
@@ -998,8 +963,5 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-document.addEventListener('DOMContentLoaded', function() {
-    initDiagnosedDatePicker();
-});
 </script>
 @endpush

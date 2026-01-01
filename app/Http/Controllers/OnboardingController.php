@@ -172,16 +172,9 @@ class OnboardingController extends Controller
         $request->validate([
             'goals' => 'required|array|min:1',
             'goals.*' => 'string|in:' . implode(',', array_keys(self::GOALS)),
-            'backup_email' => 'nullable|email|max:255',
         ]);
 
-        $user = $request->user();
-        $tenant = $user->tenant;
-
-        // Save backup email if provided
-        if ($request->filled('backup_email')) {
-            $user->update(['backup_email' => $request->backup_email]);
-        }
+        $tenant = $request->user()->tenant;
 
         $tenant->update([
             'goals' => $request->goals,
@@ -198,6 +191,7 @@ class OnboardingController extends Controller
         $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
+            'backup_email' => 'nullable|email|max:255',
             'country_code' => 'nullable|string|max:10',
             'phone' => 'nullable|string|max:20',
             'name' => 'required|string|max:255',
@@ -211,6 +205,7 @@ class OnboardingController extends Controller
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
             'name' => $request->first_name . ' ' . $request->last_name,
+            'backup_email' => $request->backup_email,
             'country_code' => $request->country_code,
             'phone' => $request->phone,
         ]);

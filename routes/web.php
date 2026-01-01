@@ -105,13 +105,13 @@ Route::middleware(['security.code', 'auth'])->group(function () {
     Route::delete('/settings/social/{provider}', [SocialAuthController::class, 'unlink'])
         ->where('provider', 'google|apple|facebook');
 
-    // Dashboard
+    // Dashboard (requires email verification AND onboarding completion)
     Route::get('/dashboard', function () {
         return view('dashboard');
-    })->middleware('verified')->name('dashboard');
+    })->middleware(['verified', 'onboarding'])->name('dashboard');
 
     // Family Circle
-    Route::middleware('verified')->prefix('family-circle')->name('family-circle.')->group(function () {
+    Route::middleware(['verified', 'onboarding'])->prefix('family-circle')->name('family-circle.')->group(function () {
         Route::get('/', [FamilyCircleController::class, 'index'])->name('index');
         Route::post('/', [FamilyCircleController::class, 'store'])->name('store');
         Route::get('/{familyCircle}', [FamilyCircleController::class, 'show'])->name('show');
@@ -141,7 +141,7 @@ Route::middleware(['security.code', 'auth'])->group(function () {
     });
 
     // Member Documents (accessible directly via member ID)
-    Route::middleware('verified')->prefix('member')->name('member.')->group(function () {
+    Route::middleware(['verified', 'onboarding'])->prefix('member')->name('member.')->group(function () {
         // Medical Info
         Route::post('/{member}/medical', [FamilyMemberController::class, 'storeMedicalInfo'])->name('medical.store');
         Route::post('/{member}/medical/field', [FamilyMemberController::class, 'updateMedicalField'])->name('medical.update-field');
@@ -191,7 +191,7 @@ Route::middleware(['security.code', 'auth'])->group(function () {
     });
 
     // Assets
-    Route::middleware('verified')->prefix('assets')->name('assets.')->group(function () {
+    Route::middleware(['verified', 'onboarding'])->prefix('assets')->name('assets.')->group(function () {
         Route::get('/', [AssetController::class, 'index'])->name('index');
         Route::get('/create', [AssetController::class, 'create'])->name('create');
         Route::post('/', [AssetController::class, 'store'])->name('store');
@@ -208,53 +208,53 @@ Route::middleware(['security.code', 'auth'])->group(function () {
     });
 
     // Documents
-    Route::get('/documents', [DocumentController::class, 'index'])->middleware('verified')->name('documents.index');
+    Route::get('/documents', [DocumentController::class, 'index'])->middleware(['verified', 'onboarding'])->name('documents.index');
 
     // Insurance Policies
-    Route::get('/documents/insurance/create', [DocumentController::class, 'createInsurance'])->middleware('verified')->name('documents.insurance.create');
-    Route::post('/documents/insurance', [DocumentController::class, 'storeInsurance'])->middleware('verified')->name('documents.insurance.store');
-    Route::get('/documents/insurance/{insurance}', [DocumentController::class, 'showInsurance'])->middleware('verified')->name('documents.insurance.show');
-    Route::get('/documents/insurance/{insurance}/edit', [DocumentController::class, 'editInsurance'])->middleware('verified')->name('documents.insurance.edit');
-    Route::put('/documents/insurance/{insurance}', [DocumentController::class, 'updateInsurance'])->middleware('verified')->name('documents.insurance.update');
-    Route::delete('/documents/insurance/{insurance}', [DocumentController::class, 'destroyInsurance'])->middleware('verified')->name('documents.insurance.destroy');
-    Route::get('/documents/insurance/{insurance}/card/{type}', [DocumentController::class, 'insuranceCardImage'])->middleware('verified')->name('documents.insurance.card');
+    Route::get('/documents/insurance/create', [DocumentController::class, 'createInsurance'])->middleware(['verified', 'onboarding'])->name('documents.insurance.create');
+    Route::post('/documents/insurance', [DocumentController::class, 'storeInsurance'])->middleware(['verified', 'onboarding'])->name('documents.insurance.store');
+    Route::get('/documents/insurance/{insurance}', [DocumentController::class, 'showInsurance'])->middleware(['verified', 'onboarding'])->name('documents.insurance.show');
+    Route::get('/documents/insurance/{insurance}/edit', [DocumentController::class, 'editInsurance'])->middleware(['verified', 'onboarding'])->name('documents.insurance.edit');
+    Route::put('/documents/insurance/{insurance}', [DocumentController::class, 'updateInsurance'])->middleware(['verified', 'onboarding'])->name('documents.insurance.update');
+    Route::delete('/documents/insurance/{insurance}', [DocumentController::class, 'destroyInsurance'])->middleware(['verified', 'onboarding'])->name('documents.insurance.destroy');
+    Route::get('/documents/insurance/{insurance}/card/{type}', [DocumentController::class, 'insuranceCardImage'])->middleware(['verified', 'onboarding'])->name('documents.insurance.card');
 
     // Tax Returns
-    Route::get('/documents/tax-returns/create', [DocumentController::class, 'createTaxReturn'])->middleware('verified')->name('documents.tax-returns.create');
-    Route::post('/documents/tax-returns', [DocumentController::class, 'storeTaxReturn'])->middleware('verified')->name('documents.tax-returns.store');
-    Route::get('/documents/tax-returns/{taxReturn}', [DocumentController::class, 'showTaxReturn'])->middleware('verified')->name('documents.tax-returns.show');
-    Route::get('/documents/tax-returns/{taxReturn}/edit', [DocumentController::class, 'editTaxReturn'])->middleware('verified')->name('documents.tax-returns.edit');
-    Route::put('/documents/tax-returns/{taxReturn}', [DocumentController::class, 'updateTaxReturn'])->middleware('verified')->name('documents.tax-returns.update');
-    Route::delete('/documents/tax-returns/{taxReturn}', [DocumentController::class, 'destroyTaxReturn'])->middleware('verified')->name('documents.tax-returns.destroy');
-    Route::get('/documents/tax-returns/{taxReturn}/download/{type}/{index}', [DocumentController::class, 'downloadTaxReturnFile'])->middleware('verified')->name('documents.tax-returns.download');
+    Route::get('/documents/tax-returns/create', [DocumentController::class, 'createTaxReturn'])->middleware(['verified', 'onboarding'])->name('documents.tax-returns.create');
+    Route::post('/documents/tax-returns', [DocumentController::class, 'storeTaxReturn'])->middleware(['verified', 'onboarding'])->name('documents.tax-returns.store');
+    Route::get('/documents/tax-returns/{taxReturn}', [DocumentController::class, 'showTaxReturn'])->middleware(['verified', 'onboarding'])->name('documents.tax-returns.show');
+    Route::get('/documents/tax-returns/{taxReturn}/edit', [DocumentController::class, 'editTaxReturn'])->middleware(['verified', 'onboarding'])->name('documents.tax-returns.edit');
+    Route::put('/documents/tax-returns/{taxReturn}', [DocumentController::class, 'updateTaxReturn'])->middleware(['verified', 'onboarding'])->name('documents.tax-returns.update');
+    Route::delete('/documents/tax-returns/{taxReturn}', [DocumentController::class, 'destroyTaxReturn'])->middleware(['verified', 'onboarding'])->name('documents.tax-returns.destroy');
+    Route::get('/documents/tax-returns/{taxReturn}/download/{type}/{index}', [DocumentController::class, 'downloadTaxReturnFile'])->middleware(['verified', 'onboarding'])->name('documents.tax-returns.download');
 
     // Tasks (To Do List)
     Route::get('/tasks', function () {
         return view('pages.tasks.index');
-    })->middleware('verified')->name('tasks.index');
+    })->middleware(['verified', 'onboarding'])->name('tasks.index');
 
     // Collaborators
     Route::get('/collaborators', function () {
         return view('pages.collaborators.index');
-    })->middleware('verified')->name('collaborators.index');
+    })->middleware(['verified', 'onboarding'])->name('collaborators.index');
 
     // Reminders
     Route::get('/reminders', function () {
         return view('pages.reminders.index');
-    })->middleware('verified')->name('reminders.index');
+    })->middleware(['verified', 'onboarding'])->name('reminders.index');
 
     // Expenses Tracker
     Route::get('/expenses', function () {
         return view('pages.expenses.index');
-    })->middleware('verified')->name('expenses.index');
+    })->middleware(['verified', 'onboarding'])->name('expenses.index');
 
     // Journey
     Route::get('/journey', function () {
         return view('pages.journey.index');
-    })->middleware('verified')->name('journey.index');
+    })->middleware(['verified', 'onboarding'])->name('journey.index');
 
     // People Directory (Personal CRM)
-    Route::middleware('verified')->prefix('people')->name('people.')->group(function () {
+    Route::middleware(['verified', 'onboarding'])->prefix('people')->name('people.')->group(function () {
         Route::get('/', [PersonController::class, 'index'])->name('index');
         Route::get('/create', [PersonController::class, 'create'])->name('create');
         Route::post('/', [PersonController::class, 'store'])->name('store');
@@ -269,8 +269,8 @@ Route::middleware(['security.code', 'auth'])->group(function () {
     });
 
     // Settings
-    Route::get('/settings', [SettingsController::class, 'index'])->middleware('verified')->name('settings.index');
-    Route::post('/settings/profile', [SettingsController::class, 'updateProfile'])->middleware('verified')->name('settings.profile.update');
+    Route::get('/settings', [SettingsController::class, 'index'])->middleware(['verified', 'onboarding'])->name('settings.index');
+    Route::post('/settings/profile', [SettingsController::class, 'updateProfile'])->middleware(['verified', 'onboarding'])->name('settings.profile.update');
 
     // Image Verification (for viewing sensitive documents/images)
     Route::get('/image-verify/status', [ImageVerificationController::class, 'status'])->name('image-verify.status');

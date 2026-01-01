@@ -255,28 +255,18 @@
                     </div>
 
                     <!-- Filing Date -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Filing Date</label>
-                        <div class="relative">
-                            <input type="text" name="filing_date" id="filing_date" value="{{ old('filing_date', $taxReturn?->filing_date?->format('m/d/Y')) }}"
-                                   class="input w-full pe-10" placeholder="Select date..." readonly />
-                            <span class="absolute inset-y-0 end-3 flex items-center pointer-events-none text-slate-400">
-                                <span class="icon-[tabler--calendar] size-5"></span>
-                            </span>
-                        </div>
-                    </div>
+                    <x-date-select
+                        name="filing_date"
+                        label="Filing Date"
+                        :value="$taxReturn?->filing_date"
+                    />
 
                     <!-- Due Date -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Due Date</label>
-                        <div class="relative">
-                            <input type="text" name="due_date" id="due_date" value="{{ old('due_date', $taxReturn?->due_date?->format('m/d/Y')) }}"
-                                   class="input w-full pe-10" placeholder="Select date..." readonly />
-                            <span class="absolute inset-y-0 end-3 flex items-center pointer-events-none text-slate-400">
-                                <span class="icon-[tabler--calendar] size-5"></span>
-                            </span>
-                        </div>
-                    </div>
+                    <x-date-select
+                        name="due_date"
+                        label="Due Date"
+                        :value="$taxReturn?->due_date"
+                    />
 
                     <!-- Refund Amount -->
                     <div>
@@ -483,34 +473,8 @@
     </form>
 </div>
 
-<!-- Flatpickr CSS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/light.css">
-
-<!-- Flatpickr JS -->
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize Flatpickr for filing date
-        flatpickr('#filing_date', {
-            dateFormat: 'm/d/Y',
-            altInput: true,
-            altFormat: 'F j, Y',
-            monthSelectorType: 'static',
-            disableMobile: true,
-            allowInput: false
-        });
-
-        // Initialize Flatpickr for due date
-        flatpickr('#due_date', {
-            dateFormat: 'm/d/Y',
-            altInput: true,
-            altFormat: 'F j, Y',
-            monthSelectorType: 'static',
-            disableMobile: true,
-            allowInput: false
-        });
-
         // File upload preview
         function setupFilePreview(inputId, previewId, listId) {
             const input = document.getElementById(inputId);

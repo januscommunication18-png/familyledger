@@ -46,26 +46,6 @@
                         @endforeach
                     </div>
 
-                    <div class="divider"></div>
-
-                    <div class="form-control">
-                        <label class="label">
-                            <span class="label-text flex items-center gap-2">
-                                Backup Email
-                                <span class="badge badge-success badge-sm">Recommended</span>
-                            </span>
-                        </label>
-                        <input type="email" name="backup_email" value="{{ old('backup_email', $user['backup_email'] ?? '') }}"
-                               placeholder="Enter a backup email address"
-                               class="input input-bordered w-full @error('backup_email') input-error @enderror">
-                        <label class="label">
-                            <span class="label-text-alt text-base-content/60">Use a different email for account recovery</span>
-                        </label>
-                        @error('backup_email')
-                            <label class="label pt-0"><span class="label-text-alt text-error">{{ $message }}</span></label>
-                        @enderror
-                    </div>
-
                     <div class="card-actions justify-between mt-8">
                         <a href="/dashboard" class="btn btn-ghost">Skip for now</a>
                         <button type="submit" class="btn btn-primary">Continue</button>
@@ -120,18 +100,36 @@
 
                         <div class="form-control">
                             <label class="label">
+                                <span class="label-text flex items-center gap-2">
+                                    Backup Email
+                                    <span class="badge badge-success badge-sm">Recommended</span>
+                                </span>
+                            </label>
+                            <input type="email" name="backup_email" value="{{ old('backup_email', $user['backup_email'] ?? '') }}"
+                                   placeholder="Enter a backup email address"
+                                   class="input input-bordered w-full @error('backup_email') input-error @enderror">
+                            <label class="label">
+                                <span class="label-text-alt text-base-content/50">Used for account recovery if you lose access</span>
+                            </label>
+                            @error('backup_email')
+                                <label class="label pt-0"><span class="label-text-alt text-error">{{ $message }}</span></label>
+                            @enderror
+                        </div>
+
+                        <div class="form-control">
+                            <label class="label">
                                 <span class="label-text">Phone Number</span>
                             </label>
                             <div class="flex gap-2">
-                                <select name="country_code" class="select select-bordered w-32">
-                                    <option value="">Code</option>
+                                <select name="country_code" class="select select-bordered w-24 min-w-0 shrink-0">
+                                    <option value="">+1</option>
                                     @foreach($countryCodes as $code => $label)
-                                        <option value="{{ $code }}" {{ old('country_code', $user['country_code'] ?? '') === $code ? 'selected' : '' }}>{{ $label }}</option>
+                                        <option value="{{ $code }}" {{ old('country_code', $user['country_code'] ?? '') === $code ? 'selected' : '' }}>{{ $code }}</option>
                                     @endforeach
                                 </select>
                                 <input type="tel" name="phone" value="{{ old('phone', $user['phone'] ?? '') }}"
                                        placeholder="Phone number"
-                                       class="input input-bordered flex-1 @error('phone') input-error @enderror">
+                                       class="input input-bordered grow @error('phone') input-error @enderror">
                             </div>
                             @error('phone')
                                 <label class="label"><span class="label-text-alt text-error">{{ $message }}</span></label>

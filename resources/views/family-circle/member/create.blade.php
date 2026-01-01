@@ -89,13 +89,75 @@
                             <label class="block text-sm font-medium text-slate-700 mb-2">
                                 Date of Birth <span class="text-rose-500">*</span>
                             </label>
-                            <div class="relative">
-                                <input type="text" name="date_of_birth" id="date_of_birth" value="{{ old('date_of_birth') }}" placeholder="MM/DD/YYYY" required readonly
-                                    class="input w-full @error('date_of_birth') is-invalid @enderror">
-                                <span class="absolute top-1/2 end-3 -translate-y-1/2 pointer-events-none text-slate-400">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
-                                </span>
+                            <div class="flex gap-2">
+                                <!-- Month -->
+                                <div class="flex-1">
+                                    <select name="dob_month" id="dob_month" data-select='{
+                                        "placeholder": "Month",
+                                        "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
+                                        "toggleClasses": "advance-select-toggle w-full",
+                                        "hasSearch": true,
+                                        "searchPlaceholder": "Search...",
+                                        "dropdownClasses": "advance-select-menu",
+                                        "optionClasses": "advance-select-option selected:select-active",
+                                        "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
+                                        "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/90 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
+                                    }' class="hidden">
+                                        <option value="">Month</option>
+                                        <option value="01" {{ old('dob_month') == '01' ? 'selected' : '' }}>January</option>
+                                        <option value="02" {{ old('dob_month') == '02' ? 'selected' : '' }}>February</option>
+                                        <option value="03" {{ old('dob_month') == '03' ? 'selected' : '' }}>March</option>
+                                        <option value="04" {{ old('dob_month') == '04' ? 'selected' : '' }}>April</option>
+                                        <option value="05" {{ old('dob_month') == '05' ? 'selected' : '' }}>May</option>
+                                        <option value="06" {{ old('dob_month') == '06' ? 'selected' : '' }}>June</option>
+                                        <option value="07" {{ old('dob_month') == '07' ? 'selected' : '' }}>July</option>
+                                        <option value="08" {{ old('dob_month') == '08' ? 'selected' : '' }}>August</option>
+                                        <option value="09" {{ old('dob_month') == '09' ? 'selected' : '' }}>September</option>
+                                        <option value="10" {{ old('dob_month') == '10' ? 'selected' : '' }}>October</option>
+                                        <option value="11" {{ old('dob_month') == '11' ? 'selected' : '' }}>November</option>
+                                        <option value="12" {{ old('dob_month') == '12' ? 'selected' : '' }}>December</option>
+                                    </select>
+                                </div>
+                                <!-- Day -->
+                                <div class="flex-1">
+                                    <select name="dob_day" id="dob_day" data-select='{
+                                        "placeholder": "Day",
+                                        "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
+                                        "toggleClasses": "advance-select-toggle w-full",
+                                        "hasSearch": true,
+                                        "searchPlaceholder": "Search...",
+                                        "dropdownClasses": "advance-select-menu",
+                                        "optionClasses": "advance-select-option selected:select-active",
+                                        "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
+                                        "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/90 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
+                                    }' class="hidden">
+                                        <option value="">Day</option>
+                                        @for($i = 1; $i <= 31; $i++)
+                                            <option value="{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}" {{ old('dob_day') == str_pad($i, 2, '0', STR_PAD_LEFT) ? 'selected' : '' }}>{{ $i }}</option>
+                                        @endfor
+                                    </select>
+                                </div>
+                                <!-- Year -->
+                                <div class="flex-1">
+                                    <select name="dob_year" id="dob_year" data-select='{
+                                        "placeholder": "Year",
+                                        "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
+                                        "toggleClasses": "advance-select-toggle w-full",
+                                        "hasSearch": true,
+                                        "searchPlaceholder": "Search...",
+                                        "dropdownClasses": "advance-select-menu",
+                                        "optionClasses": "advance-select-option selected:select-active",
+                                        "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
+                                        "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/90 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
+                                    }' class="hidden">
+                                        <option value="">Year</option>
+                                        @for($year = date('Y'); $year >= 1900; $year--)
+                                            <option value="{{ $year }}" {{ old('dob_year') == $year ? 'selected' : '' }}>{{ $year }}</option>
+                                        @endfor
+                                    </select>
+                                </div>
                             </div>
+                            <input type="hidden" name="date_of_birth" id="date_of_birth" required>
                             @error('date_of_birth')
                                 <p class="mt-1 text-sm text-rose-500">{{ $message }}</p>
                             @enderror
@@ -247,7 +309,6 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
 // Profile image preview
 function previewImage(input) {
@@ -267,24 +328,31 @@ function previewImage(input) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize Flatpickr for Date of Birth
-    flatpickr('#date_of_birth', {
-        dateFormat: 'm/d/Y',
-        altInput: true,
-        altFormat: 'F j, Y',
-        maxDate: 'today',
-        monthSelectorType: 'static',
-        disableMobile: true,
-        onChange: function(selectedDates, dateStr, instance) {
-            if (selectedDates.length > 0) {
-                const date = selectedDates[0];
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                instance.input.value = `${month}/${day}/${year}`;
-            }
+    const dobMonth = document.getElementById('dob_month');
+    const dobDay = document.getElementById('dob_day');
+    const dobYear = document.getElementById('dob_year');
+    const dobHidden = document.getElementById('date_of_birth');
+
+    // Combine date parts into hidden field
+    function updateDateOfBirth() {
+        const month = dobMonth.value;
+        const day = dobDay.value;
+        const year = dobYear.value;
+
+        if (month && day && year) {
+            dobHidden.value = `${month}/${day}/${year}`;
+        } else {
+            dobHidden.value = '';
         }
-    });
+    }
+
+    // Update on change
+    dobMonth.addEventListener('change', updateDateOfBirth);
+    dobDay.addEventListener('change', updateDateOfBirth);
+    dobYear.addEventListener('change', updateDateOfBirth);
+
+    // Initial update
+    updateDateOfBirth();
 });
 </script>
 @endpush

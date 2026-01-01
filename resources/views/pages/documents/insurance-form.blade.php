@@ -199,29 +199,17 @@
                 </div>
 
                 <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Effective Date</label>
-                        <div class="relative">
-                            <input type="text" name="effective_date" id="effective_date"
-                                   value="{{ old('effective_date', $insurance?->effective_date?->format('m/d/Y')) }}"
-                                   class="input w-full" placeholder="MM/DD/YYYY" readonly />
-                            <span class="absolute top-1/2 end-3 -translate-y-1/2 pointer-events-none text-slate-400">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
-                            </span>
-                        </div>
-                    </div>
+                    <x-date-select
+                        name="effective_date"
+                        label="Effective Date"
+                        :value="$insurance?->effective_date"
+                    />
 
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Expiration Date</label>
-                        <div class="relative">
-                            <input type="text" name="expiration_date" id="expiration_date"
-                                   value="{{ old('expiration_date', $insurance?->expiration_date?->format('m/d/Y')) }}"
-                                   class="input w-full" placeholder="MM/DD/YYYY" readonly />
-                            <span class="absolute top-1/2 end-3 -translate-y-1/2 pointer-events-none text-slate-400">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
-                            </span>
-                        </div>
-                    </div>
+                    <x-date-select
+                        name="expiration_date"
+                        label="Expiration Date"
+                        :value="$insurance?->expiration_date"
+                    />
 
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Premium Amount</label>
@@ -402,26 +390,8 @@
     </form>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
-    // Initialize Flatpickr for date fields
     document.addEventListener('DOMContentLoaded', function() {
-        flatpickr('#effective_date', {
-            dateFormat: 'm/d/Y',
-            altInput: true,
-            altFormat: 'F j, Y',
-            monthSelectorType: 'static',
-            disableMobile: true
-        });
-
-        flatpickr('#expiration_date', {
-            dateFormat: 'm/d/Y',
-            altInput: true,
-            altFormat: 'F j, Y',
-            monthSelectorType: 'static',
-            disableMobile: true
-        });
-
         // Image preview functionality
         function setupImagePreview(inputId, previewContainerId, previewImgId) {
             const input = document.getElementById(inputId);

@@ -113,17 +113,11 @@
                                class="input w-full" placeholder="e.g., Manager" />
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Birthday</label>
-                        <div class="relative">
-                            <input type="text" name="birthday" id="birthday"
-                                   value="{{ old('birthday', $person?->birthday?->format('m/d/Y')) }}"
-                                   class="input w-full" placeholder="MM/DD/YYYY" readonly />
-                            <span class="absolute top-1/2 end-3 -translate-y-1/2 pointer-events-none text-slate-400">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
-                            </span>
-                        </div>
-                    </div>
+                    <x-date-select
+                        name="birthday"
+                        label="Birthday"
+                        :value="$person?->birthday"
+                    />
 
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">How We Know Each Other</label>
@@ -640,17 +634,8 @@
         initDatePickers();
     }
 
-    // Initialize Flatpickr
+    // Initialize Flatpickr for important dates
     document.addEventListener('DOMContentLoaded', function() {
-        const dateConfig = {
-            dateFormat: 'm/d/Y',
-            allowInput: true,
-            disableMobile: true
-        };
-
-        // Birthday
-        flatpickr('#birthday', dateConfig);
-
         // Important dates
         initDatePickers();
 

@@ -46,6 +46,21 @@
 
         <div class="form-control">
             <label class="label">
+                <span class="label-text">Backup Email</span>
+            </label>
+            <input type="email" name="backup_email" value="{{ old('backup_email', $user['backup_email'] ?? '') }}"
+                   placeholder="Enter a backup email address"
+                   class="input input-bordered w-full @error('backup_email') input-error @enderror">
+            <label class="label">
+                <span class="label-text-alt text-base-content/50">Used for account recovery if you lose access</span>
+            </label>
+            @error('backup_email')
+                <label class="label"><span class="label-text-alt text-error">{{ $message }}</span></label>
+            @enderror
+        </div>
+
+        <div class="form-control">
+            <label class="label">
                 <span class="label-text">Phone Number</span>
             </label>
             <div class="flex gap-2">

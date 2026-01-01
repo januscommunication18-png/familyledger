@@ -261,15 +261,11 @@
                 </div>
 
                 <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-2">Acquisition Date</label>
-                        <div class="relative">
-                            <input type="text" name="acquisition_date" id="acquisition_date" class="input w-full cursor-pointer" placeholder="Select date" value="{{ old('acquisition_date', $asset?->acquisition_date?->format('m/d/Y') ?? '') }}">
-                            <span class="absolute top-1/2 end-3 -translate-y-1/2 pointer-events-none text-slate-400">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
-                            </span>
-                        </div>
-                    </div>
+                    <x-date-select
+                        name="acquisition_date"
+                        label="Acquisition Date"
+                        :value="$asset?->acquisition_date"
+                    />
 
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-2">Purchase Value</label>
@@ -428,15 +424,11 @@
                         <input type="text" name="appraised_by" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-500/20" placeholder="Appraiser name" value="{{ old('appraised_by', $asset?->appraised_by ?? '') }}">
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-2">Appraisal Date</label>
-                        <div class="relative">
-                            <input type="text" name="appraisal_date" id="appraisal_date" class="input w-full cursor-pointer" placeholder="Select date" value="{{ old('appraisal_date', $asset?->appraisal_date?->format('m/d/Y') ?? '') }}">
-                            <span class="absolute top-1/2 end-3 -translate-y-1/2 pointer-events-none text-slate-400">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
-                            </span>
-                        </div>
-                    </div>
+                    <x-date-select
+                        name="appraisal_date"
+                        label="Appraisal Date"
+                        :value="$asset?->appraisal_date"
+                    />
 
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-2">Appraisal Value</label>
@@ -488,15 +480,11 @@
                         <input type="text" name="serial_number" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20" placeholder="Serial number" value="{{ old('serial_number', $asset?->serial_number ?? '') }}">
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-2">Warranty Expiry</label>
-                        <div class="relative">
-                            <input type="text" name="warranty_expiry" id="warranty_expiry" class="input w-full cursor-pointer" placeholder="Select date" value="{{ old('warranty_expiry', $asset?->warranty_expiry?->format('m/d/Y') ?? '') }}">
-                            <span class="absolute top-1/2 end-3 -translate-y-1/2 pointer-events-none text-slate-400">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
-                            </span>
-                        </div>
-                    </div>
+                    <x-date-select
+                        name="warranty_expiry"
+                        label="Warranty Expiry"
+                        :value="$asset?->warranty_expiry"
+                    />
                 </div>
             </div>
         </div>
@@ -532,15 +520,11 @@
                         <input type="text" name="insurance_policy_number" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" placeholder="Policy number" value="{{ old('insurance_policy_number', $asset?->insurance_policy_number ?? '') }}">
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-2">Renewal Date</label>
-                        <div class="relative">
-                            <input type="text" name="insurance_renewal_date" id="insurance_renewal_date" class="input w-full cursor-pointer" placeholder="Select date" value="{{ old('insurance_renewal_date', $asset?->insurance_renewal_date?->format('m/d/Y') ?? '') }}">
-                            <span class="absolute top-1/2 end-3 -translate-y-1/2 pointer-events-none text-slate-400">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
-                            </span>
-                        </div>
-                    </div>
+                    <x-date-select
+                        name="insurance_renewal_date"
+                        label="Renewal Date"
+                        :value="$asset?->insurance_renewal_date"
+                    />
                 </div>
             </div>
         </div>
@@ -639,28 +623,7 @@
 @endsection
 
 @push('scripts')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
-// Wait for flatpickr to be available
-function initializeDatePickers() {
-    const datePickerConfig = {
-        dateFormat: 'm/d/Y',
-        allowInput: true,
-        disableMobile: true,
-        monthSelectorType: 'static',
-        clickOpens: true
-    };
-
-    const dateFields = ['acquisition_date', 'appraisal_date', 'warranty_expiry', 'insurance_renewal_date'];
-    dateFields.forEach(id => {
-        const el = document.getElementById(id);
-        if (el && !el._flatpickr) {
-            flatpickr(el, datePickerConfig);
-        }
-    });
-}
-
 const assetTypes = {
     property: @json($propertyTypes),
     vehicle: @json($vehicleTypes),
@@ -820,9 +783,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initial calculation
     calculateTotalPercentage();
-
-    // Initialize flatpickr datepickers
-    initializeDatePickers();
 
     // File upload preview
     const fileInput = document.getElementById('document-upload');
