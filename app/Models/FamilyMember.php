@@ -198,6 +198,14 @@ class FamilyMember extends Model
     }
 
     /**
+     * Get all vaccinations for this member.
+     */
+    public function vaccinations(): HasMany
+    {
+        return $this->hasMany(MemberVaccination::class);
+    }
+
+    /**
      * Get active medical conditions.
      */
     public function activeMedicalConditions(): HasMany

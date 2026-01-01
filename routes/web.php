@@ -17,6 +17,7 @@ use App\Http\Controllers\PersonController;
 use App\Http\Controllers\SecurityCodeController;
 use App\Http\Controllers\ImageVerificationController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\ListController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -167,6 +168,12 @@ Route::middleware(['security.code', 'auth'])->group(function () {
         Route::put('/{member}/conditions/{condition}', [MemberMedicalController::class, 'updateCondition'])->name('condition.update');
         Route::delete('/{member}/conditions/{condition}', [MemberMedicalController::class, 'destroyCondition'])->name('condition.destroy');
 
+        // Vaccinations
+        Route::post('/{member}/vaccinations', [MemberMedicalController::class, 'storeVaccination'])->name('vaccination.store');
+        Route::put('/{member}/vaccinations/{vaccination}', [MemberMedicalController::class, 'updateVaccination'])->name('vaccination.update');
+        Route::delete('/{member}/vaccinations/{vaccination}', [MemberMedicalController::class, 'destroyVaccination'])->name('vaccination.destroy');
+        Route::get('/{member}/vaccinations/{vaccination}/download', [MemberMedicalController::class, 'downloadVaccinationDocument'])->name('vaccination.download');
+
         // School Info
         Route::post('/{member}/school', [FamilyMemberController::class, 'storeSchoolInfo'])->name('school.store');
 
@@ -228,10 +235,32 @@ Route::middleware(['security.code', 'auth'])->group(function () {
     Route::delete('/documents/tax-returns/{taxReturn}', [DocumentController::class, 'destroyTaxReturn'])->middleware(['verified', 'onboarding'])->name('documents.tax-returns.destroy');
     Route::get('/documents/tax-returns/{taxReturn}/download/{type}/{index}', [DocumentController::class, 'downloadTaxReturnFile'])->middleware(['verified', 'onboarding'])->name('documents.tax-returns.download');
 
-    // Tasks (To Do List)
-    Route::get('/tasks', function () {
-        return view('pages.tasks.index');
-    })->middleware(['verified', 'onboarding'])->name('tasks.index');
+    // Lists (To-Do & Shopping)
+    Route::middleware(['verified', 'onboarding'])->prefix('lists')->name('lists.')->group(function () {
+        Route::get('/', [ListController::class, 'index'])->name('index');
+
+        // Todo lists
+        Route::get('/todos/create', [ListController::class, 'createTodoList'])->name('todos.create');
+        Route::post('/todos', [ListController::class, 'storeTodoList'])->name('todos.store');
+        Route::get('/todos/items/create', [ListController::class, 'createTodoItem'])->name('todos.items.create');
+        Route::post('/todos/items', [ListController::class, 'storeTodoItem'])->name('todos.items.store');
+        Route::get('/todos/items/{item}/edit', [ListController::class, 'editTodoItem'])->name('todos.items.edit');
+        Route::put('/todos/items/{item}', [ListController::class, 'updateTodoItem'])->name('todos.items.update');
+        Route::post('/todos/items/{item}/toggle', [ListController::class, 'toggleTodoItem'])->name('todos.items.toggle');
+        Route::delete('/todos/items/{item}', [ListController::class, 'destroyTodoItem'])->name('todos.items.destroy');
+        Route::post('/todos/items/{item}/comments', [ListController::class, 'storeTodoComment'])->name('todos.items.comments.store');
+
+        // Shopping lists
+        Route::get('/shopping/create', [ListController::class, 'createShoppingList'])->name('shopping.create');
+        Route::post('/shopping', [ListController::class, 'storeShoppingList'])->name('shopping.store');
+        Route::get('/shopping/items/create', [ListController::class, 'createShoppingItem'])->name('shopping.items.create');
+        Route::post('/shopping/items', [ListController::class, 'storeShoppingItem'])->name('shopping.items.store');
+        Route::put('/shopping/items/{item}', [ListController::class, 'updateShoppingItem'])->name('shopping.items.update');
+        Route::post('/shopping/items/{item}/toggle', [ListController::class, 'toggleShoppingItem'])->name('shopping.items.toggle');
+        Route::delete('/shopping/items/{item}', [ListController::class, 'destroyShoppingItem'])->name('shopping.items.destroy');
+        Route::post('/shopping/{list}/clear-checked', [ListController::class, 'clearCheckedItems'])->name('shopping.clear-checked');
+        Route::get('/shopping/suggestions', [ListController::class, 'getItemSuggestions'])->name('shopping.suggestions');
+    });
 
     // Collaborators
     Route::get('/collaborators', function () {

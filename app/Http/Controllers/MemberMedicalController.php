@@ -9,8 +9,10 @@ use App\Models\MemberHealthcareProvider;
 use App\Models\MemberMedicalCondition;
 use App\Models\MemberMedicalInfo;
 use App\Models\MemberMedication;
+use App\Models\MemberVaccination;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class MemberMedicalController extends Controller
 {
@@ -33,9 +35,10 @@ class MemberMedicalController extends Controller
             $member->setRelation('healthcareProviders', MemberHealthcareProvider::whereIn('family_member_id', $linkedMemberIds)->get());
             $member->setRelation('medications', MemberMedication::whereIn('family_member_id', $linkedMemberIds)->get());
             $member->setRelation('medicalConditions', MemberMedicalCondition::whereIn('family_member_id', $linkedMemberIds)->get());
+            $member->setRelation('vaccinations', MemberVaccination::whereIn('family_member_id', $linkedMemberIds)->orderBy('vaccination_date', 'desc')->get());
             $member->setRelation('medicalInfo', MemberMedicalInfo::whereIn('family_member_id', $linkedMemberIds)->first());
         } else {
-            $member->load(['medicalInfo', 'allergies', 'healthcareProviders', 'medications', 'medicalConditions']);
+            $member->load(['medicalInfo', 'allergies', 'healthcareProviders', 'medications', 'medicalConditions', 'vaccinations']);
         }
 
         return view('family-circle.member.medical-info', [
@@ -50,6 +53,7 @@ class MemberMedicalController extends Controller
             'bloodTypes' => MemberMedicalInfo::BLOOD_TYPES,
             'medicationFrequencies' => MemberMedication::FREQUENCIES,
             'conditionStatuses' => MemberMedicalCondition::STATUSES,
+            'vaccineTypes' => MemberVaccination::VACCINE_TYPES,
         ]);
     }
 
@@ -399,5 +403,150 @@ class MemberMedicalController extends Controller
             $member->familyCircle,
             $member
         ])->with('success', 'Medical condition removed successfully');
+    }
+
+    /**
+     * Store a new vaccination record.
+     */
+    public function storeVaccination(Request $request, FamilyMember $member)
+    {
+        if ($member->tenant_id !== Auth::user()->tenant_id) {
+            abort(403);
+        }
+
+        // Convert date formats if needed
+        $this->convertDateFormat($request, 'vaccination_date');
+        $this->convertDateFormat($request, 'next_vaccination_date');
+
+        $validated = $request->validate([
+            'vaccine_type' => 'required|string|in:' . implode(',', array_keys(MemberVaccination::VACCINE_TYPES)),
+            'custom_vaccine_name' => 'nullable|required_if:vaccine_type,other|string|max:255',
+            'vaccination_date' => 'nullable|date',
+            'next_vaccination_date' => 'nullable|date',
+            'administered_by' => 'nullable|string|max:255',
+            'lot_number' => 'nullable|string|max:100',
+            'notes' => 'nullable|string',
+            'document' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+        ]);
+
+        $validated['tenant_id'] = Auth::user()->tenant_id;
+        $validated['family_member_id'] = $member->id;
+
+        // Handle file upload
+        if ($request->hasFile('document')) {
+            $file = $request->file('document');
+            $path = $file->store('vaccinations/' . $member->id, 'private');
+            $validated['document_path'] = $path;
+            $validated['document_name'] = $file->getClientOriginalName();
+        }
+
+        unset($validated['document']);
+        MemberVaccination::create($validated);
+
+        return redirect()->route('family-circle.member.medical-info', [
+            $member->familyCircle,
+            $member
+        ])->with('success', 'Vaccination record added successfully');
+    }
+
+    /**
+     * Update a vaccination record.
+     */
+    public function updateVaccination(Request $request, FamilyMember $member, MemberVaccination $vaccination)
+    {
+        if ($vaccination->tenant_id !== Auth::user()->tenant_id) {
+            abort(403);
+        }
+
+        // Convert date formats if needed
+        $this->convertDateFormat($request, 'vaccination_date');
+        $this->convertDateFormat($request, 'next_vaccination_date');
+
+        $validated = $request->validate([
+            'vaccine_type' => 'required|string|in:' . implode(',', array_keys(MemberVaccination::VACCINE_TYPES)),
+            'custom_vaccine_name' => 'nullable|required_if:vaccine_type,other|string|max:255',
+            'vaccination_date' => 'nullable|date',
+            'next_vaccination_date' => 'nullable|date',
+            'administered_by' => 'nullable|string|max:255',
+            'lot_number' => 'nullable|string|max:100',
+            'notes' => 'nullable|string',
+            'document' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+        ]);
+
+        // Handle file upload
+        if ($request->hasFile('document')) {
+            // Delete old file if exists
+            if ($vaccination->document_path) {
+                Storage::disk('private')->delete($vaccination->document_path);
+            }
+            $file = $request->file('document');
+            $path = $file->store('vaccinations/' . $member->id, 'private');
+            $validated['document_path'] = $path;
+            $validated['document_name'] = $file->getClientOriginalName();
+        }
+
+        unset($validated['document']);
+        $vaccination->update($validated);
+
+        return redirect()->route('family-circle.member.medical-info', [
+            $member->familyCircle,
+            $member
+        ])->with('success', 'Vaccination record updated successfully');
+    }
+
+    /**
+     * Delete a vaccination record.
+     */
+    public function destroyVaccination(FamilyMember $member, MemberVaccination $vaccination)
+    {
+        if ($vaccination->tenant_id !== Auth::user()->tenant_id) {
+            abort(403);
+        }
+
+        // Delete file if exists
+        if ($vaccination->document_path) {
+            Storage::disk('private')->delete($vaccination->document_path);
+        }
+
+        $vaccination->delete();
+
+        return redirect()->route('family-circle.member.medical-info', [
+            $member->familyCircle,
+            $member
+        ])->with('success', 'Vaccination record removed successfully');
+    }
+
+    /**
+     * Download vaccination document.
+     */
+    public function downloadVaccinationDocument(FamilyMember $member, MemberVaccination $vaccination)
+    {
+        if ($vaccination->tenant_id !== Auth::user()->tenant_id) {
+            abort(403);
+        }
+
+        if (!$vaccination->document_path || !Storage::disk('private')->exists($vaccination->document_path)) {
+            abort(404);
+        }
+
+        return Storage::disk('private')->download(
+            $vaccination->document_path,
+            $vaccination->document_name
+        );
+    }
+
+    /**
+     * Helper to convert date format from MM/DD/YYYY to YYYY-MM-DD.
+     */
+    private function convertDateFormat(Request $request, string $field): void
+    {
+        if ($request->has($field) && $request->$field) {
+            $dateParts = explode('/', $request->$field);
+            if (count($dateParts) === 3) {
+                $request->merge([
+                    $field => $dateParts[2] . '-' . $dateParts[0] . '-' . $dateParts[1]
+                ]);
+            }
+        }
     }
 }

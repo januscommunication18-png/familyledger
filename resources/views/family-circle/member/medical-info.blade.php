@@ -357,6 +357,187 @@
         </div>
     </div>
 
+    <!-- Vaccinations Section -->
+    <div class="card bg-base-100 shadow-sm">
+        <div class="card-body">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-teal-600"><path d="m18 2 4 4"/><path d="m17 7 3-3"/><path d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5"/><path d="m9 11 4 4"/><path d="m5 19-3 3"/><path d="m14 4 6 6"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800">Vaccinations</h2>
+                        <p class="text-xs text-slate-400">Track immunization records</p>
+                    </div>
+                </div>
+                <button type="button" onclick="toggleVaccinationForm()" class="btn btn-primary btn-sm gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                    Add
+                </button>
+            </div>
+
+            <!-- Add Vaccination Form (Hidden by default) -->
+            <div id="vaccinationForm" class="hidden mb-4 p-4 bg-teal-50 rounded-xl border border-teal-200">
+                <form action="{{ route('member.vaccination.store', $member) }}" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Vaccine <span class="text-rose-500">*</span></label>
+                            <select name="vaccine_type" id="vaccine_type_select" required onchange="toggleCustomVaccine(this)" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20">
+                                <option value="">Select vaccine</option>
+                                @foreach($vaccineTypes as $key => $label)
+                                    <option value="{{ $key }}">{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div id="customVaccineField" class="hidden">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Custom Vaccine Name <span class="text-rose-500">*</span></label>
+                            <input type="text" name="custom_vaccine_name" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20" placeholder="Enter vaccine name">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <x-date-select
+                                name="vaccination_date"
+                                label="Date of Vaccination"
+                            />
+                            <x-date-select
+                                name="next_vaccination_date"
+                                label="Next Vaccination"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Administered By</label>
+                            <input type="text" name="administered_by" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20" placeholder="Doctor or clinic name">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Notes</label>
+                            <textarea name="notes" rows="2" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20" placeholder="Any additional notes..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Upload Document</label>
+                            <input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png" class="file-input file-input-bordered file-input-sm w-full">
+                            <p class="text-xs text-slate-400 mt-1">PDF, JPG, or PNG (max 10MB)</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                        <button type="button" onclick="toggleVaccinationForm()" class="btn btn-ghost btn-sm">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Vaccinations List -->
+            @if($member->vaccinations && $member->vaccinations->count() > 0)
+                <div class="space-y-2">
+                    @foreach($member->vaccinations as $vaccination)
+                        <div class="rounded-lg border border-slate-200 hover:border-teal-300 transition-colors">
+                            <!-- Display Mode -->
+                            <div id="vaccinationDisplay{{ $vaccination->id }}" class="flex items-start justify-between p-3">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-2 h-2 rounded-full mt-1.5 {{ $vaccination->is_due ? 'bg-rose-500' : ($vaccination->is_coming_soon ? 'bg-amber-500' : 'bg-teal-500') }}"></div>
+                                    <div>
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <span class="font-medium text-slate-800">{{ $vaccination->vaccine_name }}</span>
+                                            @if($vaccination->is_due)
+                                                <span class="badge badge-sm bg-rose-100 text-rose-700 border-0">Due</span>
+                                            @elseif($vaccination->is_coming_soon)
+                                                <span class="badge badge-sm bg-amber-100 text-amber-700 border-0">Due Soon</span>
+                                            @endif
+                                        </div>
+                                        <div class="text-sm text-slate-500 mt-1 space-y-0.5">
+                                            @if($vaccination->vaccination_date)
+                                                <p>Received: {{ $vaccination->vaccination_date->format('M d, Y') }}</p>
+                                            @endif
+                                            @if($vaccination->next_vaccination_date)
+                                                <p>Next: {{ $vaccination->next_vaccination_date->format('M d, Y') }}</p>
+                                            @endif
+                                            @if($vaccination->administered_by)
+                                                <p>By: {{ $vaccination->administered_by }}</p>
+                                            @endif
+                                        </div>
+                                        @if($vaccination->document_path)
+                                            <a href="{{ route('member.vaccination.download', [$member, $vaccination]) }}" class="inline-flex items-center gap-1 text-sm text-teal-600 hover:text-teal-700 mt-1">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                                                {{ $vaccination->document_name }}
+                                            </a>
+                                        @endif
+                                    </div>
+                                </div>
+                                <div class="flex gap-1">
+                                    <button type="button" onclick="toggleVaccinationEdit({{ $vaccination->id }})" class="btn btn-ghost btn-xs text-slate-500 hover:bg-slate-100">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                                    </button>
+                                    <form action="{{ route('member.vaccination.destroy', [$member, $vaccination]) }}" method="POST" onsubmit="event.preventDefault(); confirmDelete(this, 'Remove Vaccination?', 'Are you sure you want to remove this vaccination record? This action cannot be undone.')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-ghost btn-xs text-rose-500 hover:bg-rose-50">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            <!-- Edit Mode -->
+                            <div id="vaccinationEdit{{ $vaccination->id }}" class="hidden p-3 bg-teal-50 border-t border-teal-200">
+                                <form action="{{ route('member.vaccination.update', [$member, $vaccination]) }}" method="POST" enctype="multipart/form-data">
+                                    @csrf
+                                    @method('PUT')
+                                    <div class="space-y-3">
+                                        <div>
+                                            <label class="block text-sm font-medium text-slate-700 mb-1">Vaccine <span class="text-rose-500">*</span></label>
+                                            <select name="vaccine_type" required onchange="toggleCustomVaccineEdit(this, {{ $vaccination->id }})" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20">
+                                                @foreach($vaccineTypes as $key => $label)
+                                                    <option value="{{ $key }}" {{ $vaccination->vaccine_type == $key ? 'selected' : '' }}>{{ $label }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div id="customVaccineFieldEdit{{ $vaccination->id }}" class="{{ $vaccination->vaccine_type === 'other' ? '' : 'hidden' }}">
+                                            <label class="block text-sm font-medium text-slate-700 mb-1">Custom Vaccine Name</label>
+                                            <input type="text" name="custom_vaccine_name" value="{{ $vaccination->custom_vaccine_name }}" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20">
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <x-date-select
+                                                name="vaccination_date"
+                                                label="Date of Vaccination"
+                                                :value="$vaccination->vaccination_date"
+                                            />
+                                            <x-date-select
+                                                name="next_vaccination_date"
+                                                label="Next Vaccination"
+                                                :value="$vaccination->next_vaccination_date"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-slate-700 mb-1">Administered By</label>
+                                            <input type="text" name="administered_by" value="{{ $vaccination->administered_by }}" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-slate-700 mb-1">Notes</label>
+                                            <textarea name="notes" rows="2" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20">{{ $vaccination->notes }}</textarea>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-slate-700 mb-1">Upload New Document</label>
+                                            <input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png" class="file-input file-input-bordered file-input-xs w-full">
+                                            @if($vaccination->document_path)
+                                                <p class="text-xs text-slate-500 mt-1">Current: {{ $vaccination->document_name }}</p>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-2 mt-3">
+                                        <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                                        <button type="button" onclick="toggleVaccinationEdit({{ $vaccination->id }})" class="btn btn-ghost btn-sm">Cancel</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @else
+                <div class="text-center py-6 text-slate-400">
+                    <p class="text-sm">No vaccinations recorded</p>
+                </div>
+            @endif
+        </div>
+    </div>
+
     {{-- Insurance Information - Commented out for now
     <div class="card bg-base-100 shadow-sm">
         <div class="card-body">
@@ -930,6 +1111,36 @@ function toggleBloodTypeForm() {
     const display = document.getElementById('bloodTypeDisplay');
     display.classList.toggle('hidden');
     form.classList.toggle('hidden');
+}
+
+function toggleVaccinationForm() {
+    const form = document.getElementById('vaccinationForm');
+    form.classList.toggle('hidden');
+}
+
+function toggleVaccinationEdit(id) {
+    const display = document.getElementById('vaccinationDisplay' + id);
+    const edit = document.getElementById('vaccinationEdit' + id);
+    display.classList.toggle('hidden');
+    edit.classList.toggle('hidden');
+}
+
+function toggleCustomVaccine(select) {
+    const customField = document.getElementById('customVaccineField');
+    if (select.value === 'other') {
+        customField.classList.remove('hidden');
+    } else {
+        customField.classList.add('hidden');
+    }
+}
+
+function toggleCustomVaccineEdit(select, id) {
+    const customField = document.getElementById('customVaccineFieldEdit' + id);
+    if (select.value === 'other') {
+        customField.classList.remove('hidden');
+    } else {
+        customField.classList.add('hidden');
+    }
 }
 
 // Confirmation Modal Functions
