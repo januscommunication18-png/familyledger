@@ -119,9 +119,13 @@
 
                 <!-- Profile Card -->
                 <a href="{{ route('settings.index') }}" class="mx-3 mt-4 mb-2 flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-slate-800">
-                    <div class="w-9 h-9 shrink-0 rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center">
-                        <span class="text-xs font-bold text-white">{{ strtoupper(substr(auth()->user()->name ?? 'U', 0, 1)) }}</span>
-                    </div>
+                    @if(auth()->user()->avatar)
+                        <img src="{{ Storage::disk('do_spaces')->url(auth()->user()->avatar) }}" alt="{{ auth()->user()->name }}" class="w-9 h-9 shrink-0 rounded-lg object-cover">
+                    @else
+                        <div class="w-9 h-9 shrink-0 rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center">
+                            <span class="text-xs font-bold text-white">{{ strtoupper(substr(auth()->user()->name ?? 'U', 0, 1)) }}</span>
+                        </div>
+                    @endif
                     <div class="profile-info flex-1 min-w-0 overflow-hidden">
                         <p class="font-medium text-sm text-white truncate">{{ auth()->user()->name ?? 'User' }}</p>
                         <p class="text-xs text-slate-400 truncate">{{ auth()->user()->role_name ?? 'Member' }}</p>
@@ -281,9 +285,13 @@
                         <!-- User Menu -->
                         <div class="dropdown dropdown-end">
                             <button tabindex="0" class="flex items-center gap-2 p-1 rounded-lg hover:bg-slate-100">
-                                <div class="w-9 h-9 shrink-0 rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center">
-                                    <span class="text-sm font-bold text-white">{{ strtoupper(substr(auth()->user()->name ?? 'U', 0, 1)) }}</span>
-                                </div>
+                                @if(auth()->user()->avatar)
+                                    <img src="{{ Storage::disk('do_spaces')->url(auth()->user()->avatar) }}" alt="{{ auth()->user()->name }}" class="w-9 h-9 shrink-0 rounded-lg object-cover">
+                                @else
+                                    <div class="w-9 h-9 shrink-0 rounded-lg bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center">
+                                        <span class="text-sm font-bold text-white">{{ strtoupper(substr(auth()->user()->name ?? 'U', 0, 1)) }}</span>
+                                    </div>
+                                @endif
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 hidden sm:block"><path d="m6 9 6 6 6-6"/></svg>
                             </button>
                             <ul tabindex="0" class="dropdown-menu dropdown-open:opacity-100 hidden mt-2 w-56 p-2 bg-white shadow-xl border border-slate-200 rounded-xl">

@@ -4,6 +4,11 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use PragmaRX\Google2FA\Google2FA;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
 
 class OnboardingController extends Controller
 {
@@ -40,6 +45,29 @@ class OnboardingController extends Controller
         'DE' => 'Germany',
         'FR' => 'France',
         'OTHER' => 'Other',
+    ];
+
+    public const COUNTRY_CODES = [
+        '+1' => 'US/CA (+1)',
+        '+44' => 'UK (+44)',
+        '+61' => 'AU (+61)',
+        '+49' => 'DE (+49)',
+        '+33' => 'FR (+33)',
+        '+91' => 'IN (+91)',
+        '+86' => 'CN (+86)',
+        '+81' => 'JP (+81)',
+        '+82' => 'KR (+82)',
+        '+52' => 'MX (+52)',
+        '+55' => 'BR (+55)',
+        '+34' => 'ES (+34)',
+        '+39' => 'IT (+39)',
+        '+31' => 'NL (+31)',
+        '+7' => 'RU (+7)',
+        '+65' => 'SG (+65)',
+        '+971' => 'UAE (+971)',
+        '+966' => 'SA (+966)',
+        '+27' => 'ZA (+27)',
+        '+234' => 'NG (+234)',
     ];
 
     public const FAMILY_TYPES = [
@@ -100,11 +128,17 @@ class OnboardingController extends Controller
             return redirect()->route('dashboard');
         }
 
+        // Split name into first and last if not already set
+        $nameParts = explode(' ', $user->name, 2);
+        $firstName = $user->first_name ?? $nameParts[0] ?? '';
+        $lastName = $user->last_name ?? ($nameParts[1] ?? '');
+
         return view('onboarding.index', [
             'step' => $tenant->onboarding_step ?? 1,
             'totalSteps' => self::TOTAL_STEPS,
             'goals' => self::GOALS,
             'countries' => self::COUNTRIES,
+            'countryCodes' => self::COUNTRY_CODES,
             'familyTypes' => self::FAMILY_TYPES,
             'roles' => self::ROLES,
             'quickSetup' => self::QUICK_SETUP,
@@ -120,7 +154,13 @@ class OnboardingController extends Controller
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
+                'first_name' => $firstName,
+                'last_name' => $lastName,
                 'email' => $user->email,
+                'backup_email' => $user->backup_email,
+                'country_code' => $user->country_code,
+                'phone' => $user->phone,
+                'phone_verified' => $user->phone_verified_at ? '1' : '0',
                 'role' => $user->role,
             ],
             'timezones' => $this->getTimezones(),
@@ -132,9 +172,17 @@ class OnboardingController extends Controller
         $request->validate([
             'goals' => 'required|array|min:1',
             'goals.*' => 'string|in:' . implode(',', array_keys(self::GOALS)),
+            'backup_email' => 'nullable|email|max:255',
         ]);
 
-        $tenant = $request->user()->tenant;
+        $user = $request->user();
+        $tenant = $user->tenant;
+
+        // Save backup email if provided
+        if ($request->filled('backup_email')) {
+            $user->update(['backup_email' => $request->backup_email]);
+        }
+
         $tenant->update([
             'goals' => $request->goals,
             'onboarding_step' => 2,
@@ -148,13 +196,26 @@ class OnboardingController extends Controller
     public function step2(Request $request)
     {
         $request->validate([
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'country_code' => 'nullable|string|max:10',
+            'phone' => 'nullable|string|max:20',
             'name' => 'required|string|max:255',
             'country' => 'required|string|in:' . implode(',', array_keys(self::COUNTRIES)),
             'timezone' => 'required|string|timezone',
             'family_type' => 'nullable|string|in:' . implode(',', array_keys(self::FAMILY_TYPES)),
         ]);
 
-        $tenant = $request->user()->tenant;
+        $user = $request->user();
+        $user->update([
+            'first_name' => $request->first_name,
+            'last_name' => $request->last_name,
+            'name' => $request->first_name . ' ' . $request->last_name,
+            'country_code' => $request->country_code,
+            'phone' => $request->phone,
+        ]);
+
+        $tenant = $user->tenant;
         $tenant->update([
             'name' => $request->name,
             'country' => $request->country,
@@ -163,7 +224,7 @@ class OnboardingController extends Controller
             'onboarding_step' => 3,
         ]);
 
-        Log::info('Onboarding step 2 completed', ['tenant_id' => $tenant->id]);
+        Log::info('Onboarding step 2 completed', ['tenant_id' => $tenant->id, 'user_id' => $user->id]);
 
         return redirect()->route('onboarding');
     }
@@ -210,19 +271,193 @@ class OnboardingController extends Controller
         $tenant->setSetting('email_notifications', $request->has('email_notifications'));
         $tenant->save();
 
-        // If 2FA is enabled
-        if ($request->has('enable_2fa')) {
-            $user->update(['mfa_enabled' => true]);
-        }
+        // Update user MFA settings
+        $user->update([
+            'mfa_enabled' => $request->has('enable_2fa'),
+            'phone_2fa_enabled' => $request->has('enable_phone_2fa') && !empty($user->phone),
+            'mfa_method' => $request->has('enable_phone_2fa') ? 'sms' : ($request->has('enable_2fa') ? 'authenticator' : null),
+        ]);
 
         $tenant->update([
             'onboarding_completed' => true,
             'onboarding_step' => self::TOTAL_STEPS,
         ]);
 
-        Log::info('Onboarding completed', ['tenant_id' => $tenant->id, 'user_id' => $user->id]);
+        Log::info('Onboarding completed', [
+            'tenant_id' => $tenant->id,
+            'user_id' => $user->id,
+            'mfa_enabled' => $user->mfa_enabled,
+            'phone_2fa_enabled' => $user->phone_2fa_enabled,
+        ]);
 
         return redirect()->route('dashboard')->with('success', 'Welcome! Your account is all set up.');
+    }
+
+    public function generateRecoveryCodes(Request $request)
+    {
+        $user = $request->user();
+
+        // Generate 8 recovery codes
+        $codes = [];
+        for ($i = 0; $i < 8; $i++) {
+            $codes[] = strtoupper(bin2hex(random_bytes(4))) . '-' . strtoupper(bin2hex(random_bytes(4)));
+        }
+
+        // Store hashed codes in database
+        $hashedCodes = array_map(fn($code) => [
+            'code' => hash('sha256', $code),
+            'used' => false,
+        ], $codes);
+
+        $user->update(['recovery_codes' => $hashedCodes]);
+
+        Log::info('Recovery codes generated', ['user_id' => $user->id]);
+
+        // Return plain codes to user (only time they'll see them)
+        return response()->json(['codes' => $codes]);
+    }
+
+    public function sendPhoneCode(Request $request)
+    {
+        $user = $request->user();
+
+        if (empty($user->phone)) {
+            return response()->json(['success' => false, 'message' => 'No phone number on file.']);
+        }
+
+        // Generate 6-digit code
+        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        // Store code in session with expiry (10 minutes)
+        session([
+            'phone_verification_code' => $code,
+            'phone_verification_expires' => now()->addMinutes(10),
+        ]);
+
+        // Send via Twilio
+        $twilioService = app(\App\Services\TwilioService::class);
+
+        if ($twilioService->isConfigured()) {
+            $phoneNumber = $user->country_code . $user->phone;
+            $sent = $twilioService->sendVerificationCode($phoneNumber, $code);
+
+            if (!$sent) {
+                return response()->json(['success' => false, 'message' => 'Failed to send SMS. Please try again.']);
+            }
+            Log::info('Phone verification code sent via Twilio', ['user_id' => $user->id]);
+        } else {
+            // For development without Twilio configured, log the code
+            Log::info('Phone verification code (Twilio not configured)', [
+                'code' => $code,
+                'user_id' => $user->id,
+                'phone' => $user->country_code . $user->phone
+            ]);
+        }
+
+        return response()->json(['success' => true, 'dev_mode' => !$twilioService->isConfigured()]);
+    }
+
+    public function verifyPhoneCode(Request $request)
+    {
+        $request->validate(['code' => 'required|string|size:6']);
+
+        $storedCode = session('phone_verification_code');
+        $expiresAt = session('phone_verification_expires');
+
+        if (!$storedCode || !$expiresAt) {
+            return response()->json(['success' => false, 'message' => 'No verification code found. Please request a new one.']);
+        }
+
+        if (now()->gt($expiresAt)) {
+            session()->forget(['phone_verification_code', 'phone_verification_expires']);
+            return response()->json(['success' => false, 'message' => 'Code expired. Please request a new one.']);
+        }
+
+        if ($request->code !== $storedCode) {
+            return response()->json(['success' => false, 'message' => 'Invalid code. Please try again.']);
+        }
+
+        // Mark phone as verified
+        $user = $request->user();
+        $user->update(['phone_verified_at' => now()]);
+
+        // Clear session
+        session()->forget(['phone_verification_code', 'phone_verification_expires']);
+
+        Log::info('Phone verified', ['user_id' => $user->id]);
+
+        return response()->json(['success' => true]);
+    }
+
+    public function generate2FASecret(Request $request)
+    {
+        $user = $request->user();
+        $google2fa = new Google2FA();
+
+        // Generate secret
+        $secret = $google2fa->generateSecretKey();
+
+        // Store temporarily in session
+        session(['2fa_secret' => $secret]);
+
+        // Generate QR code
+        $qrCodeUrl = $google2fa->getQRCodeUrl(
+            config('app.name', 'FamilyLedger'),
+            $user->email,
+            $secret
+        );
+
+        // Generate SVG QR code
+        $renderer = new ImageRenderer(
+            new RendererStyle(200),
+            new SvgImageBackEnd()
+        );
+        $writer = new Writer($renderer);
+        $qrCodeSvg = $writer->writeString($qrCodeUrl);
+
+        return response()->json([
+            'success' => true,
+            'secret' => $secret,
+            'qr_code' => $qrCodeSvg,
+        ]);
+    }
+
+    public function verify2FACode(Request $request)
+    {
+        $request->validate([
+            'code' => 'required|string|size:6',
+            'secret' => 'required|string',
+        ]);
+
+        $google2fa = new Google2FA();
+        $secret = $request->secret;
+        $code = $request->code;
+
+        // Verify the code
+        $valid = $google2fa->verifyKey($secret, $code);
+
+        if (!$valid) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid code. Please check and try again.',
+            ]);
+        }
+
+        // Save the secret to user
+        $user = $request->user();
+        $user->update([
+            'two_factor_secret' => encrypt($secret),
+            'two_factor_confirmed_at' => now(),
+            'mfa_enabled' => true,
+            'mfa_method' => 'authenticator',
+        ]);
+
+        // Clear session
+        session()->forget('2fa_secret');
+
+        Log::info('2FA authenticator enabled', ['user_id' => $user->id]);
+
+        return response()->json(['success' => true]);
     }
 
     public function back(Request $request)

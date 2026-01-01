@@ -51,7 +51,11 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $fillable = [
         'tenant_id',
         'name',
+        'first_name',
+        'last_name',
         'email',
+        'backup_email',
+        'country_code',
         'phone',
         'password',
         'role',
@@ -60,6 +64,10 @@ class User extends Authenticatable implements MustVerifyEmail
         'is_active',
         'mfa_enabled',
         'mfa_method',
+        'phone_2fa_enabled',
+        'recovery_codes',
+        'two_factor_secret',
+        'two_factor_confirmed_at',
     ];
 
     /**
@@ -88,6 +96,8 @@ class User extends Authenticatable implements MustVerifyEmail
             'last_login_at' => 'datetime',
             'is_active' => 'boolean',
             'mfa_enabled' => 'boolean',
+            'phone_2fa_enabled' => 'boolean',
+            'recovery_codes' => 'encrypted:array',
             'password' => 'hashed',
         ];
     }

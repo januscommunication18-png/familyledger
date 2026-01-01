@@ -279,4 +279,9 @@ Route::middleware(['security.code', 'auth'])->group(function () {
     Route::post('/onboarding/step4', [OnboardingController::class, 'step4']);
     Route::post('/onboarding/step5', [OnboardingController::class, 'step5']);
     Route::post('/onboarding/back', [OnboardingController::class, 'back']);
+    Route::post('/onboarding/generate-recovery-codes', [OnboardingController::class, 'generateRecoveryCodes']);
+    Route::post('/onboarding/send-phone-code', [OnboardingController::class, 'sendPhoneCode']);
+    Route::post('/onboarding/verify-phone-code', [OnboardingController::class, 'verifyPhoneCode']);
+    Route::post('/onboarding/generate-2fa-secret', [OnboardingController::class, 'generate2FASecret']);
+    Route::post('/onboarding/verify-2fa-code', [OnboardingController::class, 'verify2FACode']);
 });
