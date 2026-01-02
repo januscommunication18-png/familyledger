@@ -49,6 +49,8 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::disableForeignKeyConstraints();
         Schema::dropIfExists('todo_items');
+        Schema::enableForeignKeyConstraints();
     }
 };

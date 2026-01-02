@@ -46,6 +46,8 @@ return new class extends Migration
 
     public function down(): void
     {
+        Schema::disableForeignKeyConstraints();
         Schema::dropIfExists('member_medical_info');
+        Schema::enableForeignKeyConstraints();
     }
 };

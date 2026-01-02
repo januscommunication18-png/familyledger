@@ -127,6 +127,7 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::disableForeignKeyConstraints();
         Schema::dropIfExists('person_links');
         Schema::dropIfExists('person_attachments');
         Schema::dropIfExists('person_important_dates');
@@ -134,5 +135,6 @@ return new class extends Migration
         Schema::dropIfExists('person_phones');
         Schema::dropIfExists('person_emails');
         Schema::dropIfExists('people');
+        Schema::enableForeignKeyConstraints();
     }
 };
