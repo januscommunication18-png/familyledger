@@ -33,7 +33,7 @@ class FixEncryptedUserData extends Command
                 try {
                     $plainEmail = $this->decryptValue($user->email);
                     $updates['email'] = $plainEmail;
-                    $this->line("User {$user->id} email: {$plainEmail}");
+                    $this->line("User {$user->id} email (decrypt): {$plainEmail}");
                 } catch (\Exception $e) {
                     $this->error("User {$user->id} email ERROR: {$e->getMessage()}");
                     $errors++;
@@ -43,16 +43,24 @@ class FixEncryptedUserData extends Command
             // Fix encrypted fields
             foreach ($fieldsToFix as $field) {
                 $value = $user->$field;
-                if ($value && str_starts_with($value, 'eyJ')) {
-                    try {
+                if (empty($value)) {
+                    continue;
+                }
+
+                try {
+                    if (str_starts_with($value, 'eyJ')) {
+                        // Already encrypted - decrypt and re-encrypt properly
                         $plainValue = $this->decryptValue($value);
-                        // Re-encrypt with encryptString for Laravel's encrypted cast
                         $updates[$field] = Crypt::encryptString($plainValue);
-                        $this->line("User {$user->id} {$field}: {$plainValue}");
-                    } catch (\Exception $e) {
-                        $this->error("User {$user->id} {$field} ERROR: {$e->getMessage()}");
-                        $errors++;
+                        $this->line("User {$user->id} {$field} (re-encrypt): {$plainValue}");
+                    } else {
+                        // Plain text - needs to be encrypted
+                        $updates[$field] = Crypt::encryptString($value);
+                        $this->line("User {$user->id} {$field} (encrypt): {$value}");
                     }
+                } catch (\Exception $e) {
+                    $this->error("User {$user->id} {$field} ERROR: {$e->getMessage()}");
+                    $errors++;
                 }
             }
 
