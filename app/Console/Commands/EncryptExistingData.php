@@ -120,17 +120,18 @@ class EncryptExistingData extends Command
                 $needsUpdate = false;
                 $updates = [];
 
-                // Check if email needs email_hash
+                // Check if email needs email_hash (email stays plain text, only hash is added)
                 if (empty($user->email_hash) && !empty($user->email)) {
-                    // Check if email is already encrypted (starts with eyJ)
-                    if (!$this->isEncrypted($user->email) || $force) {
-                        $email = $this->isEncrypted($user->email)
-                            ? Crypt::decryptString($user->email)
-                            : $user->email;
-                        $updates['email_hash'] = hash('sha256', strtolower(trim($email)));
-                        $updates['email'] = Crypt::encryptString($email);
-                        $needsUpdate = true;
+                    // If email was previously encrypted, decrypt it first
+                    $email = $this->isEncrypted($user->email)
+                        ? Crypt::decryptString($user->email)
+                        : $user->email;
+                    $updates['email_hash'] = hash('sha256', strtolower(trim($email)));
+                    // Keep email as plain text (not encrypted) - email_hash provides privacy for lookups
+                    if ($this->isEncrypted($user->email)) {
+                        $updates['email'] = $email; // Restore plain text if was encrypted
                     }
+                    $needsUpdate = true;
                 }
 
                 // Encrypt other fields
