@@ -86,6 +86,7 @@ Route::middleware(['security.code', 'guest'])->group(function () {
 Route::middleware('web')->group(function () {
     Route::get('/auth/mfa', [MfaController::class, 'show'])->name('mfa.show');
     Route::post('/auth/mfa/verify', [MfaController::class, 'verify']);
+    Route::post('/auth/mfa/email/send', [MfaController::class, 'sendEmailCode']);
     Route::post('/auth/mfa/sms/send', [MfaController::class, 'sendSmsCode']);
 });
 

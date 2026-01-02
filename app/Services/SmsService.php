@@ -11,15 +11,23 @@ use Illuminate\Support\Facades\Log;
  */
 class SmsService
 {
-    protected string $sid;
-    protected string $authToken;
-    protected string $fromNumber;
+    protected ?string $sid;
+    protected ?string $authToken;
+    protected ?string $fromNumber;
 
     public function __construct()
     {
         $this->sid = config('services.twilio.sid');
         $this->authToken = config('services.twilio.auth_token');
         $this->fromNumber = config('services.twilio.phone_number');
+    }
+
+    /**
+     * Check if SMS service is configured.
+     */
+    public function isConfigured(): bool
+    {
+        return !empty($this->sid) && !empty($this->authToken) && !empty($this->fromNumber);
     }
 
     /**

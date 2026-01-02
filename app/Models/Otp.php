@@ -29,6 +29,7 @@ class Otp extends Model
      */
     public const TYPE_EMAIL_LOGIN = 'email_login';
     public const TYPE_EMAIL_VERIFY = 'email_verify';
+    public const TYPE_EMAIL_MFA = 'email_mfa';
     public const TYPE_SMS_MFA = 'sms_mfa';
     public const TYPE_PHONE_VERIFY = 'phone_verify';
     public const TYPE_PASSWORD_RESET = 'password_reset';

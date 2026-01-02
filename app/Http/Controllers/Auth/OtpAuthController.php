@@ -93,8 +93,8 @@ class OtpAuthController extends Controller
         // Clear rate limits on success
         RateLimiter::clear($key);
 
-        // Find or create user
-        $user = User::where('email', $email)->first();
+        // Find or create user (use findByEmail which uses the email_hash index)
+        $user = User::findByEmail($email);
 
         if (!$user) {
             // This is a new user - create account

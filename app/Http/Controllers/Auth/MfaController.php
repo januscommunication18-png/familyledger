@@ -9,11 +9,13 @@ use App\Services\SmsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
+use PragmaRX\Google2FA\Google2FA;
 
 /**
  * Controller for Multi-Factor Authentication (MFA).
- * Supports SMS authentication.
+ * Supports Email, Authenticator App, and SMS authentication.
  */
 class MfaController extends Controller
 {
@@ -41,10 +43,111 @@ class MfaController extends Controller
             return redirect('/login');
         }
 
+        // Determine available MFA methods for this user
+        $availableMethods = [];
+
+        // Check if authenticator is set up
+        if ($user->two_factor_secret && $user->two_factor_confirmed_at) {
+            $availableMethods[] = 'authenticator';
+        }
+
+        // Check if email is verified
+        if ($user->email && $user->email_verified_at) {
+            $availableMethods[] = 'email';
+        }
+
+        // SMS is always shown but marked as coming soon if not configured
+        $smsAvailable = $user->phone && $user->phone_verified_at && $this->smsService->isConfigured();
+        if ($smsAvailable) {
+            $availableMethods[] = 'sms';
+        }
+
+        // Default method priority: authenticator > email > sms
+        $defaultMethod = null;
+        if (in_array('authenticator', $availableMethods)) {
+            $defaultMethod = 'authenticator';
+        } elseif (in_array('email', $availableMethods)) {
+            $defaultMethod = 'email';
+        } elseif (in_array('sms', $availableMethods)) {
+            $defaultMethod = 'sms';
+        }
+
+        // If user has a preferred method and it's available, use it
+        if ($user->mfa_method && in_array($user->mfa_method, $availableMethods)) {
+            $defaultMethod = $user->mfa_method;
+        }
+
         return view('auth.mfa', [
-            'method' => $user->mfa_method,
+            'method' => $defaultMethod,
+            'availableMethods' => $availableMethods,
+            'email' => $user->email ? $this->maskEmail($user->email) : null,
             'phone_last_four' => $user->phone ? substr($user->phone, -4) : null,
+            'smsConfigured' => $this->smsService->isConfigured(),
+            'hasPhone' => (bool) $user->phone,
         ]);
+    }
+
+    /**
+     * Mask email for display.
+     */
+    private function maskEmail(string $email): string
+    {
+        $parts = explode('@', $email);
+        $name = $parts[0];
+        $domain = $parts[1] ?? '';
+
+        if (strlen($name) <= 2) {
+            $masked = $name[0] . '***';
+        } else {
+            $masked = substr($name, 0, 2) . str_repeat('*', max(strlen($name) - 2, 3));
+        }
+
+        return $masked . '@' . $domain;
+    }
+
+    /**
+     * Send Email MFA code.
+     */
+    public function sendEmailCode(Request $request)
+    {
+        $userId = session('mfa_user_id');
+        $user = User::find($userId);
+
+        if (!$user || !$user->email) {
+            return response()->json(['error' => 'Email not configured'], 400);
+        }
+
+        // Rate limiting
+        $key = 'mfa_email:' . $user->id;
+        if (RateLimiter::tooManyAttempts($key, 3)) {
+            $seconds = RateLimiter::availableIn($key);
+            return response()->json([
+                'error' => "Too many attempts. Try again in {$seconds} seconds.",
+            ], 429);
+        }
+
+        RateLimiter::hit($key, 120);
+
+        // Generate OTP
+        $otp = Otp::generate($user->email, Otp::TYPE_EMAIL_MFA);
+
+        // Send email
+        try {
+            Mail::send('emails.mfa-code', ['code' => $otp->code, 'user' => $user], function ($message) use ($user) {
+                $message->to($user->email)
+                    ->subject('Your Family Ledger Login Code');
+            });
+
+            Log::info('MFA email sent', ['user_id' => $user->id]);
+
+            return response()->json([
+                'message' => 'Verification code sent to your email',
+                'email' => $this->maskEmail($user->email),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to send MFA email', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Failed to send email'], 500);
+        }
     }
 
     /**
@@ -56,7 +159,11 @@ class MfaController extends Controller
         $user = User::find($userId);
 
         if (!$user || !$user->phone) {
-            return response()->json(['error' => 'MFA not configured'], 400);
+            return response()->json(['error' => 'Phone number not configured'], 400);
+        }
+
+        if (!$this->smsService->isConfigured()) {
+            return response()->json(['error' => 'SMS service not available'], 503);
         }
 
         // Rate limiting
@@ -91,7 +198,8 @@ class MfaController extends Controller
     public function verify(Request $request)
     {
         $request->validate([
-            'code' => 'required|string|size:6',
+            'code' => 'required|string|min:6|max:6',
+            'method' => 'nullable|string|in:authenticator,email,sms',
         ]);
 
         $userId = session('mfa_user_id');
@@ -112,15 +220,35 @@ class MfaController extends Controller
 
         RateLimiter::hit($key, 300);
 
-        // Verify based on MFA method
+        // Determine which method to use
+        $method = $request->method ?? $user->mfa_method ?? 'authenticator';
         $verified = false;
 
-        if ($user->mfa_method === 'sms') {
-            $verified = Otp::verify($user->phone, Otp::TYPE_SMS_MFA, $request->code);
+        if ($method === 'authenticator') {
+            // Verify using Google2FA
+            if ($user->two_factor_secret) {
+                try {
+                    $google2fa = new Google2FA();
+                    $secret = decrypt($user->two_factor_secret);
+                    $verified = $google2fa->verifyKey($secret, $request->code);
+                } catch (\Exception $e) {
+                    Log::error('Authenticator verification failed', ['error' => $e->getMessage()]);
+                }
+            }
+        } elseif ($method === 'email') {
+            // Verify using Email OTP
+            if ($user->email) {
+                $verified = Otp::verify($user->email, Otp::TYPE_EMAIL_MFA, $request->code);
+            }
+        } elseif ($method === 'sms') {
+            // Verify using SMS OTP
+            if ($user->phone) {
+                $verified = Otp::verify($user->phone, Otp::TYPE_SMS_MFA, $request->code);
+            }
         }
 
         if (!$verified) {
-            Log::warning('Invalid MFA code', ['user_id' => $user->id]);
+            Log::warning('Invalid MFA code', ['user_id' => $user->id, 'method' => $method]);
             return response()->json(['error' => 'Invalid verification code'], 401);
         }
 
@@ -132,7 +260,7 @@ class MfaController extends Controller
         Auth::login($user, true);
         $user->recordLogin();
 
-        Log::info('MFA verified successfully', ['user_id' => $user->id]);
+        Log::info('MFA verified successfully', ['user_id' => $user->id, 'method' => $method]);
 
         return response()->json([
             'message' => 'Verification successful',
@@ -148,6 +276,10 @@ class MfaController extends Controller
         $request->validate([
             'phone' => 'required|string|min:10|max:20',
         ]);
+
+        if (!$this->smsService->isConfigured()) {
+            return response()->json(['error' => 'SMS service not available'], 503);
+        }
 
         $user = $request->user();
         $phone = $request->phone;
