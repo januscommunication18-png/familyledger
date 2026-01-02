@@ -201,6 +201,22 @@
                             </a>
                         </li>
                         <li>
+                            <a href="{{ route('legal.index') }}" class="group flex items-center gap-3 px-2 py-2.5 rounded-lg text-sm font-medium @if(request()->routeIs('legal.*')) bg-gradient-to-r from-violet-600 to-purple-600 text-white @else text-slate-400 hover:text-white hover:bg-slate-800 @endif">
+                                <div class="w-5 h-5 shrink-0 flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 14 2 2"/><path d="M16 4a2 2 0 1 1 4 0v2a2 2 0 0 1-2 2h-2V4Z"/><path d="M11 6 7 10"/><path d="m7 6 4 4"/><rect x="2" y="2" width="8" height="8" rx="2"/><path d="M11 18H5a2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2h6"/><path d="m14 14 6 6"/></svg>
+                                </div>
+                                <span class="nav-text">Legal</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('family-resources.index') }}" class="group flex items-center gap-3 px-2 py-2.5 rounded-lg text-sm font-medium @if(request()->routeIs('family-resources.*')) bg-gradient-to-r from-violet-600 to-purple-600 text-white @else text-slate-400 hover:text-white hover:bg-slate-800 @endif">
+                                <div class="w-5 h-5 shrink-0 flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><path d="M12 10v6"/><path d="m9 13 3-3 3 3"/></svg>
+                                </div>
+                                <span class="nav-text">Family Resources</span>
+                            </a>
+                        </li>
+                        <li>
                             <a href="{{ route('lists.index') }}" class="group flex items-center gap-3 px-2 py-2.5 rounded-lg text-sm font-medium @if(request()->routeIs('lists.*')) bg-gradient-to-r from-violet-600 to-purple-600 text-white @else text-slate-400 hover:text-white hover:bg-slate-800 @endif">
                                 <div class="w-5 h-5 shrink-0 flex items-center justify-center">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\MfaController;
 use App\Http\Controllers\Auth\OtpAuthController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\FamilyCircleController;
@@ -18,6 +19,8 @@ use App\Http\Controllers\SecurityCodeController;
 use App\Http\Controllers\ImageVerificationController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\ListController;
+use App\Http\Controllers\LegalDocumentController;
+use App\Http\Controllers\FamilyResourceController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -60,6 +63,12 @@ Route::middleware(['security.code', 'guest'])->group(function () {
     Route::post('/auth/otp/request', [OtpAuthController::class, 'requestOtp']);
     Route::post('/auth/otp/verify', [OtpAuthController::class, 'verifyOtp']);
     Route::post('/auth/otp/resend', [OtpAuthController::class, 'resendOtp']);
+
+    // Password Reset
+    Route::get('/forgot-password', [PasswordResetController::class, 'showForgotForm'])->name('password.request');
+    Route::post('/forgot-password', [PasswordResetController::class, 'sendResetCode'])->name('password.email');
+    Route::post('/reset-password', [PasswordResetController::class, 'resetPassword'])->name('password.update');
+    Route::post('/forgot-password/resend', [PasswordResetController::class, 'resendCode'])->name('password.resend');
 
     // Social OAuth Routes
     Route::get('/auth/{provider}', [SocialAuthController::class, 'redirect'])
@@ -234,6 +243,38 @@ Route::middleware(['security.code', 'auth'])->group(function () {
     Route::put('/documents/tax-returns/{taxReturn}', [DocumentController::class, 'updateTaxReturn'])->middleware(['verified', 'onboarding'])->name('documents.tax-returns.update');
     Route::delete('/documents/tax-returns/{taxReturn}', [DocumentController::class, 'destroyTaxReturn'])->middleware(['verified', 'onboarding'])->name('documents.tax-returns.destroy');
     Route::get('/documents/tax-returns/{taxReturn}/download/{type}/{index}', [DocumentController::class, 'downloadTaxReturnFile'])->middleware(['verified', 'onboarding'])->name('documents.tax-returns.download');
+
+    // Legal Documents
+    Route::middleware(['verified', 'onboarding'])->prefix('legal')->name('legal.')->group(function () {
+        Route::get('/', [LegalDocumentController::class, 'index'])->name('index');
+        Route::get('/create', [LegalDocumentController::class, 'create'])->name('create');
+        Route::post('/', [LegalDocumentController::class, 'store'])->name('store');
+        Route::get('/{legalDocument}', [LegalDocumentController::class, 'show'])->name('show');
+        Route::get('/{legalDocument}/edit', [LegalDocumentController::class, 'edit'])->name('edit');
+        Route::put('/{legalDocument}', [LegalDocumentController::class, 'update'])->name('update');
+        Route::delete('/{legalDocument}', [LegalDocumentController::class, 'destroy'])->name('destroy');
+
+        // File management
+        Route::get('/{legalDocument}/files/{file}/download', [LegalDocumentController::class, 'downloadFile'])->name('files.download');
+        Route::get('/{legalDocument}/files/{file}/view', [LegalDocumentController::class, 'viewFile'])->name('files.view');
+        Route::delete('/{legalDocument}/files/{file}', [LegalDocumentController::class, 'destroyFile'])->name('files.destroy');
+    });
+
+    // Family Resources
+    Route::middleware(['verified', 'onboarding'])->prefix('family-resources')->name('family-resources.')->group(function () {
+        Route::get('/', [FamilyResourceController::class, 'index'])->name('index');
+        Route::get('/create', [FamilyResourceController::class, 'create'])->name('create');
+        Route::post('/', [FamilyResourceController::class, 'store'])->name('store');
+        Route::get('/{familyResource}', [FamilyResourceController::class, 'show'])->name('show');
+        Route::get('/{familyResource}/edit', [FamilyResourceController::class, 'edit'])->name('edit');
+        Route::put('/{familyResource}', [FamilyResourceController::class, 'update'])->name('update');
+        Route::delete('/{familyResource}', [FamilyResourceController::class, 'destroy'])->name('destroy');
+
+        // File management
+        Route::get('/{familyResource}/files/{file}/download', [FamilyResourceController::class, 'downloadFile'])->name('files.download');
+        Route::get('/{familyResource}/files/{file}/view', [FamilyResourceController::class, 'viewFile'])->name('files.view');
+        Route::delete('/{familyResource}/files/{file}', [FamilyResourceController::class, 'destroyFile'])->name('files.destroy');
+    });
 
     // Lists (To-Do & Shopping)
     Route::middleware(['verified', 'onboarding'])->prefix('lists')->name('lists.')->group(function () {
