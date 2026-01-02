@@ -37,22 +37,22 @@
 
     <!-- Tab Navigation -->
     <div class="flex rounded-lg bg-base-200 p-1 mb-6">
-        <button class="tab-btn flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all bg-base-100 shadow-sm text-base-content" data-tab="otp">
+        <button class="tab-btn flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all bg-base-100 shadow-sm text-base-content" data-tab="password">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            Login
+        </button>
+        <button class="tab-btn flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all text-base-content/60 hover:text-base-content" data-tab="otp">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
             Email Code
         </button>
-        <button class="tab-btn flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all text-base-content/60 hover:text-base-content" data-tab="password">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-            Password
-        </button>
     </div>
 
     <!-- OTP Login Form -->
-    <div id="otp-form">
+    <div id="otp-form" class="hidden">
         <form id="otp-request-form" class="space-y-4">
             <div class="form-control">
                 <label class="label">
@@ -105,7 +105,7 @@
     </div>
 
     <!-- Password Login Form -->
-    <div id="password-form" class="hidden">
+    <div id="password-form">
         <form class="space-y-4">
             <div class="form-control">
                 <label class="label">
