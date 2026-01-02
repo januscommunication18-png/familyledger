@@ -100,11 +100,6 @@ class User extends Authenticatable implements MustVerifyEmail
             'phone_2fa_enabled' => 'boolean',
             'recovery_codes' => 'encrypted:array',
             'password' => 'hashed',
-            // AES-256 encrypted PII fields
-            'name' => 'encrypted',
-            'first_name' => 'encrypted',
-            'last_name' => 'encrypted',
-            'email' => 'encrypted',
             'backup_email' => 'encrypted',
             'phone' => 'encrypted',
             'country_code' => 'encrypted',
