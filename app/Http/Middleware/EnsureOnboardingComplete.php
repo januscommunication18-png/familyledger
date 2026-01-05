@@ -34,6 +34,11 @@ class EnsureOnboardingComplete
                 return $next($request);
             }
 
+            // Allow collaborator invite acceptance
+            if ($request->routeIs('collaborator.accept*') || $request->is('invite/*')) {
+                return $next($request);
+            }
+
             return redirect()->route('onboarding');
         }
 

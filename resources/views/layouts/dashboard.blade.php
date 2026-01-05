@@ -185,6 +185,14 @@
                             </a>
                         </li>
                         <li>
+                            <a href="{{ route('pets.index') }}" class="group flex items-center gap-3 px-2 py-2.5 rounded-lg text-sm font-medium @if(request()->routeIs('pets.*')) bg-gradient-to-r from-violet-600 to-purple-600 text-white @else text-slate-400 hover:text-white hover:bg-slate-800 @endif">
+                                <div class="w-5 h-5 shrink-0 flex items-center justify-center text-lg">
+                                    🐾
+                                </div>
+                                <span class="nav-text">Pets</span>
+                            </a>
+                        </li>
+                        <li>
                             <a href="{{ route('assets.index') }}" class="group flex items-center gap-3 px-2 py-2.5 rounded-lg text-sm font-medium @if(request()->routeIs('assets.*')) bg-gradient-to-r from-violet-600 to-purple-600 text-white @else text-slate-400 hover:text-white hover:bg-slate-800 @endif">
                                 <div class="w-5 h-5 shrink-0 flex items-center justify-center">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
@@ -230,6 +238,14 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
                                 </div>
                                 <span class="nav-text">Shopping List</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('journal.index') }}" class="group flex items-center gap-3 px-2 py-2.5 rounded-lg text-sm font-medium @if(request()->routeIs('journal.*')) bg-gradient-to-r from-violet-600 to-purple-600 text-white @else text-slate-400 hover:text-white hover:bg-slate-800 @endif">
+                                <div class="w-5 h-5 shrink-0 flex items-center justify-center text-lg">
+                                    📔
+                                </div>
+                                <span class="nav-text">Journal</span>
                             </a>
                         </li>
                         <li>

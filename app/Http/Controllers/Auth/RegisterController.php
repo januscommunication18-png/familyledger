@@ -25,9 +25,13 @@ class RegisterController extends Controller
     /**
      * Show registration form.
      */
-    public function show()
+    public function show(Request $request)
     {
-        return view('auth.register');
+        return view('auth.register', [
+            'prefillEmail' => $request->query('email'),
+            'prefillName' => trim(($request->query('first_name') ?? '') . ' ' . ($request->query('last_name') ?? '')),
+            'redirect' => $request->query('redirect'),
+        ]);
     }
 
     /**
@@ -96,6 +100,13 @@ class RegisterController extends Controller
 
             // Log in the user
             Auth::login($user);
+
+            // Check if there's a pending collaborator invite redirect and store it in PHP session
+            $inviteRedirect = $request->header('X-Invite-Redirect');
+            if ($inviteRedirect && str_contains($inviteRedirect, '/invite/')) {
+                session(['pending_invite_redirect' => $inviteRedirect]);
+                Log::info('Stored pending invite redirect for collaborator', ['user_id' => $user->id, 'redirect' => $inviteRedirect]);
+            }
 
             return response()->json([
                 'message' => 'Registration successful. Please verify your email.',

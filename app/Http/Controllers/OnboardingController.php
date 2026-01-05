@@ -285,6 +285,14 @@ class OnboardingController extends Controller
             'phone_2fa_enabled' => $user->phone_2fa_enabled,
         ]);
 
+        // Check if there's a pending collaborator invite to accept
+        $pendingInviteRedirect = session('pending_invite_redirect');
+        if ($pendingInviteRedirect) {
+            session()->forget('pending_invite_redirect');
+            Log::info('Redirecting to pending invite after onboarding', ['user_id' => $user->id, 'redirect' => $pendingInviteRedirect]);
+            return redirect($pendingInviteRedirect)->with('success', 'Account setup complete! You can now accept the invitation.');
+        }
+
         return redirect()->route('dashboard')->with('success', 'Welcome! Your account is all set up.');
     }
 

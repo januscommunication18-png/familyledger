@@ -20,9 +20,11 @@ class PasswordResetController extends Controller
     /**
      * Show the forgot password form.
      */
-    public function showForgotForm()
+    public function showForgotForm(Request $request)
     {
-        return view('auth.forgot-password');
+        return view('auth.forgot-password', [
+            'prefillEmail' => $request->query('email'),
+        ]);
     }
 
     /**

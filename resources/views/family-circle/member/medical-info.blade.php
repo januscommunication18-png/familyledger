@@ -68,11 +68,14 @@
                             @endif
                         </div>
                     </div>
-                    <button type="button" onclick="toggleBloodTypeForm()" class="btn btn-ghost btn-xs text-slate-500 hover:bg-slate-100">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                    </button>
+                    @if($access->canEdit('medical'))
+                        <button type="button" onclick="toggleBloodTypeForm()" class="btn btn-ghost btn-xs text-slate-500 hover:bg-slate-100">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                        </button>
+                    @endif
                 </div>
                 <!-- Edit Mode -->
+                @if($access->canEdit('medical'))
                 <div id="bloodTypeForm" class="hidden p-3 bg-rose-50 border-t border-rose-200">
                     <form action="{{ route('member.medical-info.update', $member) }}" method="POST">
                         @csrf
@@ -92,6 +95,7 @@
                         </div>
                     </form>
                 </div>
+                @endif
             </div>
         </div>
     </div>
@@ -109,13 +113,16 @@
                         <p class="text-xs text-slate-400">Track medications and dosages</p>
                     </div>
                 </div>
-                <button type="button" onclick="toggleMedicationForm()" class="btn btn-primary btn-sm gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                    Add
-                </button>
+                @if($access->canCreate('medical'))
+                    <button type="button" onclick="toggleMedicationForm()" class="btn btn-primary btn-sm gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                        Add
+                    </button>
+                @endif
             </div>
 
             <!-- Add Medication Form (Hidden by default) -->
+            @if($access->canCreate('medical'))
             <div id="medicationForm" class="hidden mb-4 p-4 bg-violet-50 rounded-xl border border-violet-200">
                 <form action="{{ route('member.medication.store', $member) }}" method="POST">
                     @csrf
@@ -150,6 +157,7 @@
                     </div>
                 </form>
             </div>
+            @endif
 
             <!-- Medications List -->
             @if($member->medications->count() > 0)
@@ -170,20 +178,27 @@
                                         @endif
                                     </div>
                                 </div>
+                                @if($access->canEdit('medical') || $access->canDelete('medical'))
                                 <div class="flex gap-1">
-                                    <button type="button" onclick="toggleMedicationEdit({{ $medication->id }})" class="btn btn-ghost btn-xs text-slate-500 hover:bg-slate-100">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                                    </button>
-                                    <form action="{{ route('member.medication.destroy', [$member, $medication]) }}" method="POST" onsubmit="event.preventDefault(); confirmDelete(this, 'Remove Medication?', 'Are you sure you want to remove {{ $medication->name }}? This action cannot be undone.')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-ghost btn-xs text-rose-500 hover:bg-rose-50">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                    @if($access->canEdit('medical'))
+                                        <button type="button" onclick="toggleMedicationEdit({{ $medication->id }})" class="btn btn-ghost btn-xs text-slate-500 hover:bg-slate-100">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                                         </button>
-                                    </form>
+                                    @endif
+                                    @if($access->canDelete('medical'))
+                                        <form action="{{ route('member.medication.destroy', [$member, $medication]) }}" method="POST" onsubmit="event.preventDefault(); confirmDelete(this, 'Remove Medication?', 'Are you sure you want to remove {{ $medication->name }}? This action cannot be undone.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-ghost btn-xs text-rose-500 hover:bg-rose-50">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                            </button>
+                                        </form>
+                                    @endif
                                 </div>
+                                @endif
                             </div>
                             <!-- Edit Mode -->
+                            @if($access->canEdit('medical'))
                             <div id="medicationEdit{{ $medication->id }}" class="hidden p-3 bg-violet-50 border-t border-violet-200">
                                 <form action="{{ route('member.medication.update', [$member, $medication]) }}" method="POST">
                                     @csrf
@@ -215,6 +230,7 @@
                                     </div>
                                 </form>
                             </div>
+                            @endif
                         </div>
                     @endforeach
                 </div>
@@ -239,10 +255,12 @@
                         <p class="text-xs text-slate-400">Ongoing health conditions</p>
                     </div>
                 </div>
-                <button type="button" onclick="toggleConditionForm()" class="btn btn-primary btn-sm gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                    Add
-                </button>
+                @if($access->canCreate('medical'))
+                    <button type="button" onclick="toggleConditionForm()" class="btn btn-primary btn-sm gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                        Add
+                    </button>
+                @endif
             </div>
 
             <!-- Add Condition Form (Hidden by default) -->
@@ -300,20 +318,27 @@
                                         @endif
                                     </div>
                                 </div>
+                                @if($access->canEdit('medical') || $access->canDelete('medical'))
                                 <div class="flex gap-1">
-                                    <button type="button" onclick="toggleConditionEdit({{ $condition->id }})" class="btn btn-ghost btn-xs text-slate-500 hover:bg-slate-100">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                                    </button>
-                                    <form action="{{ route('member.condition.destroy', [$member, $condition]) }}" method="POST" onsubmit="event.preventDefault(); confirmDelete(this, 'Remove Condition?', 'Are you sure you want to remove {{ $condition->name }}? This action cannot be undone.')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-ghost btn-xs text-rose-500 hover:bg-rose-50">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                    @if($access->canEdit('medical'))
+                                        <button type="button" onclick="toggleConditionEdit({{ $condition->id }})" class="btn btn-ghost btn-xs text-slate-500 hover:bg-slate-100">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                                         </button>
-                                    </form>
+                                    @endif
+                                    @if($access->canDelete('medical'))
+                                        <form action="{{ route('member.condition.destroy', [$member, $condition]) }}" method="POST" onsubmit="event.preventDefault(); confirmDelete(this, 'Remove Condition?', 'Are you sure you want to remove {{ $condition->name }}? This action cannot be undone.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-ghost btn-xs text-rose-500 hover:bg-rose-50">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                            </button>
+                                        </form>
+                                    @endif
                                 </div>
+                                @endif
                             </div>
                             <!-- Edit Mode -->
+                            @if($access->canEdit('medical'))
                             <div id="conditionEdit{{ $condition->id }}" class="hidden p-3 bg-sky-50 border-t border-sky-200">
                                 <form action="{{ route('member.condition.update', [$member, $condition]) }}" method="POST">
                                     @csrf
@@ -346,6 +371,7 @@
                                     </div>
                                 </form>
                             </div>
+                            @endif
                         </div>
                     @endforeach
                 </div>
@@ -370,10 +396,12 @@
                         <p class="text-xs text-slate-400">Track immunization records</p>
                     </div>
                 </div>
-                <button type="button" onclick="toggleVaccinationForm()" class="btn btn-primary btn-sm gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                    Add
-                </button>
+                @if($access->canCreate('medical'))
+                    <button type="button" onclick="toggleVaccinationForm()" class="btn btn-primary btn-sm gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                        Add
+                    </button>
+                @endif
             </div>
 
             <!-- Add Vaccination Form (Hidden by default) -->
@@ -468,20 +496,27 @@
                                         @endif
                                     </div>
                                 </div>
+                                @if($access->canEdit('medical') || $access->canDelete('medical'))
                                 <div class="flex gap-1">
-                                    <button type="button" onclick="toggleVaccinationEdit({{ $vaccination->id }})" class="btn btn-ghost btn-xs text-slate-500 hover:bg-slate-100">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                                    </button>
-                                    <form action="{{ route('member.vaccination.destroy', [$member, $vaccination]) }}" method="POST" onsubmit="event.preventDefault(); confirmDelete(this, 'Remove Vaccination?', 'Are you sure you want to remove this vaccination record? This action cannot be undone.')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-ghost btn-xs text-rose-500 hover:bg-rose-50">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                    @if($access->canEdit('medical'))
+                                        <button type="button" onclick="toggleVaccinationEdit({{ $vaccination->id }})" class="btn btn-ghost btn-xs text-slate-500 hover:bg-slate-100">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                                         </button>
-                                    </form>
+                                    @endif
+                                    @if($access->canDelete('medical'))
+                                        <form action="{{ route('member.vaccination.destroy', [$member, $vaccination]) }}" method="POST" onsubmit="event.preventDefault(); confirmDelete(this, 'Remove Vaccination?', 'Are you sure you want to remove this vaccination record? This action cannot be undone.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-ghost btn-xs text-rose-500 hover:bg-rose-50">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                            </button>
+                                        </form>
+                                    @endif
                                 </div>
+                                @endif
                             </div>
                             <!-- Edit Mode -->
+                            @if($access->canEdit('medical'))
                             <div id="vaccinationEdit{{ $vaccination->id }}" class="hidden p-3 bg-teal-50 border-t border-teal-200">
                                 <form action="{{ route('member.vaccination.update', [$member, $vaccination]) }}" method="POST" enctype="multipart/form-data">
                                     @csrf
@@ -539,6 +574,7 @@
                                     </div>
                                 </form>
                             </div>
+                            @endif
                         </div>
                     @endforeach
                 </div>
@@ -563,10 +599,12 @@
                         <p class="text-xs text-slate-400">Health insurance details</p>
                     </div>
                 </div>
-                <button type="button" onclick="toggleInsuranceForm()" id="insuranceEditBtn" class="btn btn-primary btn-sm gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                    Edit
-                </button>
+                @if($access->canEdit('medical'))
+                    <button type="button" onclick="toggleInsuranceForm()" id="insuranceEditBtn" class="btn btn-primary btn-sm gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                        Edit
+                    </button>
+                @endif
             </div>
 
             <div id="insuranceDisplay">
@@ -645,10 +683,12 @@
                         <p class="text-xs text-slate-400">Track allergies and reactions</p>
                     </div>
                 </div>
-                <button type="button" onclick="toggleAllergyForm()" class="btn btn-primary btn-sm gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                    Add
-                </button>
+                @if($access->canCreate('medical'))
+                    <button type="button" onclick="toggleAllergyForm()" class="btn btn-primary btn-sm gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                        Add
+                    </button>
+                @endif
             </div>
 
             <!-- Add Allergy Form (Hidden by default) -->
@@ -724,20 +764,27 @@
                                         @endif
                                     </div>
                                 </div>
+                                @if($access->canEdit('medical') || $access->canDelete('medical'))
                                 <div class="flex gap-1">
-                                    <button type="button" onclick="toggleAllergyEdit({{ $allergy->id }})" class="btn btn-ghost btn-xs text-slate-500 hover:bg-slate-100">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                                    </button>
-                                    <form action="{{ route('member.allergy.destroy', [$member, $allergy]) }}" method="POST" onsubmit="event.preventDefault(); confirmDelete(this, 'Remove Allergy?', 'Are you sure you want to remove {{ $allergy->allergen_name }}? This action cannot be undone.')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-ghost btn-xs text-rose-500 hover:bg-rose-50">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                    @if($access->canEdit('medical'))
+                                        <button type="button" onclick="toggleAllergyEdit({{ $allergy->id }})" class="btn btn-ghost btn-xs text-slate-500 hover:bg-slate-100">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                                         </button>
-                                    </form>
+                                    @endif
+                                    @if($access->canDelete('medical'))
+                                        <form action="{{ route('member.allergy.destroy', [$member, $allergy]) }}" method="POST" onsubmit="event.preventDefault(); confirmDelete(this, 'Remove Allergy?', 'Are you sure you want to remove {{ $allergy->allergen_name }}? This action cannot be undone.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-ghost btn-xs text-rose-500 hover:bg-rose-50">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                            </button>
+                                        </form>
+                                    @endif
                                 </div>
+                                @endif
                             </div>
                             <!-- Edit Mode -->
+                            @if($access->canEdit('medical'))
                             <div id="allergyEdit{{ $allergy->id }}" class="hidden p-3 bg-amber-50 border-t border-amber-200">
                                 <form action="{{ route('member.allergy.update', [$member, $allergy]) }}" method="POST">
                                     @csrf
@@ -787,6 +834,7 @@
                                     </div>
                                 </form>
                             </div>
+                            @endif
                         </div>
                     @endforeach
                 </div>
@@ -811,10 +859,12 @@
                         <p class="text-xs text-slate-400">Doctors and care providers</p>
                     </div>
                 </div>
-                <button type="button" onclick="toggleProviderForm()" class="btn btn-primary btn-sm gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                    Add
-                </button>
+                @if($access->canCreate('medical'))
+                    <button type="button" onclick="toggleProviderForm()" class="btn btn-primary btn-sm gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                        Add
+                    </button>
+                @endif
             </div>
 
             <!-- Add Provider Form (Hidden by default) -->
@@ -934,20 +984,27 @@
                                         @endif
                                     </div>
                                 </div>
+                                @if($access->canEdit('medical') || $access->canDelete('medical'))
                                 <div class="flex gap-1">
-                                    <button type="button" onclick="toggleProviderEdit({{ $provider->id }})" class="btn btn-ghost btn-xs text-slate-500 hover:bg-slate-100">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                                    </button>
-                                    <form action="{{ route('member.provider.destroy', [$member, $provider]) }}" method="POST" onsubmit="event.preventDefault(); confirmDelete(this, 'Remove Provider?', 'Are you sure you want to remove {{ $provider->name }}? This action cannot be undone.')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-ghost btn-xs text-rose-500 hover:bg-rose-50">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                    @if($access->canEdit('medical'))
+                                        <button type="button" onclick="toggleProviderEdit({{ $provider->id }})" class="btn btn-ghost btn-xs text-slate-500 hover:bg-slate-100">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                                         </button>
-                                    </form>
+                                    @endif
+                                    @if($access->canDelete('medical'))
+                                        <form action="{{ route('member.provider.destroy', [$member, $provider]) }}" method="POST" onsubmit="event.preventDefault(); confirmDelete(this, 'Remove Provider?', 'Are you sure you want to remove {{ $provider->name }}? This action cannot be undone.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-ghost btn-xs text-rose-500 hover:bg-rose-50">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                            </button>
+                                        </form>
+                                    @endif
                                 </div>
+                                @endif
                             </div>
                             <!-- Edit Mode -->
+                            @if($access->canEdit('medical'))
                             <div id="providerEdit{{ $provider->id }}" class="hidden p-3 bg-emerald-50 border-t border-emerald-200">
                                 <form action="{{ route('member.provider.update', [$member, $provider]) }}" method="POST">
                                     @csrf
@@ -1005,6 +1062,7 @@
                                     </div>
                                 </form>
                             </div>
+                            @endif
                         </div>
                     @endforeach
                 </div>

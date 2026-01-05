@@ -40,14 +40,19 @@
             <label class="label">
                 <span class="label-text">Full Name</span>
             </label>
-            <input type="text" name="name" placeholder="John Doe" class="input input-bordered w-full" required>
+            <input type="text" name="name" placeholder="John Doe" class="input input-bordered w-full" value="{{ $prefillName ?? '' }}" required>
         </div>
 
         <div class="form-control">
             <label class="label">
                 <span class="label-text">Email Address</span>
             </label>
-            <input type="email" name="email" placeholder="you@example.com" class="input input-bordered w-full" required>
+            <input type="email" name="email" placeholder="you@example.com" class="input input-bordered w-full {{ ($prefillEmail ?? false) ? 'input-disabled bg-base-200' : '' }}" value="{{ $prefillEmail ?? '' }}" {{ ($prefillEmail ?? false) ? 'readonly' : '' }} required>
+            @if($prefillEmail ?? false)
+                <label class="label">
+                    <span class="label-text-alt text-base-content/60">Email address from your invitation</span>
+                </label>
+            @endif
         </div>
 
         <div class="form-control">
@@ -105,6 +110,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    const intendedRedirect = @json($redirect ?? null);
 
     document.getElementById('register-form').addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -117,13 +123,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
+            const headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            };
+
+            // Include invite redirect URL in header for server-side storage
+            if (intendedRedirect) {
+                headers['X-Invite-Redirect'] = intendedRedirect;
+            }
+
             const response = await fetch('/register', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken
-                },
+                headers: headers,
                 body: JSON.stringify({
                     name: formData.get('name'),
                     email: formData.get('email'),

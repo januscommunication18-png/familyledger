@@ -79,8 +79,16 @@ class LoginController extends Controller
 
         // Check if MFA is required
         if ($user->hasTwoFactorEnabled() || $user->hasSmsMfaEnabled()) {
+            // Preserve intended URL for after MFA
+            $intendedUrl = session('url.intended');
+
             Auth::logout();
             session(['mfa_required' => true, 'mfa_user_id' => $user->id]);
+
+            // Restore intended URL
+            if ($intendedUrl) {
+                session(['url.intended' => $intendedUrl]);
+            }
 
             $this->logLoginAttempt($email, $request, true, 'mfa_required', $user->id);
 
@@ -95,9 +103,12 @@ class LoginController extends Controller
 
         $request->session()->regenerate();
 
+        // Check for intended URL (e.g., from collaborator invite)
+        $redirect = session()->pull('url.intended', '/dashboard');
+
         return response()->json([
             'message' => 'Login successful',
-            'redirect' => '/dashboard',
+            'redirect' => $redirect,
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,

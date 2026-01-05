@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Collaborator;
+use App\Models\CollaboratorInvite;
 use App\Models\FamilyCircle;
 use App\Models\FamilyMember;
 use Illuminate\Http\Request;
@@ -15,13 +17,41 @@ class FamilyCircleController extends Controller
      */
     public function index()
     {
+        $user = Auth::user();
+
         $circles = FamilyCircle::forCurrentTenant()
             ->withCount('members')
             ->orderBy('created_at', 'desc')
             ->get();
 
+        // Get collaborations where this user is a collaborator (shared with them)
+        $collaborations = Collaborator::where('user_id', $user->id)
+            ->where('is_active', true)
+            ->with(['familyMembers', 'inviter'])
+            ->get()
+            ->map(function ($collaboration) {
+                return [
+                    'id' => $collaboration->id,
+                    'tenant_id' => $collaboration->tenant_id,
+                    'owner_name' => $collaboration->inviter->name ?? 'Unknown',
+                    'role' => $collaboration->role,
+                    'role_info' => $collaboration->role_info,
+                    'relationship' => $collaboration->relationship_info['label'] ?? 'Collaborator',
+                    'family_members' => $collaboration->familyMembers,
+                    'joined_at' => $collaboration->created_at,
+                ];
+            });
+
+        // Get pending invites for this user's email
+        $pendingInvites = CollaboratorInvite::where('email', strtolower($user->email))
+            ->pending()
+            ->with(['inviter', 'familyMembers'])
+            ->get();
+
         return view('family-circle.index', [
             'circles' => $circles,
+            'collaborations' => $collaborations,
+            'pendingInvites' => $pendingInvites,
         ]);
     }
 

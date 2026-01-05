@@ -252,9 +252,12 @@ class MfaController extends Controller
             return response()->json(['error' => 'Invalid verification code'], 401);
         }
 
+        // Get intended URL before clearing session
+        $redirect = session('url.intended', '/dashboard');
+
         // Clear session and rate limits
         RateLimiter::clear($key);
-        session()->forget(['mfa_required', 'mfa_user_id']);
+        session()->forget(['mfa_required', 'mfa_user_id', 'url.intended']);
 
         // Login user
         Auth::login($user, true);
@@ -264,7 +267,7 @@ class MfaController extends Controller
 
         return response()->json([
             'message' => 'Verification successful',
-            'redirect' => '/dashboard',
+            'redirect' => $redirect,
         ]);
     }
 

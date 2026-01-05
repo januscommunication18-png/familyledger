@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Collaborator;
 use App\Models\FamilyCircle;
 use App\Models\FamilyMember;
+use App\Services\CollaboratorPermissionService;
 use App\Models\MemberContact;
 use App\Models\MemberDocument;
 use App\Models\MemberMedicalInfo;
@@ -121,10 +123,14 @@ class FamilyMemberController extends Controller
      */
     public function show(FamilyCircle $familyCircle, FamilyMember $member)
     {
-        // Ensure the user can access this member
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->hasAccess()) {
             abort(403);
         }
+
+        $access = $permissionService->forView();
 
         // For linked members (Self), load data from all linked member records
         if ($member->linked_user_id) {
@@ -196,6 +202,7 @@ class FamilyMemberController extends Controller
         return view('family-circle.member.show', [
             'circle' => $familyCircle,
             'member' => $member,
+            'access' => $access,
         ]);
     }
 
@@ -204,8 +211,10 @@ class FamilyMemberController extends Controller
      */
     public function edit(FamilyCircle $familyCircle, FamilyMember $member)
     {
-        // Ensure the user can access this member
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service - require full access to edit member profile
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->hasFullAccess()) {
             abort(403);
         }
 
@@ -214,6 +223,7 @@ class FamilyMemberController extends Controller
             'member' => $member,
             'relationships' => FamilyMember::RELATIONSHIPS,
             'immigrationStatuses' => FamilyMember::IMMIGRATION_STATUSES,
+            'access' => $permissionService->forView(),
         ]);
     }
 
@@ -222,8 +232,10 @@ class FamilyMemberController extends Controller
      */
     public function update(Request $request, FamilyCircle $familyCircle, FamilyMember $member)
     {
-        // Ensure the user can access this member
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service - require full access to update member profile
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->hasFullAccess()) {
             abort(403);
         }
 
@@ -316,8 +328,10 @@ class FamilyMemberController extends Controller
      */
     public function destroy(FamilyCircle $familyCircle, FamilyMember $member)
     {
-        // Ensure the user can access this member
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service - require full access to delete member
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->hasFullAccess()) {
             abort(403);
         }
 
@@ -353,7 +367,10 @@ class FamilyMemberController extends Controller
      */
     public function storeMedicalInfo(Request $request, FamilyMember $member)
     {
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service - require edit access for medical
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canEdit('medical')) {
             abort(403);
         }
 
@@ -392,7 +409,10 @@ class FamilyMemberController extends Controller
      */
     public function storeSchoolInfo(Request $request, FamilyMember $member)
     {
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service - require full access for school info
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->hasFullAccess()) {
             abort(403);
         }
 
@@ -435,7 +455,10 @@ class FamilyMemberController extends Controller
      */
     public function storeContact(Request $request, FamilyMember $member)
     {
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service - require full access to create contacts
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canCreate('emergency_contacts')) {
             abort(403);
         }
 
@@ -473,7 +496,10 @@ class FamilyMemberController extends Controller
      */
     public function destroyContact(FamilyMember $member, MemberContact $contact)
     {
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service - require full access to delete contacts
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canDelete('emergency_contacts')) {
             abort(403);
         }
 
@@ -493,11 +519,20 @@ class FamilyMemberController extends Controller
      */
     public function updateField(Request $request, FamilyCircle $familyCircle, FamilyMember $member)
     {
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        $field = $request->input('field');
+
+        // Check permission based on field being updated
+        if ($field === 'immigration_status') {
+            if (!$permissionService->canEdit('immigration_status')) {
+                abort(403);
+            }
+        } elseif (!$permissionService->hasFullAccess()) {
             abort(403);
         }
 
-        $field = $request->input('field');
         $value = $request->input('value');
 
         // Only allow specific fields to be updated inline
@@ -531,7 +566,10 @@ class FamilyMemberController extends Controller
      */
     public function updateMedicalField(Request $request, FamilyMember $member)
     {
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service - require edit access for medical
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canEdit('medical')) {
             abort(403);
         }
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\FamilyMember;
 use App\Models\MemberDocument;
+use App\Services\CollaboratorPermissionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -11,11 +12,28 @@ use Illuminate\Support\Facades\Storage;
 class MemberDocumentController extends Controller
 {
     /**
+     * Map document types to permission categories.
+     */
+    protected function getPermissionCategory(string $documentType): string
+    {
+        return match ($documentType) {
+            MemberDocument::TYPE_DRIVERS_LICENSE => 'drivers_license',
+            MemberDocument::TYPE_PASSPORT => 'passport',
+            MemberDocument::TYPE_SOCIAL_SECURITY => 'ssn',
+            MemberDocument::TYPE_BIRTH_CERTIFICATE => 'birth_certificate',
+            default => 'documents',
+        };
+    }
+
+    /**
      * Display the document vault for a family member.
      */
     public function index(FamilyMember $member)
     {
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->hasAccess()) {
             abort(403);
         }
 
@@ -48,7 +66,11 @@ class MemberDocumentController extends Controller
      */
     public function store(Request $request, FamilyMember $member)
     {
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service - check create permission for this document type
+        $permissionService = CollaboratorPermissionService::forMember($member);
+        $category = $this->getPermissionCategory($request->input('document_type', ''));
+
+        if (!$permissionService->canCreate($category)) {
             abort(403);
         }
 
@@ -120,7 +142,11 @@ class MemberDocumentController extends Controller
      */
     public function show(FamilyMember $member, MemberDocument $document)
     {
-        if ($document->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+        $category = $this->getPermissionCategory($document->document_type);
+
+        if (!$permissionService->canView($category)) {
             abort(403);
         }
 
@@ -135,7 +161,11 @@ class MemberDocumentController extends Controller
      */
     public function update(Request $request, FamilyMember $member, MemberDocument $document)
     {
-        if ($document->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+        $category = $this->getPermissionCategory($document->document_type);
+
+        if (!$permissionService->canEdit($category)) {
             abort(403);
         }
 
@@ -208,7 +238,11 @@ class MemberDocumentController extends Controller
      */
     public function destroy(FamilyMember $member, MemberDocument $document)
     {
-        if ($document->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+        $category = $this->getPermissionCategory($document->document_type);
+
+        if (!$permissionService->canDelete($category)) {
             abort(403);
         }
 
@@ -239,7 +273,11 @@ class MemberDocumentController extends Controller
      */
     public function image(FamilyMember $member, MemberDocument $document, string $type)
     {
-        if ($document->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+        $category = $this->getPermissionCategory($document->document_type);
+
+        if (!$permissionService->canView($category)) {
             abort(403);
         }
 
@@ -257,7 +295,10 @@ class MemberDocumentController extends Controller
      */
     public function driversLicense(\App\Models\FamilyCircle $familyCircle, FamilyMember $member)
     {
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canView('drivers_license')) {
             abort(403);
         }
 
@@ -269,6 +310,7 @@ class MemberDocumentController extends Controller
             'circle' => $familyCircle,
             'member' => $member,
             'document' => $document,
+            'access' => $permissionService->forView(),
         ]);
     }
 
@@ -277,7 +319,10 @@ class MemberDocumentController extends Controller
      */
     public function passport(\App\Models\FamilyCircle $familyCircle, FamilyMember $member)
     {
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canView('passport')) {
             abort(403);
         }
 
@@ -289,6 +334,7 @@ class MemberDocumentController extends Controller
             'circle' => $familyCircle,
             'member' => $member,
             'document' => $document,
+            'access' => $permissionService->forView(),
         ]);
     }
 
@@ -297,7 +343,10 @@ class MemberDocumentController extends Controller
      */
     public function socialSecurity(\App\Models\FamilyCircle $familyCircle, FamilyMember $member)
     {
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canView('ssn')) {
             abort(403);
         }
 
@@ -309,6 +358,7 @@ class MemberDocumentController extends Controller
             'circle' => $familyCircle,
             'member' => $member,
             'document' => $document,
+            'access' => $permissionService->forView(),
         ]);
     }
 
@@ -317,7 +367,10 @@ class MemberDocumentController extends Controller
      */
     public function birthCertificate(\App\Models\FamilyCircle $familyCircle, FamilyMember $member)
     {
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canView('birth_certificate')) {
             abort(403);
         }
 
@@ -329,6 +382,7 @@ class MemberDocumentController extends Controller
             'circle' => $familyCircle,
             'member' => $member,
             'document' => $document,
+            'access' => $permissionService->forView(),
         ]);
     }
 }

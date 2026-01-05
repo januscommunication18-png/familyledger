@@ -24,6 +24,9 @@ use App\Http\Controllers\GoalController;
 use App\Http\Controllers\LegalDocumentController;
 use App\Http\Controllers\FamilyResourceController;
 use App\Http\Controllers\ShoppingListController;
+use App\Http\Controllers\PetController;
+use App\Http\Controllers\JournalController;
+use App\Http\Controllers\CollaboratorController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -45,6 +48,11 @@ Route::middleware('security.code')->group(function () {
     Route::get('/', function () {
         return view('welcome');
     });
+
+    // Collaborator Invite Accept (Public - invitees may not have an account yet)
+    Route::get('/invite/{token}', [CollaboratorController::class, 'acceptForm'])->name('collaborator.accept');
+    Route::post('/invite/{token}/accept', [CollaboratorController::class, 'acceptInvite'])->name('collaborator.accept.process');
+    Route::post('/invite/{token}/decline', [CollaboratorController::class, 'declineInvite'])->name('collaborator.decline');
 });
 
 /*
@@ -327,9 +335,23 @@ Route::middleware(['security.code', 'auth'])->group(function () {
     })->middleware(['verified', 'onboarding']);
 
     // Collaborators
-    Route::get('/collaborators', function () {
-        return view('pages.collaborators.index');
-    })->middleware(['verified', 'onboarding'])->name('collaborators.index');
+    Route::middleware(['verified', 'onboarding'])->prefix('collaborators')->name('collaborators.')->group(function () {
+        Route::get('/', [CollaboratorController::class, 'index'])->name('index');
+        Route::get('/invite', [CollaboratorController::class, 'create'])->name('create');
+        Route::post('/', [CollaboratorController::class, 'store'])->name('store');
+        Route::get('/{collaborator}', [CollaboratorController::class, 'show'])->name('show');
+        Route::get('/{collaborator}/edit', [CollaboratorController::class, 'edit'])->name('edit');
+        Route::put('/{collaborator}', [CollaboratorController::class, 'update'])->name('update');
+        Route::patch('/{collaborator}/deactivate', [CollaboratorController::class, 'deactivate'])->name('deactivate');
+        Route::patch('/{collaborator}/activate', [CollaboratorController::class, 'activate'])->name('activate');
+        Route::delete('/{collaborator}', [CollaboratorController::class, 'destroy'])->name('destroy');
+
+        // Invite management
+        Route::get('/invites/{invite}', [CollaboratorController::class, 'showInvite'])->name('invites.show');
+        Route::post('/invites/{invite}/resend', [CollaboratorController::class, 'resendInvite'])->name('invites.resend');
+        Route::delete('/invites/{invite}', [CollaboratorController::class, 'revokeInvite'])->name('invites.revoke');
+    });
+
 
     // Reminders
     Route::get('/reminders', function () {
@@ -379,6 +401,42 @@ Route::middleware(['security.code', 'auth'])->group(function () {
 
         // Suggestions
         Route::get('/api/suggestions', [ShoppingListController::class, 'suggestions'])->name('suggestions');
+    });
+
+    // Pets
+    Route::middleware(['verified', 'onboarding'])->prefix('pets')->name('pets.')->group(function () {
+        Route::get('/', [PetController::class, 'index'])->name('index');
+        Route::get('/create', [PetController::class, 'create'])->name('create');
+        Route::post('/', [PetController::class, 'store'])->name('store');
+        Route::get('/{pet}', [PetController::class, 'show'])->name('show');
+        Route::get('/{pet}/edit', [PetController::class, 'edit'])->name('edit');
+        Route::put('/{pet}', [PetController::class, 'update'])->name('update');
+        Route::delete('/{pet}', [PetController::class, 'destroy'])->name('destroy');
+
+        // Vaccinations
+        Route::post('/{pet}/vaccinations', [PetController::class, 'storeVaccination'])->name('vaccinations.store');
+        Route::put('/{pet}/vaccinations/{vaccination}', [PetController::class, 'updateVaccination'])->name('vaccinations.update');
+        Route::delete('/{pet}/vaccinations/{vaccination}', [PetController::class, 'destroyVaccination'])->name('vaccinations.destroy');
+
+        // Medications
+        Route::post('/{pet}/medications', [PetController::class, 'storeMedication'])->name('medications.store');
+        Route::put('/{pet}/medications/{medication}', [PetController::class, 'updateMedication'])->name('medications.update');
+        Route::patch('/{pet}/medications/{medication}/toggle', [PetController::class, 'toggleMedication'])->name('medications.toggle');
+        Route::delete('/{pet}/medications/{medication}', [PetController::class, 'destroyMedication'])->name('medications.destroy');
+    });
+
+    // Journal
+    Route::middleware(['verified', 'onboarding'])->prefix('journal')->name('journal.')->group(function () {
+        Route::get('/', [JournalController::class, 'index'])->name('index');
+        Route::get('/create', [JournalController::class, 'create'])->name('create');
+        Route::post('/', [JournalController::class, 'store'])->name('store');
+        Route::get('/tags/search', [JournalController::class, 'searchTags'])->name('tags.search');
+        Route::get('/{journalEntry}', [JournalController::class, 'show'])->name('show');
+        Route::get('/{journalEntry}/edit', [JournalController::class, 'edit'])->name('edit');
+        Route::put('/{journalEntry}', [JournalController::class, 'update'])->name('update');
+        Route::delete('/{journalEntry}', [JournalController::class, 'destroy'])->name('destroy');
+        Route::patch('/{journalEntry}/toggle-pin', [JournalController::class, 'togglePin'])->name('toggle-pin');
+        Route::delete('/{journalEntry}/attachments/{attachment}', [JournalController::class, 'destroyAttachment'])->name('attachments.destroy');
     });
 
     // Settings

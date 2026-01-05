@@ -10,6 +10,7 @@ use App\Models\MemberMedicalCondition;
 use App\Models\MemberMedicalInfo;
 use App\Models\MemberMedication;
 use App\Models\MemberVaccination;
+use App\Services\CollaboratorPermissionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -21,7 +22,10 @@ class MemberMedicalController extends Controller
      */
     public function show(FamilyCircle $familyCircle, FamilyMember $member)
     {
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canView('medical')) {
             abort(403);
         }
 
@@ -54,6 +58,7 @@ class MemberMedicalController extends Controller
             'medicationFrequencies' => MemberMedication::FREQUENCIES,
             'conditionStatuses' => MemberMedicalCondition::STATUSES,
             'vaccineTypes' => MemberVaccination::VACCINE_TYPES,
+            'access' => $permissionService->forView(),
         ]);
     }
 
@@ -62,7 +67,10 @@ class MemberMedicalController extends Controller
      */
     public function updateMedicalInfo(Request $request, FamilyMember $member)
     {
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canEdit('medical')) {
             abort(403);
         }
 
@@ -95,7 +103,10 @@ class MemberMedicalController extends Controller
      */
     public function storeAllergy(Request $request, FamilyMember $member)
     {
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canCreate('medical')) {
             abort(403);
         }
 
@@ -125,7 +136,10 @@ class MemberMedicalController extends Controller
      */
     public function updateAllergy(Request $request, FamilyMember $member, MemberAllergy $allergy)
     {
-        if ($allergy->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canEdit('medical')) {
             abort(403);
         }
 
@@ -152,7 +166,10 @@ class MemberMedicalController extends Controller
      */
     public function destroyAllergy(FamilyMember $member, MemberAllergy $allergy)
     {
-        if ($allergy->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canDelete('medical')) {
             abort(403);
         }
 
@@ -169,7 +186,10 @@ class MemberMedicalController extends Controller
      */
     public function storeProvider(Request $request, FamilyMember $member)
     {
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canCreate('medical')) {
             abort(403);
         }
 
@@ -204,7 +224,10 @@ class MemberMedicalController extends Controller
      */
     public function updateProvider(Request $request, FamilyMember $member, MemberHealthcareProvider $provider)
     {
-        if ($provider->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canEdit('medical')) {
             abort(403);
         }
 
@@ -237,7 +260,10 @@ class MemberMedicalController extends Controller
      */
     public function destroyProvider(FamilyMember $member, MemberHealthcareProvider $provider)
     {
-        if ($provider->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canDelete('medical')) {
             abort(403);
         }
 
@@ -254,7 +280,10 @@ class MemberMedicalController extends Controller
      */
     public function storeMedication(Request $request, FamilyMember $member)
     {
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canCreate('medical')) {
             abort(403);
         }
 
@@ -281,7 +310,10 @@ class MemberMedicalController extends Controller
      */
     public function updateMedication(Request $request, FamilyMember $member, MemberMedication $medication)
     {
-        if ($medication->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canEdit('medical')) {
             abort(403);
         }
 
@@ -305,7 +337,10 @@ class MemberMedicalController extends Controller
      */
     public function destroyMedication(FamilyMember $member, MemberMedication $medication)
     {
-        if ($medication->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canDelete('medical')) {
             abort(403);
         }
 
@@ -322,7 +357,10 @@ class MemberMedicalController extends Controller
      */
     public function storeCondition(Request $request, FamilyMember $member)
     {
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canCreate('medical')) {
             abort(403);
         }
 
@@ -359,7 +397,10 @@ class MemberMedicalController extends Controller
      */
     public function updateCondition(Request $request, FamilyMember $member, MemberMedicalCondition $condition)
     {
-        if ($condition->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canEdit('medical')) {
             abort(403);
         }
 
@@ -393,7 +434,10 @@ class MemberMedicalController extends Controller
      */
     public function destroyCondition(FamilyMember $member, MemberMedicalCondition $condition)
     {
-        if ($condition->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canDelete('medical')) {
             abort(403);
         }
 
@@ -410,7 +454,10 @@ class MemberMedicalController extends Controller
      */
     public function storeVaccination(Request $request, FamilyMember $member)
     {
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canCreate('medical')) {
             abort(403);
         }
 
@@ -454,7 +501,10 @@ class MemberMedicalController extends Controller
      */
     public function updateVaccination(Request $request, FamilyMember $member, MemberVaccination $vaccination)
     {
-        if ($vaccination->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canEdit('medical')) {
             abort(403);
         }
 
@@ -499,7 +549,10 @@ class MemberMedicalController extends Controller
      */
     public function destroyVaccination(FamilyMember $member, MemberVaccination $vaccination)
     {
-        if ($vaccination->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canDelete('medical')) {
             abort(403);
         }
 
@@ -521,7 +574,10 @@ class MemberMedicalController extends Controller
      */
     public function downloadVaccinationDocument(FamilyMember $member, MemberVaccination $vaccination)
     {
-        if ($vaccination->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canView('medical')) {
             abort(403);
         }
 

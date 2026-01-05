@@ -15,7 +15,40 @@
 
 @section('content')
 <div id="family-circle-app">
-    @if($circles->isEmpty())
+    @if(isset($pendingInvites) && $pendingInvites->count() > 0)
+        <!-- Pending Invitations Alert -->
+        <div class="mb-6">
+            @foreach($pendingInvites as $invite)
+                <div class="alert bg-amber-50 border border-amber-200 shadow-sm mb-3">
+                    <div class="flex items-center gap-4 w-full">
+                        <div class="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-600"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="font-semibold text-slate-800">You have a pending invitation!</h3>
+                            <p class="text-sm text-slate-600">
+                                <strong>{{ $invite->inviter->name ?? 'Someone' }}</strong> has invited you to access their family circle as <strong>{{ $invite->relationship_info['label'] ?? 'Collaborator' }}</strong>.
+                                @if($invite->familyMembers->count() > 0)
+                                    You'll have access to {{ $invite->familyMembers->count() }} family member{{ $invite->familyMembers->count() > 1 ? 's' : '' }}.
+                                @endif
+                            </p>
+                        </div>
+                        <div class="flex gap-2 shrink-0">
+                            <a href="{{ route('collaborator.accept', $invite->token) }}" class="btn btn-primary btn-sm gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                                Accept
+                            </a>
+                            <a href="{{ route('collaborator.accept', $invite->token) }}" class="btn btn-ghost btn-sm">
+                                View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    @endif
+
+    @if($circles->isEmpty() && $collaborations->count() == 0 && (!isset($pendingInvites) || $pendingInvites->count() == 0))
         <!-- Empty State -->
         <div class="card bg-base-100 shadow-sm">
             <div class="card-body py-16">
@@ -34,7 +67,9 @@
                 </div>
             </div>
         </div>
-    @else
+    @endif
+
+    @if($circles->count() > 0)
         <!-- Family Circles Grid -->
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>
@@ -73,6 +108,81 @@
                     </div>
                 </a>
             @endforeach
+        </div>
+    @endif
+
+    @if($collaborations->count() > 0)
+        <!-- Shared With Me Section -->
+        <div class="mt-12">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-600"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">Shared With Me</h2>
+                    <p class="text-sm text-slate-500">Family members others have shared with you</p>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                @foreach($collaborations as $collab)
+                    <div class="card bg-base-100 shadow-sm">
+                        <div class="card-body">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="avatar placeholder">
+                                        <div class="bg-emerald-100 text-emerald-700 rounded-full w-10">
+                                            <span class="text-sm font-semibold">{{ strtoupper(substr($collab['owner_name'], 0, 1)) }}</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-slate-800">{{ $collab['owner_name'] }}'s Family</h3>
+                                        <p class="text-xs text-slate-500">You're their {{ $collab['relationship'] }}</p>
+                                    </div>
+                                </div>
+                                @php
+                                    $roleColor = $collab['role_info']['color'] ?? 'ghost';
+                                    $badgeClass = match($roleColor) {
+                                        'error' => 'badge-error',
+                                        'warning' => 'badge-warning',
+                                        'info' => 'badge-info',
+                                        'success' => 'badge-success',
+                                        'secondary' => 'badge-secondary',
+                                        default => 'badge-ghost',
+                                    };
+                                @endphp
+                                <span class="badge {{ $badgeClass }}">{{ $collab['role_info']['label'] ?? 'Viewer' }}</span>
+                            </div>
+
+                            @if($collab['family_members']->count() > 0)
+                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                    @foreach($collab['family_members'] as $member)
+                                        <a href="{{ route('family-circle.member.show', ['familyCircle' => $member->family_circle_id, 'member' => $member->id]) }}"
+                                           class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/50 transition-all group">
+                                            <div class="avatar placeholder">
+                                                <div class="bg-slate-100 text-slate-600 rounded-full w-10 group-hover:bg-emerald-100 group-hover:text-emerald-700 transition-colors">
+                                                    <span>{{ strtoupper(substr($member->first_name, 0, 1)) }}</span>
+                                                </div>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <div class="font-medium text-slate-800 truncate group-hover:text-emerald-700 transition-colors">{{ $member->first_name }} {{ $member->last_name }}</div>
+                                                <div class="text-xs text-slate-500">{{ $member->relationship ?? 'Family Member' }}</div>
+                                            </div>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-300 group-hover:text-emerald-500 transition-colors"><path d="m9 18 6-6-6-6"/></svg>
+                                        </a>
+                                    @endforeach
+                                </div>
+                            @else
+                                <p class="text-sm text-slate-500 text-center py-4">No family members shared yet</p>
+                            @endif
+
+                            <div class="text-xs text-slate-400 mt-3 pt-3 border-t">
+                                Joined {{ $collab['joined_at']->diffForHumans() }}
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
         </div>
     @endif
 </div>

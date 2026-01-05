@@ -13,7 +13,7 @@
             <label class="label">
                 <span class="label-text">Email Address</span>
             </label>
-            <input type="email" name="email" placeholder="you@example.com" class="input input-bordered w-full" required>
+            <input type="email" name="email" placeholder="you@example.com" class="input input-bordered w-full" value="{{ $prefillEmail ?? '' }}" required>
         </div>
 
         <button type="submit" class="btn btn-primary btn-block">

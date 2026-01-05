@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\FamilyCircle;
 use App\Models\FamilyMember;
 use App\Models\MemberContact;
+use App\Services\CollaboratorPermissionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -15,7 +16,10 @@ class MemberEmergencyContactController extends Controller
      */
     public function show(FamilyCircle $familyCircle, FamilyMember $member)
     {
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canView('emergency_contacts')) {
             abort(403);
         }
 
@@ -41,6 +45,7 @@ class MemberEmergencyContactController extends Controller
             'circle' => $familyCircle,
             'member' => $member,
             'relationshipTypes' => MemberContact::RELATIONSHIP_TYPES,
+            'access' => $permissionService->forView(),
         ]);
     }
 
@@ -49,7 +54,10 @@ class MemberEmergencyContactController extends Controller
      */
     public function store(Request $request, FamilyMember $member)
     {
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canCreate('emergency_contacts')) {
             abort(403);
         }
 
@@ -82,7 +90,10 @@ class MemberEmergencyContactController extends Controller
      */
     public function update(Request $request, FamilyMember $member, MemberContact $contact)
     {
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canEdit('emergency_contacts')) {
             abort(403);
         }
 
@@ -110,7 +121,10 @@ class MemberEmergencyContactController extends Controller
      */
     public function destroy(FamilyMember $member, MemberContact $contact)
     {
-        if ($member->tenant_id !== Auth::user()->tenant_id) {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canDelete('emergency_contacts')) {
             abort(403);
         }
 
