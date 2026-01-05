@@ -21,6 +21,7 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\ListController;
 use App\Http\Controllers\LegalDocumentController;
 use App\Http\Controllers\FamilyResourceController;
+use App\Http\Controllers\ShoppingListController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -292,17 +293,6 @@ Route::middleware(['security.code', 'auth'])->group(function () {
         Route::post('/todos/items/{item}/toggle', [ListController::class, 'toggleTodoItem'])->name('todos.items.toggle');
         Route::delete('/todos/items/{item}', [ListController::class, 'destroyTodoItem'])->name('todos.items.destroy');
         Route::post('/todos/items/{item}/comments', [ListController::class, 'storeTodoComment'])->name('todos.items.comments.store');
-
-        // Shopping lists
-        Route::get('/shopping/create', [ListController::class, 'createShoppingList'])->name('shopping.create');
-        Route::post('/shopping', [ListController::class, 'storeShoppingList'])->name('shopping.store');
-        Route::get('/shopping/items/create', [ListController::class, 'createShoppingItem'])->name('shopping.items.create');
-        Route::post('/shopping/items', [ListController::class, 'storeShoppingItem'])->name('shopping.items.store');
-        Route::put('/shopping/items/{item}', [ListController::class, 'updateShoppingItem'])->name('shopping.items.update');
-        Route::post('/shopping/items/{item}/toggle', [ListController::class, 'toggleShoppingItem'])->name('shopping.items.toggle');
-        Route::delete('/shopping/items/{item}', [ListController::class, 'destroyShoppingItem'])->name('shopping.items.destroy');
-        Route::post('/shopping/{list}/clear-checked', [ListController::class, 'clearCheckedItems'])->name('shopping.clear-checked');
-        Route::get('/shopping/suggestions', [ListController::class, 'getItemSuggestions'])->name('shopping.suggestions');
     });
 
     // Collaborators
@@ -338,6 +328,26 @@ Route::middleware(['security.code', 'auth'])->group(function () {
         // Attachments
         Route::delete('/{person}/attachments/{attachment}', [PersonController::class, 'deleteAttachment'])->name('attachments.delete');
         Route::get('/{person}/attachments/{attachment}/download', [PersonController::class, 'downloadAttachment'])->name('attachments.download');
+    });
+
+    // Shopping Lists
+    Route::middleware(['verified', 'onboarding'])->prefix('shopping')->name('shopping.')->group(function () {
+        Route::get('/', [ShoppingListController::class, 'index'])->name('index');
+        Route::post('/', [ShoppingListController::class, 'store'])->name('store');
+        Route::get('/{shoppingList}', [ShoppingListController::class, 'show'])->name('show');
+        Route::get('/{shoppingList}/store-mode', [ShoppingListController::class, 'storeMode'])->name('store-mode');
+        Route::put('/{shoppingList}', [ShoppingListController::class, 'update'])->name('update');
+        Route::delete('/{shoppingList}', [ShoppingListController::class, 'destroy'])->name('destroy');
+
+        // Items
+        Route::post('/{shoppingList}/items', [ShoppingListController::class, 'addItem'])->name('items.store');
+        Route::post('/items/{item}/toggle', [ShoppingListController::class, 'toggleItem'])->name('items.toggle');
+        Route::put('/items/{item}', [ShoppingListController::class, 'updateItem'])->name('items.update');
+        Route::delete('/items/{item}', [ShoppingListController::class, 'deleteItem'])->name('items.destroy');
+        Route::post('/{shoppingList}/clear-checked', [ShoppingListController::class, 'clearChecked'])->name('clear-checked');
+
+        // Suggestions
+        Route::get('/api/suggestions', [ShoppingListController::class, 'suggestions'])->name('suggestions');
     });
 
     // Settings

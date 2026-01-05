@@ -27,36 +27,21 @@
         <div class="card-body">
             <div class="border-b border-base-200 mb-6">
                 <nav class="-mb-px flex gap-6">
-                    <a href="{{ route('lists.index', ['tab' => 'todos']) }}"
-                       class="pb-3 px-1 border-b-2 font-medium text-sm {{ $tab === 'todos' ? 'border-primary text-primary' : 'border-transparent text-base-content/60 hover:text-base-content hover:border-base-300' }}">
+                    <a href="{{ route('lists.index') }}"
+                       class="pb-3 px-1 border-b-2 font-medium text-sm border-primary text-primary">
                         <span class="icon-[tabler--checkbox] size-5 inline-block align-middle mr-2"></span>
                         To-Do List
                         @php
                             $pendingCount = $todoLists->sum(fn($list) => $list->items->where('status', '!=', 'completed')->count());
                         @endphp
                         @if($pendingCount > 0)
-                            <span class="badge badge-sm {{ $tab === 'todos' ? 'badge-primary' : 'badge-neutral' }} ml-2">{{ $pendingCount }}</span>
-                        @endif
-                    </a>
-                    <a href="{{ route('lists.index', ['tab' => 'shopping']) }}"
-                       class="pb-3 px-1 border-b-2 font-medium text-sm {{ $tab === 'shopping' ? 'border-primary text-primary' : 'border-transparent text-base-content/60 hover:text-base-content hover:border-base-300' }}">
-                        <span class="icon-[tabler--shopping-cart] size-5 inline-block align-middle mr-2"></span>
-                        Shopping List
-                        @php
-                            $uncheckedCount = $shoppingLists->sum(fn($list) => $list->items->where('is_checked', false)->count());
-                        @endphp
-                        @if($uncheckedCount > 0)
-                            <span class="badge badge-sm {{ $tab === 'shopping' ? 'badge-primary' : 'badge-neutral' }} ml-2">{{ $uncheckedCount }}</span>
+                            <span class="badge badge-sm badge-primary ml-2">{{ $pendingCount }}</span>
                         @endif
                     </a>
                 </nav>
             </div>
 
-            @if($tab === 'todos')
-                @include('pages.lists.partials.todos-tab')
-            @else
-                @include('pages.lists.partials.shopping-tab')
-            @endif
+            @include('pages.lists.partials.todos-tab')
         </div>
     </div>
 </div>
@@ -107,22 +92,5 @@ function toggleTodoItem(itemId) {
     });
 }
 
-// Toggle shopping item checked
-function toggleShoppingItem(itemId) {
-    fetch(`{{ url('/lists/shopping/items') }}/${itemId}/toggle`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Accept': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        }
-    });
-}
 </script>
 @endsection
