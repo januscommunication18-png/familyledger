@@ -19,6 +19,8 @@ use App\Http\Controllers\SecurityCodeController;
 use App\Http\Controllers\ImageVerificationController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\ListController;
+use App\Http\Controllers\TaskController;
+use App\Http\Controllers\GoalController;
 use App\Http\Controllers\LegalDocumentController;
 use App\Http\Controllers\FamilyResourceController;
 use App\Http\Controllers\ShoppingListController;
@@ -279,21 +281,50 @@ Route::middleware(['security.code', 'auth'])->group(function () {
         Route::delete('/{familyResource}/files/{file}', [FamilyResourceController::class, 'destroyFile'])->name('files.destroy');
     });
 
-    // Lists (To-Do & Shopping)
-    Route::middleware(['verified', 'onboarding'])->prefix('lists')->name('lists.')->group(function () {
-        Route::get('/', [ListController::class, 'index'])->name('index');
+    // Goals & To-Do
+    Route::middleware(['verified', 'onboarding'])->prefix('goals-todo')->name('goals-todo.')->group(function () {
+        Route::get('/', [TaskController::class, 'index'])->name('index');
 
-        // Todo lists
-        Route::get('/todos/create', [ListController::class, 'createTodoList'])->name('todos.create');
-        Route::post('/todos', [ListController::class, 'storeTodoList'])->name('todos.store');
-        Route::get('/todos/items/create', [ListController::class, 'createTodoItem'])->name('todos.items.create');
-        Route::post('/todos/items', [ListController::class, 'storeTodoItem'])->name('todos.items.store');
-        Route::get('/todos/items/{item}/edit', [ListController::class, 'editTodoItem'])->name('todos.items.edit');
-        Route::put('/todos/items/{item}', [ListController::class, 'updateTodoItem'])->name('todos.items.update');
-        Route::post('/todos/items/{item}/toggle', [ListController::class, 'toggleTodoItem'])->name('todos.items.toggle');
-        Route::delete('/todos/items/{item}', [ListController::class, 'destroyTodoItem'])->name('todos.items.destroy');
-        Route::post('/todos/items/{item}/comments', [ListController::class, 'storeTodoComment'])->name('todos.items.comments.store');
+        // Goals
+        Route::get('/goals', [GoalController::class, 'index'])->name('goals.index');
+        Route::get('/goals/templates', [GoalController::class, 'templates'])->name('goals.templates');
+        Route::get('/goals/create', [GoalController::class, 'create'])->name('goals.create');
+        Route::post('/goals', [GoalController::class, 'store'])->name('goals.store');
+        Route::post('/goals/from-template/{template}', [GoalController::class, 'createFromTemplate'])->name('goals.from-template');
+        Route::get('/goals/{goal}', [GoalController::class, 'show'])->name('goals.show');
+        Route::get('/goals/{goal}/edit', [GoalController::class, 'edit'])->name('goals.edit');
+        Route::put('/goals/{goal}', [GoalController::class, 'update'])->name('goals.update');
+        Route::delete('/goals/{goal}', [GoalController::class, 'destroy'])->name('goals.destroy');
+        Route::post('/goals/{goal}/progress', [GoalController::class, 'updateProgress'])->name('goals.progress');
+        Route::post('/goals/{goal}/status', [GoalController::class, 'toggleStatus'])->name('goals.status');
+        Route::post('/goals/{goal}/check-in', [GoalController::class, 'checkIn'])->name('goals.check-in');
+        Route::post('/goals/{goal}/mark-done', [GoalController::class, 'markDone'])->name('goals.mark-done');
+        Route::post('/goals/{goal}/skip', [GoalController::class, 'skip'])->name('goals.skip');
+        Route::post('/goals/{goal}/claim-reward', [GoalController::class, 'claimReward'])->name('goals.claim-reward');
+
+        // Tasks
+        Route::get('/tasks/create', [TaskController::class, 'create'])->name('tasks.create');
+        Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
+        Route::get('/tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
+        Route::get('/tasks/{task}/edit', [TaskController::class, 'edit'])->name('tasks.edit');
+        Route::put('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
+        Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
+        Route::post('/tasks/{task}/toggle', [TaskController::class, 'toggle'])->name('tasks.toggle');
+        Route::post('/tasks/{task}/toggle-series', [TaskController::class, 'toggleSeries'])->name('tasks.toggle-series');
+        Route::get('/tasks/{task}/occurrences', [TaskController::class, 'getOccurrences'])->name('tasks.occurrences');
+        Route::post('/tasks/{task}/comments', [TaskController::class, 'storeComment'])->name('tasks.comments.store');
+
+        // Task Occurrences
+        Route::post('/occurrences/{occurrence}/complete', [TaskController::class, 'completeOccurrence'])->name('occurrences.complete');
+        Route::post('/occurrences/{occurrence}/reopen', [TaskController::class, 'reopenOccurrence'])->name('occurrences.reopen');
+        Route::post('/occurrences/{occurrence}/skip', [TaskController::class, 'skipOccurrence'])->name('occurrences.skip');
+        Route::post('/occurrences/{occurrence}/snooze', [TaskController::class, 'snoozeOccurrence'])->name('occurrences.snooze');
     });
+
+    // Backward compatibility redirect from old lists route
+    Route::get('/lists', function () {
+        return redirect()->route('goals-todo.index');
+    })->middleware(['verified', 'onboarding']);
 
     // Collaborators
     Route::get('/collaborators', function () {
