@@ -221,7 +221,7 @@ class MfaController extends Controller
         RateLimiter::hit($key, 300);
 
         // Determine which method to use
-        $method = $request->method ?? $user->mfa_method ?? 'authenticator';
+        $method = $request->input('method') ?? $user->mfa_method ?? 'authenticator';
         $verified = false;
 
         if ($method === 'authenticator') {

@@ -141,6 +141,39 @@ class FamilyCircleController extends Controller
     }
 
     /**
+     * Display the owner's profile in the same format as family members.
+     */
+    public function showOwner(FamilyCircle $familyCircle)
+    {
+        // Ensure the user can access this circle
+        if ($familyCircle->tenant_id !== Auth::user()->tenant_id) {
+            abort(403);
+        }
+
+        $user = Auth::user();
+
+        // Load owner's related data through tenant
+        $tenantId = $user->tenant_id;
+
+        // Get insurance policies for this tenant
+        $insurancePolicies = \App\Models\InsurancePolicy::where('tenant_id', $tenantId)->get();
+
+        // Get tax returns for this tenant
+        $taxReturns = \App\Models\TaxReturn::where('tenant_id', $tenantId)->get();
+
+        // Get assets for this tenant
+        $assets = \App\Models\Asset::where('tenant_id', $tenantId)->get();
+
+        return view('family-circle.owner.show', [
+            'circle' => $familyCircle,
+            'owner' => $user,
+            'insurancePolicies' => $insurancePolicies,
+            'taxReturns' => $taxReturns,
+            'assets' => $assets,
+        ]);
+    }
+
+    /**
      * Remove the specified family circle.
      */
     public function destroy(FamilyCircle $familyCircle)

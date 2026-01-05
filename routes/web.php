@@ -126,6 +126,7 @@ Route::middleware(['security.code', 'auth'])->group(function () {
         Route::get('/', [FamilyCircleController::class, 'index'])->name('index');
         Route::post('/', [FamilyCircleController::class, 'store'])->name('store');
         Route::get('/{familyCircle}', [FamilyCircleController::class, 'show'])->name('show');
+        Route::get('/{familyCircle}/owner', [FamilyCircleController::class, 'showOwner'])->name('owner.show');
         Route::put('/{familyCircle}', [FamilyCircleController::class, 'update'])->name('update');
         Route::delete('/{familyCircle}', [FamilyCircleController::class, 'destroy'])->name('destroy');
 

@@ -69,7 +69,17 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">Relationship</label>
-                            <select name="relationship" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
+                            <select name="relationship" id="relationship_select" data-select='{
+                                "placeholder": "Select relationship...",
+                                "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
+                                "toggleClasses": "advance-select-toggle",
+                                "hasSearch": true,
+                                "searchPlaceholder": "Search relationships...",
+                                "dropdownClasses": "advance-select-menu max-h-52 overflow-y-auto",
+                                "optionClasses": "advance-select-option selected:select-active",
+                                "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
+                                "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/90 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
+                            }' class="hidden">
                                 <option value="">Select relationship</option>
                                 @foreach($relationshipTypes as $key => $label)
                                     <option value="{{ $key }}">{{ $label }}</option>
@@ -181,7 +191,17 @@
                                             </div>
                                             <div>
                                                 <label class="block text-sm font-medium text-slate-700 mb-1">Relationship</label>
-                                                <select name="relationship" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-900 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20">
+                                                <select name="relationship" data-select='{
+                                                    "placeholder": "Select...",
+                                                    "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
+                                                    "toggleClasses": "advance-select-toggle",
+                                                    "hasSearch": true,
+                                                    "searchPlaceholder": "Search...",
+                                                    "dropdownClasses": "advance-select-menu max-h-48 overflow-y-auto",
+                                                    "optionClasses": "advance-select-option selected:select-active",
+                                                    "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
+                                                    "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/90 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
+                                                }' class="hidden">
                                                     <option value="">Select</option>
                                                     @foreach($relationshipTypes as $key => $label)
                                                         <option value="{{ $key }}" {{ $contact->relationship == $key ? 'selected' : '' }}>{{ $label }}</option>
@@ -265,6 +285,11 @@
 function toggleContactForm() {
     const form = document.getElementById('contactForm');
     form.classList.toggle('hidden');
+
+    // Initialize advanced selects when form is shown
+    if (!form.classList.contains('hidden')) {
+        initAdvancedSelects();
+    }
 }
 
 function toggleContactEdit(id) {
@@ -272,6 +297,20 @@ function toggleContactEdit(id) {
     const edit = document.getElementById('contactEdit' + id);
     display.classList.toggle('hidden');
     edit.classList.toggle('hidden');
+
+    // Initialize advanced selects when edit form is shown
+    if (!edit.classList.contains('hidden')) {
+        initAdvancedSelects();
+    }
+}
+
+function initAdvancedSelects() {
+    // Reinitialize HSSelect for the advanced selects
+    if (typeof HSSelect !== 'undefined') {
+        setTimeout(() => {
+            HSSelect.autoInit();
+        }, 100);
+    }
 }
 
 // Confirmation Modal Functions

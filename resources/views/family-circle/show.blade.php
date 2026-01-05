@@ -112,7 +112,7 @@
 
                 <!-- Quick Actions -->
                 <div class="mt-4 pt-4 border-t border-slate-100 flex gap-2">
-                    <a href="{{ route('settings.index') }}" class="btn btn-sm btn-ghost flex-1">Edit Profile</a>
+                    <a href="{{ route('family-circle.owner.show', $circle) }}" class="btn btn-sm btn-ghost flex-1">View</a>
                     <a href="{{ route('documents.index') }}" class="btn btn-sm btn-outline btn-primary flex-1">Documents</a>
                 </div>
             </div>

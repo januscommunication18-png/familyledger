@@ -25,10 +25,22 @@ class FamilyMemberController extends Controller
             abort(403);
         }
 
+        // Get existing family members for autocomplete suggestions
+        $existingMembers = FamilyMember::where('tenant_id', Auth::user()->tenant_id)
+            ->select('first_name', 'last_name')
+            ->get()
+            ->map(fn($m) => $m->first_name . ' ' . $m->last_name)
+            ->toArray();
+
+        // Also add the account owner's name
+        $owner = Auth::user();
+        array_unshift($existingMembers, $owner->name);
+
         return view('family-circle.member.create', [
             'circle' => $familyCircle,
             'relationships' => FamilyMember::RELATIONSHIPS,
             'immigrationStatuses' => FamilyMember::IMMIGRATION_STATUSES,
+            'existingMembers' => $existingMembers,
         ]);
     }
 

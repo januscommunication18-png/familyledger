@@ -41,19 +41,49 @@ class MemberContact extends Model
      * Common relationship/role types for contacts.
      */
     public const RELATIONSHIP_TYPES = [
-        'doctor' => 'Doctor',
-        'pediatrician' => 'Pediatrician',
-        'dentist' => 'Dentist',
-        'therapist' => 'Therapist',
-        'teacher' => 'Teacher',
-        'coach' => 'Coach',
-        'tutor' => 'Tutor',
-        'babysitter' => 'Babysitter',
-        'nanny' => 'Nanny',
+        // Family - Immediate
+        'spouse' => 'Spouse',
+        'partner' => 'Partner',
+        'parent' => 'Parent',
+        'father' => 'Father',
+        'mother' => 'Mother',
+        'child' => 'Child',
+        'son' => 'Son',
+        'daughter' => 'Daughter',
+        'sibling' => 'Sibling',
+        'brother' => 'Brother',
+        'sister' => 'Sister',
+        'legal_guardian' => 'Legal Guardian',
+        // Family - Extended
+        'aunt' => 'Aunt',
+        'uncle' => 'Uncle',
+        'cousin' => 'Cousin',
+        'niece' => 'Niece',
+        'nephew' => 'Nephew',
+        'in_law' => 'In-Law',
+        // Non-Family
+        'close_friend' => 'Close Friend',
         'neighbor' => 'Neighbor',
-        'family_friend' => 'Family Friend',
-        'relative' => 'Relative',
-        'emergency' => 'Emergency Contact',
+        'roommate' => 'Roommate / Housemate',
+        // Caregivers
+        'caregiver' => 'Caregiver',
+        'babysitter' => 'Babysitter / Nanny',
+        'emergency_contact' => 'Emergency Contact (Non-Family)',
+        // Education & Activities
+        'teacher' => 'Teacher',
+        'school_counselor' => 'School Counselor',
+        'daycare' => 'Daycare',
+        'after_school' => 'After-School Program',
+        'coach' => 'Coach',
+        // Professional
+        'lawyer' => 'Lawyer / Attorney',
+        'social_worker' => 'Social Worker',
+        'hr_contact' => 'HR Contact',
+        // Property
+        'landlord' => 'Landlord',
+        'property_manager' => 'Property Manager',
+        'building_security' => 'Building Security',
+        // Other
         'other' => 'Other',
     ];
 

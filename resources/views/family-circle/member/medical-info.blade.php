@@ -254,7 +254,7 @@
                             <label class="block text-sm font-medium text-slate-700 mb-1">Condition Name <span class="text-rose-500">*</span></label>
                             <input type="text" name="name" required class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20" placeholder="e.g., Diabetes, Asthma">
                         </div>
-                        <div class="grid grid-cols-2 gap-3">
+                        <div class="grid grid-cols-1 gap-3">
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 mb-1">Status</label>
                                 <select name="status" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20">
@@ -394,7 +394,7 @@
                             <label class="block text-sm font-medium text-slate-700 mb-1">Custom Vaccine Name <span class="text-rose-500">*</span></label>
                             <input type="text" name="custom_vaccine_name" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20" placeholder="Enter vaccine name">
                         </div>
-                        <div class="grid grid-cols-2 gap-3">
+                        <div class="grid grid-cols-1 gap-3">
                             <x-date-select
                                 name="vaccination_date"
                                 label="Date of Vaccination"
@@ -414,8 +414,14 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">Upload Document</label>
-                            <input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png" class="file-input file-input-bordered file-input-sm w-full">
-                            <p class="text-xs text-slate-400 mt-1">PDF, JPG, or PNG (max 10MB)</p>
+                            <label class="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 hover:border-teal-400 transition-colors">
+                                <div class="flex flex-col items-center justify-center pt-2 pb-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 mb-1"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                                    <p class="text-xs text-slate-500"><span class="font-semibold text-teal-600">Click to upload</span> or drag and drop</p>
+                                    <p class="text-xs text-slate-400">PDF, JPG, or PNG (max 10MB)</p>
+                                </div>
+                                <input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png" class="hidden">
+                            </label>
                         </div>
                     </div>
                     <div class="flex gap-2 mt-4">
@@ -515,7 +521,13 @@
                                         </div>
                                         <div>
                                             <label class="block text-sm font-medium text-slate-700 mb-1">Upload New Document</label>
-                                            <input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png" class="file-input file-input-bordered file-input-xs w-full">
+                                            <label class="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 hover:border-teal-400 transition-colors">
+                                                <div class="flex flex-col items-center justify-center py-2">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 mb-1"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                                                    <p class="text-xs text-slate-500"><span class="font-semibold text-teal-600">Click to upload</span></p>
+                                                </div>
+                                                <input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png" class="hidden">
+                                            </label>
                                             @if($vaccination->document_path)
                                                 <p class="text-xs text-slate-500 mt-1">Current: {{ $vaccination->document_name }}</p>
                                             @endif

@@ -92,17 +92,7 @@
                             <div class="flex gap-2">
                                 <!-- Month -->
                                 <div class="flex-1">
-                                    <select name="dob_month" id="dob_month" data-select='{
-                                        "placeholder": "Month",
-                                        "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
-                                        "toggleClasses": "advance-select-toggle w-full",
-                                        "hasSearch": true,
-                                        "searchPlaceholder": "Search...",
-                                        "dropdownClasses": "advance-select-menu",
-                                        "optionClasses": "advance-select-option selected:select-active",
-                                        "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
-                                        "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/90 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                                    }' class="hidden">
+                                    <select name="dob_month" id="dob_month" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-slate-900 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 bg-white">
                                         <option value="">Month</option>
                                         <option value="01" {{ old('dob_month') == '01' ? 'selected' : '' }}>January</option>
                                         <option value="02" {{ old('dob_month') == '02' ? 'selected' : '' }}>February</option>
@@ -119,42 +109,14 @@
                                     </select>
                                 </div>
                                 <!-- Day -->
-                                <div class="flex-1">
-                                    <select name="dob_day" id="dob_day" data-select='{
-                                        "placeholder": "Day",
-                                        "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
-                                        "toggleClasses": "advance-select-toggle w-full",
-                                        "hasSearch": true,
-                                        "searchPlaceholder": "Search...",
-                                        "dropdownClasses": "advance-select-menu",
-                                        "optionClasses": "advance-select-option selected:select-active",
-                                        "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
-                                        "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/90 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                                    }' class="hidden">
-                                        <option value="">Day</option>
-                                        @for($i = 1; $i <= 31; $i++)
-                                            <option value="{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}" {{ old('dob_day') == str_pad($i, 2, '0', STR_PAD_LEFT) ? 'selected' : '' }}>{{ $i }}</option>
-                                        @endfor
-                                    </select>
+                                <div class="w-20">
+                                    <input type="number" name="dob_day" id="dob_day" value="{{ old('dob_day') }}" placeholder="Day" min="1" max="31"
+                                        class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20">
                                 </div>
                                 <!-- Year -->
-                                <div class="flex-1">
-                                    <select name="dob_year" id="dob_year" data-select='{
-                                        "placeholder": "Year",
-                                        "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
-                                        "toggleClasses": "advance-select-toggle w-full",
-                                        "hasSearch": true,
-                                        "searchPlaceholder": "Search...",
-                                        "dropdownClasses": "advance-select-menu",
-                                        "optionClasses": "advance-select-option selected:select-active",
-                                        "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
-                                        "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/90 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                                    }' class="hidden">
-                                        <option value="">Year</option>
-                                        @for($year = date('Y'); $year >= 1900; $year--)
-                                            <option value="{{ $year }}" {{ old('dob_year') == $year ? 'selected' : '' }}>{{ $year }}</option>
-                                        @endfor
-                                    </select>
+                                <div class="w-24">
+                                    <input type="number" name="dob_year" id="dob_year" value="{{ old('dob_year') }}" placeholder="Year" min="1900" max="{{ date('Y') }}"
+                                        class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20">
                                 </div>
                             </div>
                             <input type="hidden" name="date_of_birth" id="date_of_birth" required>
@@ -230,16 +192,18 @@
                     <p class="text-sm text-slate-500 mb-4">Optional parent details for this member</p>
 
                     <div class="space-y-5">
-                        <div>
+                        <div class="relative">
                             <label class="block text-sm font-medium text-slate-700 mb-2">Father's Name</label>
-                            <input type="text" name="father_name" value="{{ old('father_name') }}" placeholder="Full name" maxlength="255"
+                            <input type="text" name="father_name" id="father_name" value="{{ old('father_name') }}" placeholder="Start typing to search..." maxlength="255" autocomplete="off"
                                 class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20">
+                            <div id="father_name_suggestions" class="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg hidden max-h-48 overflow-y-auto"></div>
                         </div>
 
-                        <div>
+                        <div class="relative">
                             <label class="block text-sm font-medium text-slate-700 mb-2">Mother's Name</label>
-                            <input type="text" name="mother_name" value="{{ old('mother_name') }}" placeholder="Full name" maxlength="255"
+                            <input type="text" name="mother_name" id="mother_name" value="{{ old('mother_name') }}" placeholder="Start typing to search..." maxlength="255" autocomplete="off"
                                 class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20">
+                            <div id="mother_name_suggestions" class="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg hidden max-h-48 overflow-y-auto"></div>
                         </div>
                     </div>
                 </div>
@@ -336,7 +300,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Combine date parts into hidden field
     function updateDateOfBirth() {
         const month = dobMonth.value;
-        const day = dobDay.value;
+        const day = dobDay.value ? dobDay.value.toString().padStart(2, '0') : '';
         const year = dobYear.value;
 
         if (month && day && year) {
@@ -346,13 +310,115 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Update on change
+    // Update on change and input
     dobMonth.addEventListener('change', updateDateOfBirth);
-    dobDay.addEventListener('change', updateDateOfBirth);
-    dobYear.addEventListener('change', updateDateOfBirth);
+    dobDay.addEventListener('input', updateDateOfBirth);
+    dobYear.addEventListener('input', updateDateOfBirth);
 
     // Initial update
     updateDateOfBirth();
+
+    // Parent name autocomplete
+    const existingMembers = @json($existingMembers);
+
+    function setupAutocomplete(inputId, suggestionsId) {
+        const input = document.getElementById(inputId);
+        const suggestionsDiv = document.getElementById(suggestionsId);
+
+        if (!input || !suggestionsDiv) return;
+
+        input.addEventListener('input', function() {
+            const value = this.value.toLowerCase().trim();
+
+            if (value.length === 0) {
+                suggestionsDiv.classList.add('hidden');
+                suggestionsDiv.innerHTML = '';
+                return;
+            }
+
+            // Filter members that match the input
+            const matches = existingMembers.filter(name =>
+                name.toLowerCase().includes(value)
+            );
+
+            if (matches.length === 0) {
+                suggestionsDiv.classList.add('hidden');
+                suggestionsDiv.innerHTML = '';
+                return;
+            }
+
+            // Build suggestions HTML
+            suggestionsDiv.innerHTML = matches.map(name => `
+                <div class="suggestion-item px-4 py-2.5 cursor-pointer hover:bg-violet-50 flex items-center gap-3 border-b border-slate-100 last:border-b-0" data-value="${name}">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center flex-shrink-0">
+                        <span class="text-white text-sm font-medium">${name.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <span class="text-slate-700">${highlightMatch(name, value)}</span>
+                </div>
+            `).join('');
+
+            suggestionsDiv.classList.remove('hidden');
+
+            // Add click handlers to suggestions
+            suggestionsDiv.querySelectorAll('.suggestion-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    input.value = this.dataset.value;
+                    suggestionsDiv.classList.add('hidden');
+                    suggestionsDiv.innerHTML = '';
+                });
+            });
+        });
+
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!input.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                suggestionsDiv.classList.add('hidden');
+            }
+        });
+
+        // Handle keyboard navigation
+        input.addEventListener('keydown', function(e) {
+            const items = suggestionsDiv.querySelectorAll('.suggestion-item');
+            const activeItem = suggestionsDiv.querySelector('.suggestion-item.bg-violet-50');
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (!activeItem) {
+                    items[0]?.classList.add('bg-violet-50');
+                } else {
+                    const index = Array.from(items).indexOf(activeItem);
+                    activeItem.classList.remove('bg-violet-50');
+                    items[index + 1]?.classList.add('bg-violet-50') || items[0]?.classList.add('bg-violet-50');
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (!activeItem) {
+                    items[items.length - 1]?.classList.add('bg-violet-50');
+                } else {
+                    const index = Array.from(items).indexOf(activeItem);
+                    activeItem.classList.remove('bg-violet-50');
+                    items[index - 1]?.classList.add('bg-violet-50') || items[items.length - 1]?.classList.add('bg-violet-50');
+                }
+            } else if (e.key === 'Enter' && activeItem) {
+                e.preventDefault();
+                input.value = activeItem.dataset.value;
+                suggestionsDiv.classList.add('hidden');
+                suggestionsDiv.innerHTML = '';
+            } else if (e.key === 'Escape') {
+                suggestionsDiv.classList.add('hidden');
+            }
+        });
+    }
+
+    // Highlight matching text
+    function highlightMatch(text, query) {
+        const regex = new RegExp(`(${query})`, 'gi');
+        return text.replace(regex, '<strong class="text-violet-600">$1</strong>');
+    }
+
+    // Initialize autocomplete for both fields
+    setupAutocomplete('father_name', 'father_name_suggestions');
+    setupAutocomplete('mother_name', 'mother_name_suggestions');
 });
 </script>
 @endpush
