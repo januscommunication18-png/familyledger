@@ -60,6 +60,7 @@ class FamilyMemberController extends Controller
             'documents',
             'allergies',
             'medications',
+            'medicalConditions',
             'vaccinations',
             'healthcareProviders',
         ]);

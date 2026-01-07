@@ -19,6 +19,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // Force HTTPS in production
         $middleware->append(\App\Http\Middleware\ForceHttps::class);
 
+        // CORS for API routes
+        $middleware->api(prepend: [
+            \App\Http\Middleware\Cors::class,
+        ]);
+
         // Middleware aliases
         $middleware->alias([
             'honeypot' => \App\Http\Middleware\HoneypotProtection::class,

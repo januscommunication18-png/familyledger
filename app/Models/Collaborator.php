@@ -19,12 +19,21 @@ class Collaborator extends Model
         'relationship_type',
         'role',
         'is_active',
+        'coparenting_enabled',
+        'parent_role',
         'deactivated_at',
         'notes',
     ];
 
+    public const PARENT_ROLES = [
+        'mother' => ['label' => 'Mother', 'icon' => 'tabler--heart', 'color' => 'pink-500'],
+        'father' => ['label' => 'Father', 'icon' => 'tabler--heart', 'color' => 'blue-500'],
+        'parent' => ['label' => 'Parent', 'icon' => 'tabler--users', 'color' => 'violet-500'],
+    ];
+
     protected $casts = [
         'is_active' => 'boolean',
+        'coparenting_enabled' => 'boolean',
         'deactivated_at' => 'datetime',
     ];
 
@@ -58,6 +67,16 @@ class Collaborator extends Model
             ->withTimestamps();
     }
 
+    /**
+     * Get co-parenting children for this collaborator.
+     */
+    public function coparentChildren(): BelongsToMany
+    {
+        return $this->belongsToMany(FamilyMember::class, 'coparent_children')
+            ->withPivot('permissions')
+            ->withTimestamps();
+    }
+
     // ==================== ACCESSORS ====================
 
     public function getRelationshipInfoAttribute(): array
@@ -85,6 +104,16 @@ class Collaborator extends Model
         return $this->user->avatar_url ?? null;
     }
 
+    public function getParentRoleInfoAttribute(): array
+    {
+        return self::PARENT_ROLES[$this->parent_role] ?? self::PARENT_ROLES['parent'];
+    }
+
+    public function getParentRoleLabelAttribute(): string
+    {
+        return $this->parent_role_info['label'] ?? 'Co-Parent';
+    }
+
     // ==================== SCOPES ====================
 
     public function scopeActive($query)
@@ -105,6 +134,11 @@ class Collaborator extends Model
     public function scopeWithRelationship($query, string $type)
     {
         return $query->where('relationship_type', $type);
+    }
+
+    public function scopeCoparents($query)
+    {
+        return $query->where('coparenting_enabled', true)->active();
     }
 
     // ==================== METHODS ====================
@@ -226,5 +260,51 @@ class Collaborator extends Model
     public function canEdit(): bool
     {
         return in_array($this->role, ['owner', 'admin', 'contributor']);
+    }
+
+    /**
+     * Check if collaborator is a co-parent
+     */
+    public function isCoparent(): bool
+    {
+        return $this->coparenting_enabled === true;
+    }
+
+    /**
+     * Get permissions for a specific co-parent child
+     */
+    public function getCoparentPermissionsForChild(int $childId): array
+    {
+        $child = $this->coparentChildren()->where('family_member_id', $childId)->first();
+
+        if (!$child) {
+            return [];
+        }
+
+        return json_decode($child->pivot->permissions ?? '{}', true) ?: [];
+    }
+
+    /**
+     * Check if collaborator has co-parent access to a specific child
+     */
+    public function hasCoparentAccessToChild(int $childId): bool
+    {
+        return $this->coparentChildren()->where('family_member_id', $childId)->exists();
+    }
+
+    /**
+     * Sync co-parent children with permissions
+     */
+    public function syncCoparentChildren(array $childPermissions): void
+    {
+        $syncData = [];
+
+        foreach ($childPermissions as $childId => $permissions) {
+            $syncData[$childId] = [
+                'permissions' => json_encode($permissions),
+            ];
+        }
+
+        $this->coparentChildren()->sync($syncData);
     }
 }

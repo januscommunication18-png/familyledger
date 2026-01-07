@@ -283,6 +283,27 @@ class FamilyMember extends Model
     }
 
     /**
+     * Scope to filter only minors (children under 18).
+     */
+    public function scopeMinors($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('is_minor', true)
+              ->orWhere('date_of_birth', '>', now()->subYears(18));
+        });
+    }
+
+    /**
+     * Get co-parents who have access to this child.
+     */
+    public function coparents(): BelongsToMany
+    {
+        return $this->belongsToMany(Collaborator::class, 'coparent_children')
+            ->withPivot('permissions')
+            ->withTimestamps();
+    }
+
+    /**
      * Get emergency contacts for this member.
      */
     public function emergencyContacts(): HasMany

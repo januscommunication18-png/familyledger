@@ -21,6 +21,8 @@ class CollaboratorInvite extends Model
         'message',
         'relationship_type',
         'role',
+        'is_coparent_invite',
+        'parent_role',
         'token',
         'status',
         'expires_at',
@@ -35,6 +37,7 @@ class CollaboratorInvite extends Model
         'accepted_at' => 'datetime',
         'declined_at' => 'datetime',
         'revoked_at' => 'datetime',
+        'is_coparent_invite' => 'boolean',
     ];
 
     // ==================== CONSTANTS ====================
@@ -214,6 +217,11 @@ class CollaboratorInvite extends Model
         return $query->where('email', strtolower($email));
     }
 
+    public function scopeCoparentInvites($query)
+    {
+        return $query->where('is_coparent_invite', true);
+    }
+
     // ==================== METHODS ====================
 
     public function accept(User $user): Collaborator
@@ -232,6 +240,8 @@ class CollaboratorInvite extends Model
             'invite_id' => $this->id,
             'relationship_type' => $this->relationship_type,
             'role' => $this->role,
+            'coparenting_enabled' => $this->is_coparent_invite,
+            'parent_role' => $this->parent_role,
         ]);
 
         // Copy family member permissions
@@ -239,6 +249,13 @@ class CollaboratorInvite extends Model
             $collaborator->familyMembers()->attach($member->id, [
                 'permissions' => $member->pivot->permissions,
             ]);
+
+            // Also attach to coparent_children table for co-parent invites
+            if ($this->is_coparent_invite) {
+                $collaborator->coparentChildren()->attach($member->id, [
+                    'permissions' => $member->pivot->permissions,
+                ]);
+            }
         }
 
         return $collaborator;
@@ -272,5 +289,13 @@ class CollaboratorInvite extends Model
     public static function findByToken(string $token): ?self
     {
         return static::where('token', $token)->first();
+    }
+
+    /**
+     * Check if this is a co-parent invite
+     */
+    public function isCoparentInvite(): bool
+    {
+        return $this->is_coparent_invite === true;
     }
 }

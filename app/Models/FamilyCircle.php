@@ -29,11 +29,27 @@ class FamilyCircle extends Model
     }
 
     /**
+     * Alias for creator() - used by API.
+     */
+    public function createdBy(): BelongsTo
+    {
+        return $this->creator();
+    }
+
+    /**
      * Get all family members in this circle.
      */
     public function members(): HasMany
     {
         return $this->hasMany(FamilyMember::class);
+    }
+
+    /**
+     * Alias for members() - used by API resources.
+     */
+    public function familyMembers(): HasMany
+    {
+        return $this->members();
     }
 
     /**

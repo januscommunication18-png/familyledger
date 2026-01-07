@@ -28,6 +28,9 @@ Route::prefix('v1')->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::prefix('auth')->group(function () {
+        // Password Login
+        Route::post('/login', [AuthController::class, 'login']);
+
         // Email OTP Authentication
         Route::post('/otp/request', [OtpController::class, 'request']);
         Route::post('/otp/verify', [OtpController::class, 'verify']);

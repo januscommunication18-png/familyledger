@@ -7,6 +7,56 @@
 @section('page-description', 'Your family\'s important information, all in one place.')
 
 @section('content')
+@php
+    // Check for pending co-parent invites for the current user
+    $pendingCoparentInvites = \App\Models\CollaboratorInvite::where('email', auth()->user()->email)
+        ->coparentInvites()
+        ->pending()
+        ->with(['inviter', 'familyMembers'])
+        ->get();
+@endphp
+
+{{-- Pending Co-parent Invitations --}}
+@if($pendingCoparentInvites->count() > 0)
+<div class="mb-6">
+    <div class="card bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-200 shadow-sm">
+        <div class="card-body">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="p-2 rounded-full bg-pink-100">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgb(236 72 153)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-pink-800">Co-parenting Invitations</h3>
+                    <p class="text-sm text-pink-600">You have {{ $pendingCoparentInvites->count() }} pending co-parent {{ Str::plural('invitation', $pendingCoparentInvites->count()) }}</p>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                @foreach($pendingCoparentInvites as $invite)
+                <div class="flex items-center justify-between p-3 rounded-lg bg-white/80">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center">
+                            <span class="text-sm font-bold text-white">{{ strtoupper(substr($invite->inviter->name ?? 'U', 0, 1)) }}</span>
+                        </div>
+                        <div>
+                            <p class="font-medium text-slate-800">{{ $invite->inviter->name ?? 'Unknown' }}</p>
+                            <p class="text-sm text-slate-500">
+                                {{ $invite->familyMembers->count() }} {{ Str::plural('child', $invite->familyMembers->count()) }}:
+                                {{ $invite->familyMembers->pluck('first_name')->take(2)->join(', ') }}{{ $invite->familyMembers->count() > 2 ? '...' : '' }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <a href="{{ route('collaborator.accept', $invite->token) }}" class="btn btn-sm btn-primary">View Invite</a>
+                    </div>
+                </div>
+                @endforeach
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
 <!-- Quick Stats -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6">
     <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">

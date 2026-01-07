@@ -166,6 +166,11 @@
                 </a>
 
                 <!-- Navigation Menu -->
+                @if(session('expenses_mode'))
+                    @include('partials.sidebar-expenses')
+                @elseif(session('coparenting_mode'))
+                    @include('partials.sidebar-coparenting')
+                @else
                 <nav class="flex-1 overflow-y-auto overflow-x-hidden px-3 py-2">
                     <ul class="space-y-1">
                         <li>
@@ -257,6 +262,14 @@
                             </a>
                         </li>
                         <li>
+                            <a href="{{ route('coparenting.index') }}" class="group flex items-center gap-3 px-2 py-2.5 rounded-lg text-sm font-medium @if(request()->routeIs('coparenting.*')) bg-gradient-to-r from-violet-600 to-purple-600 text-white @else text-slate-400 hover:text-white hover:bg-slate-800 @endif">
+                                <div class="w-5 h-5 shrink-0 flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 5 9.04 7.96a2.17 2.17 0 0 0 0 3.08v0c.82.82 2.13.85 3 .07l2.07-1.9a2.82 2.82 0 0 1 3.79 0l2.96 2.66"/><path d="m18 15-2-2"/><path d="m15 18-2-2"/></svg>
+                                </div>
+                                <span class="nav-text">Co-parenting</span>
+                            </a>
+                        </li>
+                        <li>
                             <a href="{{ route('reminders.index') }}" class="group flex items-center gap-3 px-2 py-2.5 rounded-lg text-sm font-medium @if(request()->routeIs('reminders.*')) bg-gradient-to-r from-violet-600 to-purple-600 text-white @else text-slate-400 hover:text-white hover:bg-slate-800 @endif">
                                 <div class="w-5 h-5 shrink-0 flex items-center justify-center">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
@@ -314,6 +327,7 @@
                         </li>
                     </ul>
                 </nav>
+                @endif
             </div>
         </aside>
 

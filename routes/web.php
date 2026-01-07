@@ -27,6 +27,8 @@ use App\Http\Controllers\ShoppingListController;
 use App\Http\Controllers\PetController;
 use App\Http\Controllers\JournalController;
 use App\Http\Controllers\CollaboratorController;
+use App\Http\Controllers\CoparentingController;
+use App\Http\Controllers\ExpensesController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -352,16 +354,112 @@ Route::middleware(['security.code', 'auth'])->group(function () {
         Route::delete('/invites/{invite}', [CollaboratorController::class, 'revokeInvite'])->name('invites.revoke');
     });
 
+    // Co-Parenting
+    Route::middleware(['verified', 'onboarding'])->prefix('coparenting')->name('coparenting.')->group(function () {
+        // Main pages
+        Route::get('/', [CoparentingController::class, 'index'])->name('index');
+        Route::get('/intro', [CoparentingController::class, 'intro'])->name('intro');
+
+        // Mode toggle
+        Route::post('/enter-mode', [CoparentingController::class, 'enterMode'])->name('enter-mode');
+        Route::post('/exit-mode', [CoparentingController::class, 'exitMode'])->name('exit-mode');
+
+        // Invite flow
+        Route::get('/invite', [CoparentingController::class, 'inviteForm'])->name('invite');
+        Route::post('/invite', [CoparentingController::class, 'sendInvite'])->name('invite.send');
+        Route::post('/invite/{invite}/resend', [CoparentingController::class, 'resendInvite'])->name('invite.resend');
+
+        // Children management
+        Route::get('/children', [CoparentingController::class, 'children'])->name('children');
+        Route::get('/children/{child}', [CoparentingController::class, 'showChild'])->name('children.show');
+        Route::get('/children/{child}/access', [CoparentingController::class, 'manageAccess'])->name('children.access');
+        Route::put('/children/{child}/access', [CoparentingController::class, 'updateAccess'])->name('children.access.update');
+
+        // Calendar & Schedule Management
+        Route::get('/calendar', [CoparentingController::class, 'calendar'])->name('calendar');
+        Route::get('/calendar/events', [CoparentingController::class, 'calendarEvents'])->name('calendar.events');
+        Route::post('/schedule', [CoparentingController::class, 'storeSchedule'])->name('schedule.store');
+        Route::put('/schedule/{schedule}', [CoparentingController::class, 'updateSchedule'])->name('schedule.update');
+        Route::delete('/schedule/{schedule}', [CoparentingController::class, 'deleteSchedule'])->name('schedule.delete');
+        Route::post('/schedule/{schedule}/block', [CoparentingController::class, 'addScheduleBlock'])->name('schedule.block.store');
+
+        // Activities
+        Route::get('/activities', [CoparentingController::class, 'activities'])->name('activities');
+        Route::get('/activities/events', [CoparentingController::class, 'activityEvents'])->name('activities.events');
+        Route::post('/activities', [CoparentingController::class, 'storeActivity'])->name('activities.store');
+        Route::put('/activities/{activity}', [CoparentingController::class, 'updateActivity'])->name('activities.update');
+        Route::delete('/activities/{activity}', [CoparentingController::class, 'deleteActivity'])->name('activities.delete');
+
+        // Actual Time Tracking
+        Route::get('/actual-time', [CoparentingController::class, 'actualTime'])->name('actual-time');
+        Route::get('/actual-time/stats', [CoparentingController::class, 'actualTimeStats'])->name('actual-time.stats');
+        Route::post('/actual-time', [CoparentingController::class, 'storeActualTime'])->name('actual-time.store');
+        Route::put('/actual-time/{checkin}', [CoparentingController::class, 'updateActualTime'])->name('actual-time.update');
+        Route::delete('/actual-time/{checkin}', [CoparentingController::class, 'deleteActualTime'])->name('actual-time.delete');
+
+        // Placeholder pages
+        Route::get('/child-info', [CoparentingController::class, 'childInfo'])->name('child-info');
+        Route::get('/messages', [CoparentingController::class, 'messages'])->name('messages');
+        Route::get('/expenses', [CoparentingController::class, 'expenses'])->name('expenses');
+        Route::get('/parenting-plan', [CoparentingController::class, 'parentingPlan'])->name('parenting-plan');
+    });
 
     // Reminders
     Route::get('/reminders', function () {
         return view('pages.reminders.index');
     })->middleware(['verified', 'onboarding'])->name('reminders.index');
 
-    // Expenses Tracker
-    Route::get('/expenses', function () {
-        return view('pages.expenses.index');
-    })->middleware(['verified', 'onboarding'])->name('expenses.index');
+    // Expenses Tracker / Budgeting
+    Route::middleware(['verified', 'onboarding'])->prefix('expenses')->name('expenses.')->group(function () {
+        // Landing/Intro
+        Route::get('/', [ExpensesController::class, 'index'])->name('index');
+        Route::get('/intro', [ExpensesController::class, 'intro'])->name('intro');
+
+        // Budget Setup Wizard
+        Route::get('/budget/create', [ExpensesController::class, 'createBudget'])->name('budget.create');
+        Route::post('/budget/create', [ExpensesController::class, 'storeBudget'])->name('budget.store');
+        Route::get('/budget/{budget}/edit', [ExpensesController::class, 'editBudget'])->name('budget.edit');
+        Route::put('/budget/{budget}', [ExpensesController::class, 'updateBudget'])->name('budget.update');
+        Route::delete('/budget/{budget}', [ExpensesController::class, 'deleteBudget'])->name('budget.delete');
+
+        // Categories/Envelopes (uses session-selected budget)
+        Route::get('/categories', [ExpensesController::class, 'categories'])->name('categories');
+        Route::post('/categories', [ExpensesController::class, 'storeCategory'])->name('categories.store');
+        Route::put('/categories/{category}', [ExpensesController::class, 'updateCategory'])->name('categories.update');
+        Route::delete('/categories/{category}', [ExpensesController::class, 'deleteCategory'])->name('categories.delete');
+        Route::post('/categories/reorder', [ExpensesController::class, 'reorderCategories'])->name('categories.reorder');
+
+        // Transactions
+        Route::get('/transactions', [ExpensesController::class, 'transactions'])->name('transactions');
+        Route::post('/transactions', [ExpensesController::class, 'storeTransaction'])->name('transactions.store');
+        Route::put('/transactions/{transaction}', [ExpensesController::class, 'updateTransaction'])->name('transactions.update');
+        Route::delete('/transactions/{transaction}', [ExpensesController::class, 'deleteTransaction'])->name('transactions.delete');
+
+        // CSV Import
+        Route::get('/import', [ExpensesController::class, 'importForm'])->name('import');
+        Route::post('/import/upload', [ExpensesController::class, 'uploadCsv'])->name('import.upload');
+        Route::post('/import/map', [ExpensesController::class, 'mapColumns'])->name('import.map');
+        Route::post('/import/process', [ExpensesController::class, 'processImport'])->name('import.process');
+
+        // Sharing (uses session-selected budget)
+        Route::get('/share', [ExpensesController::class, 'shareForm'])->name('share');
+        Route::post('/share', [ExpensesController::class, 'shareWith'])->name('share.store');
+        Route::delete('/share/{share}', [ExpensesController::class, 'removeShare'])->name('share.delete');
+
+        // Dashboard & Reports
+        Route::get('/dashboard', [ExpensesController::class, 'dashboard'])->name('dashboard');
+        Route::get('/reports', [ExpensesController::class, 'reports'])->name('reports');
+        Route::get('/reports/export', [ExpensesController::class, 'exportReport'])->name('reports.export');
+
+        // Alerts
+        Route::get('/alerts', [ExpensesController::class, 'alerts'])->name('alerts');
+        Route::post('/alerts', [ExpensesController::class, 'storeAlert'])->name('alerts.store');
+        Route::delete('/alerts/{alert}', [ExpensesController::class, 'deleteAlert'])->name('alerts.delete');
+
+        // Mode toggle
+        Route::post('/enter-mode', [ExpensesController::class, 'enterMode'])->name('enter-mode');
+        Route::post('/exit-mode', [ExpensesController::class, 'exitMode'])->name('exit-mode');
+    });
 
     // Journey
     Route::get('/journey', function () {

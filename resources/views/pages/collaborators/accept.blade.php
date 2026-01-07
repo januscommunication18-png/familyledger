@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-lg w-full">
+    <div class="max-w-4xl w-full">
         <!-- Header -->
         <div class="text-center mb-8">
             <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -16,7 +16,7 @@
 
         <!-- Invitation Card -->
         <div class="card bg-white shadow-xl">
-            <div class="card-body">
+            <div class="card-body p-8 lg:p-10">
                 @if(session('error'))
                     <div class="alert alert-error mb-4">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
