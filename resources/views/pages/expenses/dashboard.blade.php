@@ -212,13 +212,17 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {{-- Category Breakdown --}}
+        {{-- Category Breakdown / Goals --}}
         <div class="card bg-base-100 shadow-sm">
             <div class="card-body">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="font-semibold text-slate-800">{{ $showAllBudgets ? 'Budget Breakdown' : ($budget->is_envelope ? 'Envelopes' : 'Categories') }}</h3>
-                    @if(!$showAllBudgets)
-                    <a href="{{ route('expenses.categories', $budget) }}" class="btn btn-ghost btn-xs">Manage</a>
+                    @if($showAllBudgets)
+                        <h3 class="font-semibold text-slate-800">Budget Breakdown</h3>
+                    @elseif($budget && $budget->is_traditional)
+                        <h3 class="font-semibold text-slate-800">Goals</h3>
+                    @else
+                        <h3 class="font-semibold text-slate-800">{{ $budget->is_envelope ? 'Envelopes' : 'Categories' }}</h3>
+                        <a href="{{ route('expenses.categories', $budget) }}" class="btn btn-ghost btn-xs">Manage</a>
                     @endif
                 </div>
                 <div class="space-y-3">
@@ -242,6 +246,62 @@
                             </div>
                         </div>
                         @endforeach
+                    @elseif($budget && $budget->is_traditional && $goals->count() > 0)
+                        {{-- Show goals for traditional budgets --}}
+                        @foreach($goals as $goal)
+                        @php
+                            $current = $goal->calculated_current ?? 0;
+                            $target = $goal->target_amount;
+                            $percentage = $target > 0 ? min(100, round(($current / $target) * 100, 1)) : 0;
+
+                            // Different color logic based on goal type
+                            if ($goal->type === 'expense') {
+                                // For expense goals (spending limits), lower is better
+                                $progressClass = $percentage > 100 ? 'progress-error' : ($percentage >= 80 ? 'progress-warning' : 'progress-success');
+                                $statusColor = $percentage > 100 ? 'text-red-600' : ($percentage >= 80 ? 'text-amber-600' : 'text-emerald-600');
+                            } else {
+                                // For income/saving goals, higher is better
+                                $progressClass = $percentage >= 100 ? 'progress-success' : 'progress-info';
+                                $statusColor = $percentage >= 100 ? 'text-emerald-600' : 'text-blue-600';
+                            }
+                        @endphp
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg flex items-center justify-center text-xl" style="background-color: {{ $goal->display_color }}20">
+                                {{ $goal->display_icon }}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-sm font-medium text-slate-700 truncate">
+                                        {{ $goal->name }}
+                                        <span class="badge badge-xs ml-1" style="background-color: {{ $goal->display_color }}20; color: {{ $goal->display_color }}">
+                                            {{ $goal->type_label }}
+                                        </span>
+                                    </span>
+                                    <span class="text-sm {{ $statusColor }}">${{ number_format($current, 2) }} / ${{ number_format($target, 2) }}</span>
+                                </div>
+                                @if($goal->description)
+                                <p class="text-xs text-slate-500 mb-1 truncate">{{ $goal->description }}</p>
+                                @endif
+                                <div class="flex items-center gap-2">
+                                    <progress class="progress w-full h-2 {{ $progressClass }}" value="{{ min($percentage, 100) }}" max="100"></progress>
+                                    <span class="text-xs text-slate-500 w-10 text-right">{{ $percentage }}%</span>
+                                </div>
+                                @if($goal->target_date && $goal->days_remaining !== null)
+                                <p class="text-xs text-slate-400 mt-1">
+                                    @if($goal->days_remaining > 0)
+                                        {{ $goal->days_remaining }} days remaining
+                                    @elseif($goal->days_remaining === 0)
+                                        Due today
+                                    @else
+                                        Overdue
+                                    @endif
+                                </p>
+                                @endif
+                            </div>
+                        </div>
+                        @endforeach
+                    @elseif($budget && $budget->is_traditional)
+                        <p class="text-sm text-slate-500 text-center py-4">No goals set up yet.</p>
                     @else
                         @forelse($categorySpending as $data)
                         <div class="flex items-center gap-3">

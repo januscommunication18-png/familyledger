@@ -5,15 +5,115 @@
 @section('content')
 <div class="p-4 lg:p-6 max-w-3xl mx-auto">
     {{-- Progress Steps --}}
+    @php
+        $budgetType = $wizardData['type'] ?? 'envelope';
+        $isEnvelopeBudget = $budgetType === 'envelope';
+
+        // Define steps based on budget type
+        if ($isEnvelopeBudget) {
+            $steps = [
+                1 => ['icon' => 'layers', 'label' => 'Type', 'color' => 'violet'],
+                2 => ['icon' => 'file-text', 'label' => 'Details', 'color' => 'blue'],
+                4 => ['icon' => 'folder', 'label' => 'Envelopes', 'color' => 'emerald'],
+                5 => ['icon' => 'users', 'label' => 'Share', 'color' => 'amber'],
+                6 => ['icon' => 'check-circle', 'label' => 'Review', 'color' => 'green'],
+            ];
+        } else {
+            $steps = [
+                1 => ['icon' => 'layers', 'label' => 'Type', 'color' => 'violet'],
+                2 => ['icon' => 'file-text', 'label' => 'Details', 'color' => 'blue'],
+                3 => ['icon' => 'dollar-sign', 'label' => 'Budget', 'color' => 'cyan'],
+                4 => ['icon' => 'target', 'label' => 'Goals', 'color' => 'emerald'],
+                5 => ['icon' => 'users', 'label' => 'Share', 'color' => 'amber'],
+                6 => ['icon' => 'check-circle', 'label' => 'Review', 'color' => 'green'],
+            ];
+        }
+        $stepKeys = array_keys($steps);
+        $currentStepIndex = array_search($step, $stepKeys);
+        if ($currentStepIndex === false) $currentStepIndex = 0;
+    @endphp
+
+    {{-- Modern Progress Indicator --}}
     <div class="mb-8">
-        <ul class="steps steps-horizontal w-full text-xs sm:text-sm">
-            <li class="step {{ $step >= 1 ? 'step-primary' : '' }}">Type</li>
-            <li class="step {{ $step >= 2 ? 'step-primary' : '' }}">Details</li>
-            <li class="step {{ $step >= 3 ? 'step-primary' : '' }}">Amount</li>
-            <li class="step {{ $step >= 4 ? 'step-primary' : '' }}">Categories</li>
-            <li class="step {{ $step >= 5 ? 'step-primary' : '' }}">Share</li>
-            <li class="step {{ $step >= 6 ? 'step-primary' : '' }}">Review</li>
-        </ul>
+        <div class="flex items-center justify-between relative">
+            {{-- Progress Line Background --}}
+            <div class="absolute top-5 left-0 right-0 h-0.5 bg-slate-200 hidden sm:block" style="left: 10%; right: 10%;"></div>
+
+            {{-- Progress Line Active --}}
+            @php
+                $progressPercent = count($stepKeys) > 1 ? ($currentStepIndex / (count($stepKeys) - 1)) * 80 : 0;
+            @endphp
+            <div class="absolute top-5 h-0.5 bg-gradient-to-r from-violet-500 via-emerald-500 to-green-500 hidden sm:block transition-all duration-500" style="left: 10%; width: {{ $progressPercent }}%;"></div>
+
+            @foreach($steps as $stepNum => $stepInfo)
+            @php
+                $stepIndex = array_search($stepNum, $stepKeys);
+                $isCompleted = $step > $stepNum;
+                $isCurrent = $step === $stepNum;
+                $isPending = $step < $stepNum;
+            @endphp
+            <div class="flex flex-col items-center relative z-10 flex-1">
+                {{-- Step Circle --}}
+                <div class="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm
+                    @if($isCompleted)
+                        bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-emerald-200
+                    @elseif($isCurrent)
+                        bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-violet-200 ring-4 ring-violet-100 scale-110
+                    @else
+                        bg-white border-2 border-slate-200 text-slate-400
+                    @endif
+                ">
+                    @if($isCompleted)
+                        {{-- Checkmark for completed --}}
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    @else
+                        {{-- Icon for current/pending --}}
+                        @switch($stepInfo['icon'])
+                            @case('layers')
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                                @break
+                            @case('file-text')
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                                @break
+                            @case('dollar-sign')
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                                @break
+                            @case('folder')
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                                @break
+                            @case('target')
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                                @break
+                            @case('users')
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                @break
+                            @case('check-circle')
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                @break
+                        @endswitch
+                    @endif
+                </div>
+
+                {{-- Step Label --}}
+                <span class="mt-2 text-xs font-medium transition-colors duration-300
+                    @if($isCompleted) text-emerald-600
+                    @elseif($isCurrent) text-violet-600
+                    @else text-slate-400
+                    @endif
+                ">
+                    {{ $stepInfo['label'] }}
+                </span>
+            </div>
+            @endforeach
+        </div>
+
+        {{-- Current Step Indicator (Mobile Friendly) --}}
+        <div class="mt-4 text-center sm:hidden">
+            <span class="inline-flex items-center gap-2 px-4 py-2 bg-violet-50 text-violet-700 rounded-full text-sm font-medium">
+                <span class="w-6 h-6 bg-violet-600 text-white rounded-full flex items-center justify-center text-xs">{{ $currentStepIndex + 1 }}</span>
+                Step {{ $currentStepIndex + 1 }} of {{ count($steps) }}: {{ $steps[$step]['label'] ?? 'Setup' }}
+            </span>
+        </div>
     </div>
 
     {{-- Step 1: Budget Type --}}
@@ -68,6 +168,9 @@
 
     {{-- Step 2: Budget Details --}}
     @if($step === 2)
+    @php
+        $isEnvelope = ($wizardData['type'] ?? 'envelope') === 'envelope';
+    @endphp
     <div class="card bg-base-100 shadow-sm">
         <div class="card-body">
             <h2 class="text-xl font-bold text-slate-800 mb-2">Budget Details</h2>
@@ -89,7 +192,7 @@
                         <label class="label">
                             <span class="label-text font-medium">Budget Period</span>
                         </label>
-                        <select name="period" class="select select-bordered" required>
+                        <select name="period" id="periodSelect" class="select select-bordered" required onchange="updateIncomeLabel()">
                             @foreach($periods as $value => $label)
                             <option value="{{ $value }}" {{ ($wizardData['period'] ?? 'monthly') === $value ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
@@ -105,6 +208,45 @@
                         </label>
                         <input type="date" name="start_date" class="input input-bordered" value="{{ $wizardData['start_date'] ?? now()->startOfMonth()->format('Y-m-d') }}" required>
                     </div>
+
+                    {{-- Income Field for Envelope Budgeting --}}
+                    @if($isEnvelope)
+                    <div class="border-t border-slate-200 pt-4 mt-4">
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text font-medium">
+                                    <span id="incomeLabel">Monthly</span> Income
+                                </span>
+                            </label>
+                            <label class="input-group">
+                                <span class="bg-base-200">$</span>
+                                <input type="number" name="total_amount" id="incomeInput" step="0.01" min="0" class="input input-bordered flex-1" placeholder="5000.00" value="{{ $wizardData['total_amount'] ?? '' }}" required>
+                            </label>
+                            <label class="label">
+                                <span class="label-text-alt text-slate-500">Enter your total income for this budget period. This will be the amount you allocate to your envelopes.</span>
+                            </label>
+                        </div>
+
+                        {{-- Quick Amount Buttons --}}
+                        <div class="flex flex-wrap gap-2 mt-2">
+                            <button type="button" onclick="setIncome(2000)" class="btn btn-xs btn-outline">$2,000</button>
+                            <button type="button" onclick="setIncome(3000)" class="btn btn-xs btn-outline">$3,000</button>
+                            <button type="button" onclick="setIncome(4000)" class="btn btn-xs btn-outline">$4,000</button>
+                            <button type="button" onclick="setIncome(5000)" class="btn btn-xs btn-outline">$5,000</button>
+                            <button type="button" onclick="setIncome(6000)" class="btn btn-xs btn-outline">$6,000</button>
+                            <button type="button" onclick="setIncome(8000)" class="btn btn-xs btn-outline">$8,000</button>
+                            <button type="button" onclick="setIncome(10000)" class="btn btn-xs btn-outline">$10,000</button>
+                        </div>
+
+                        {{-- Envelope Info --}}
+                        <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mt-4">
+                            <div class="flex gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgb(16 185 129)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                                <p class="text-sm text-emerald-700">With envelope budgeting, your income is divided into "envelopes" for different spending categories. Each envelope gets a fixed amount, helping you control where your money goes.</p>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
                 </div>
 
                 <div class="flex justify-between">
@@ -120,6 +262,29 @@
             </form>
         </div>
     </div>
+
+    @if($isEnvelope)
+    <script>
+    const periodLabels = {
+        'weekly': 'Weekly',
+        'biweekly': 'Bi-weekly',
+        'monthly': 'Monthly',
+        'yearly': 'Yearly'
+    };
+
+    function updateIncomeLabel() {
+        const period = document.getElementById('periodSelect').value;
+        document.getElementById('incomeLabel').textContent = periodLabels[period] || 'Monthly';
+    }
+
+    function setIncome(amount) {
+        document.getElementById('incomeInput').value = amount.toFixed(2);
+    }
+
+    // Initialize on load
+    updateIncomeLabel();
+    </script>
+    @endif
     @endif
 
     {{-- Step 3: Total Budget Amount --}}
@@ -178,13 +343,145 @@
     </script>
     @endif
 
-    {{-- Step 4: Categories --}}
+    {{-- Step 4: Categories (Envelope) or Goals (Traditional) --}}
     @if($step === 4)
+    @php
+        $isTraditional = ($wizardData['type'] ?? 'envelope') === 'traditional';
+    @endphp
+
+    @if($isTraditional)
+    {{-- TRADITIONAL BUDGET: Goals --}}
     <div class="card bg-base-100 shadow-sm">
         <div class="card-body">
-            <h2 class="text-xl font-bold text-slate-800 mb-2">Set Up Categories</h2>
-            <p class="text-slate-500 mb-2">Create spending categories and allocate your budget.</p>
-            <p class="text-sm text-emerald-600 font-medium mb-6">Total Budget: ${{ number_format($wizardData['total_amount'] ?? 0, 2) }}</p>
+            <h2 class="text-xl font-bold text-slate-800 mb-2">Set Up Your Goals</h2>
+            <p class="text-slate-500 mb-2">Create financial goals to track your spending, income, and savings.</p>
+            <p class="text-sm text-blue-600 font-medium mb-6">Total Budget: ${{ number_format($wizardData['total_amount'] ?? 0, 2) }}</p>
+
+            <form action="{{ route('expenses.budget.store') }}" method="POST" id="goalsForm">
+                @csrf
+                <input type="hidden" name="step" value="4">
+
+                <div id="goalsContainer" class="space-y-4 mb-4">
+                    @php
+                        $existingGoals = $wizardData['goals'] ?? [
+                            ['name' => 'Monthly Spending', 'type' => 'expense', 'target_amount' => $wizardData['total_amount'] ?? 0, 'icon' => '📉', 'description' => ''],
+                        ];
+                    @endphp
+                    @foreach($existingGoals as $index => $goal)
+                    <div class="goal-row p-4 bg-base-200 rounded-lg">
+                        <div class="flex items-start gap-3 mb-3">
+                            <input type="text" name="goals[{{ $index }}][icon]" value="{{ $goal['icon'] ?? '🎯' }}" class="input input-bordered input-sm w-14 text-center text-lg">
+                            <div class="flex-1 space-y-3">
+                                <input type="text" name="goals[{{ $index }}][name]" value="{{ $goal['name'] ?? '' }}" class="input input-bordered input-sm w-full" placeholder="Goal name (e.g., Monthly Savings)" required>
+                                <input type="text" name="goals[{{ $index }}][description]" value="{{ $goal['description'] ?? '' }}" class="input input-bordered input-sm w-full" placeholder="Description (optional)">
+                                <div class="flex flex-wrap gap-3">
+                                    <select name="goals[{{ $index }}][type]" class="select select-bordered select-sm flex-1 min-w-[150px]" required>
+                                        @foreach($goalTypes as $type => $info)
+                                        <option value="{{ $type }}" {{ ($goal['type'] ?? 'expense') === $type ? 'selected' : '' }}>{{ $info['icon'] }} {{ $info['label'] }}</option>
+                                        @endforeach
+                                    </select>
+                                    <label class="input-group input-group-sm flex-1 min-w-[150px]">
+                                        <span class="bg-base-300 text-xs">Target $</span>
+                                        <input type="number" name="goals[{{ $index }}][target_amount]" value="{{ $goal['target_amount'] ?? 0 }}" step="0.01" min="0" class="input input-bordered input-sm w-full" placeholder="0.00" required>
+                                    </label>
+                                </div>
+                            </div>
+                            <button type="button" onclick="removeGoal(this)" class="btn btn-ghost btn-sm btn-square text-error mt-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+
+                <button type="button" onclick="addGoal()" class="btn btn-ghost btn-sm gap-1 mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                    Add Goal
+                </button>
+
+                {{-- Goal Types Info --}}
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <h4 class="font-medium text-blue-800 mb-2">Goal Types</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                        @foreach($goalTypes as $type => $info)
+                        <div class="flex items-start gap-2">
+                            <span class="text-lg">{{ $info['icon'] }}</span>
+                            <div>
+                                <p class="font-medium text-slate-700">{{ $info['label'] }}</p>
+                                <p class="text-xs text-slate-500">{{ $info['description'] }}</p>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div class="flex justify-between">
+                    <a href="{{ route('expenses.budget.create', ['step' => 3]) }}" class="btn btn-ghost">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                        Back
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        Continue
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    let goalIndex = {{ count($existingGoals) }};
+    const goalIcons = {!! json_encode($goalIcons) !!};
+
+    function addGoal() {
+        const container = document.getElementById('goalsContainer');
+        const icon = goalIcons[goalIndex % goalIcons.length];
+
+        const html = `
+            <div class="goal-row p-4 bg-base-200 rounded-lg">
+                <div class="flex items-start gap-3 mb-3">
+                    <input type="text" name="goals[${goalIndex}][icon]" value="${icon}" class="input input-bordered input-sm w-14 text-center text-lg">
+                    <div class="flex-1 space-y-3">
+                        <input type="text" name="goals[${goalIndex}][name]" class="input input-bordered input-sm w-full" placeholder="Goal name (e.g., Monthly Savings)" required>
+                        <input type="text" name="goals[${goalIndex}][description]" class="input input-bordered input-sm w-full" placeholder="Description (optional)">
+                        <div class="flex flex-wrap gap-3">
+                            <select name="goals[${goalIndex}][type]" class="select select-bordered select-sm flex-1 min-w-[150px]" required>
+                                <option value="expense">📉 Spending Limit</option>
+                                <option value="income">📈 Income Target</option>
+                                <option value="saving">🎯 Savings Goal</option>
+                            </select>
+                            <label class="input-group input-group-sm flex-1 min-w-[150px]">
+                                <span class="bg-base-300 text-xs">Target $</span>
+                                <input type="number" name="goals[${goalIndex}][target_amount]" value="0" step="0.01" min="0" class="input input-bordered input-sm w-full" placeholder="0.00" required>
+                            </label>
+                        </div>
+                    </div>
+                    <button type="button" onclick="removeGoal(this)" class="btn btn-ghost btn-sm btn-square text-error mt-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        container.insertAdjacentHTML('beforeend', html);
+        goalIndex++;
+    }
+
+    function removeGoal(btn) {
+        const rows = document.querySelectorAll('.goal-row');
+        if (rows.length > 1) {
+            btn.closest('.goal-row').remove();
+        }
+    }
+    </script>
+
+    @else
+    {{-- ENVELOPE BUDGET: Categories --}}
+    <div class="card bg-base-100 shadow-sm">
+        <div class="card-body">
+            <h2 class="text-xl font-bold text-slate-800 mb-2">Set Up Your Envelopes</h2>
+            <p class="text-slate-500 mb-2">Divide your income into spending categories (envelopes).</p>
+            <p class="text-sm text-emerald-600 font-medium mb-6">{{ ucfirst($wizardData['period'] ?? 'Monthly') }} Income: ${{ number_format($wizardData['total_amount'] ?? 0, 2) }}</p>
 
             <form action="{{ route('expenses.budget.store') }}" method="POST" id="categoriesForm">
                 @csrf
@@ -222,18 +519,19 @@
                         <span id="totalAllocated" class="font-semibold">$0.00</span>
                     </div>
                     <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm text-slate-600">Budget Amount:</span>
+                        <span class="text-sm text-slate-600">{{ ucfirst($wizardData['period'] ?? 'Monthly') }} Income:</span>
                         <span class="font-semibold">${{ number_format($wizardData['total_amount'] ?? 0, 2) }}</span>
                     </div>
                     <hr class="my-2 border-slate-300">
                     <div class="flex justify-between items-center">
-                        <span class="text-sm text-slate-600">Remaining:</span>
+                        <span class="text-sm text-slate-600">Unallocated:</span>
                         <span id="remaining" class="font-semibold text-emerald-600">$0.00</span>
                     </div>
                 </div>
 
                 <div class="flex justify-between">
-                    <a href="{{ route('expenses.budget.create', ['step' => 3]) }}" class="btn btn-ghost">
+                    {{-- For envelope budgets, go back to step 2 (skipping step 3) --}}
+                    <a href="{{ route('expenses.budget.create', ['step' => 2]) }}" class="btn btn-ghost">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                         Back
                     </a>
@@ -304,6 +602,7 @@
     // Initial calculation
     updateTotal();
     </script>
+    @endif
     @endif
 
     {{-- Step 5: Share with Family --}}
@@ -464,13 +763,37 @@
                             <span class="ml-2 font-medium">{{ isset($wizardData['start_date']) ? \Carbon\Carbon::parse($wizardData['start_date'])->format('M j, Y') : 'N/A' }}</span>
                         </div>
                         <div class="col-span-2">
-                            <span class="text-slate-500">Total Budget:</span>
+                            <span class="text-slate-500">{{ ($wizardData['type'] ?? 'envelope') === 'envelope' ? ucfirst($wizardData['period'] ?? 'Monthly') . ' Income' : 'Total Budget' }}:</span>
                             <span class="ml-2 font-bold text-lg text-emerald-600">${{ number_format($wizardData['total_amount'] ?? 0, 2) }}</span>
                         </div>
                     </div>
                 </div>
 
-                {{-- Categories --}}
+                {{-- Categories or Goals --}}
+                @if(($wizardData['type'] ?? 'envelope') === 'traditional')
+                {{-- Goals for Traditional Budget --}}
+                <div class="bg-base-200 rounded-lg p-4">
+                    <h3 class="font-semibold text-slate-800 mb-3">Goals ({{ count($wizardData['goals'] ?? []) }})</h3>
+                    <div class="space-y-2">
+                        @foreach(($wizardData['goals'] ?? []) as $goal)
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="flex items-center gap-2">
+                                <span>{{ $goal['icon'] ?? '🎯' }}</span>
+                                <span>{{ $goal['name'] }}</span>
+                                <span class="badge badge-xs {{ $goal['type'] === 'expense' ? 'badge-error' : ($goal['type'] === 'income' ? 'badge-success' : 'badge-info') }}">
+                                    {{ ucfirst($goal['type']) }}
+                                </span>
+                            </span>
+                            <span class="font-medium">${{ number_format($goal['target_amount'] ?? 0, 2) }}</span>
+                        </div>
+                        @if(!empty($goal['description']))
+                        <p class="text-xs text-slate-500 ml-8">{{ $goal['description'] }}</p>
+                        @endif
+                        @endforeach
+                    </div>
+                </div>
+                @else
+                {{-- Categories for Envelope Budget --}}
                 <div class="bg-base-200 rounded-lg p-4">
                     <h3 class="font-semibold text-slate-800 mb-3">Categories ({{ count($wizardData['categories'] ?? []) }})</h3>
                     <div class="space-y-2">
@@ -492,6 +815,7 @@
                         </div>
                     </div>
                 </div>
+                @endif
 
                 {{-- Sharing --}}
                 <div class="bg-base-200 rounded-lg p-4">

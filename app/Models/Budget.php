@@ -86,6 +86,11 @@ class Budget extends Model
         return $this->hasMany(BudgetAlert::class);
     }
 
+    public function goals(): HasMany
+    {
+        return $this->hasMany(BudgetGoal::class)->orderBy('sort_order');
+    }
+
     // ==================== SCOPES ====================
 
     public function scopeActive($query)

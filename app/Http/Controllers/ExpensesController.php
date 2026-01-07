@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Budget;
 use App\Models\BudgetAlert;
 use App\Models\BudgetCategory;
+use App\Models\BudgetGoal;
 use App\Models\BudgetShare;
 use App\Models\BudgetTransaction;
 use App\Models\Collaborator;
@@ -87,6 +88,8 @@ class ExpensesController extends Controller
             'periods' => Budget::PERIODS,
             'defaultCategories' => $this->getDefaultCategories(),
             'familyCircles' => $familyCircles,
+            'goalTypes' => BudgetGoal::TYPES,
+            'goalIcons' => BudgetGoal::ICONS,
         ]);
     }
 
@@ -114,8 +117,16 @@ class ExpensesController extends Controller
             return $this->finalizeBudget($wizardData);
         }
 
+        // Determine next step
+        $nextStep = $step + 1;
+
+        // For envelope budgets, skip step 3 (total amount) since income is collected in step 2
+        if ($step === 2 && ($wizardData['type'] ?? 'envelope') === 'envelope') {
+            $nextStep = 4; // Skip to categories
+        }
+
         // Move to next step
-        return redirect()->route('expenses.budget.create', ['step' => $step + 1]);
+        return redirect()->route('expenses.budget.create', ['step' => $nextStep]);
     }
 
     /**
@@ -123,21 +134,46 @@ class ExpensesController extends Controller
      */
     protected function validateWizardStep(Request $request, int $step): array|false
     {
+        $wizardData = session('budget_wizard', []);
+        $isTraditional = ($wizardData['type'] ?? 'envelope') === 'traditional';
+
+        $isEnvelope = ($wizardData['type'] ?? 'envelope') === 'envelope';
+
         $rules = match ($step) {
             1 => ['type' => 'required|in:envelope,traditional'],
-            2 => [
-                'name' => 'required|string|max:100',
-                'period' => 'required|in:weekly,biweekly,monthly,yearly',
-                'start_date' => 'required|date',
-            ],
+            2 => $isEnvelope
+                ? [
+                    // Envelope budget includes income in step 2
+                    'name' => 'required|string|max:100',
+                    'period' => 'required|in:weekly,biweekly,monthly,yearly',
+                    'start_date' => 'required|date',
+                    'total_amount' => 'required|numeric|min:0',
+                ]
+                : [
+                    // Traditional budget only gets name, period, start_date in step 2
+                    'name' => 'required|string|max:100',
+                    'period' => 'required|in:weekly,biweekly,monthly,yearly',
+                    'start_date' => 'required|date',
+                ],
             3 => ['total_amount' => 'required|numeric|min:0'],
-            4 => [
-                'categories' => 'required|array|min:1',
-                'categories.*.name' => 'required|string|max:50',
-                'categories.*.allocated_amount' => 'required|numeric|min:0',
-                'categories.*.icon' => 'nullable|string|max:10',
-                'categories.*.color' => 'nullable|string|max:20',
-            ],
+            4 => $isTraditional
+                ? [
+                    // Traditional budget uses goals
+                    'goals' => 'required|array|min:1',
+                    'goals.*.name' => 'required|string|max:100',
+                    'goals.*.description' => 'nullable|string|max:255',
+                    'goals.*.type' => 'required|in:expense,income,saving',
+                    'goals.*.target_amount' => 'required|numeric|min:0',
+                    'goals.*.icon' => 'nullable|string|max:10',
+                ]
+                : [
+                    // Envelope budget uses categories
+                    'categories' => 'required|array|min:1',
+                    'categories.*.name' => 'required|string|max:50',
+                    'categories.*.allocated_amount' => 'required|numeric|min:0',
+                    'categories.*.icon' => 'nullable|string|max:10',
+                    'categories.*.color' => 'nullable|string|max:20',
+                ],
             5 => [
                 'share_with_members' => 'nullable|array',
                 'share_with_members.*' => 'exists:family_members,id',
@@ -178,17 +214,34 @@ class ExpensesController extends Controller
                 'is_active' => true,
             ]);
 
-            // Create categories
+            // Create categories (for envelope budgets) or goals (for traditional budgets)
             $sortOrder = 0;
-            foreach ($wizardData['categories'] as $categoryData) {
-                BudgetCategory::create([
-                    'budget_id' => $budget->id,
-                    'name' => $categoryData['name'],
-                    'icon' => $categoryData['icon'] ?? null,
-                    'color' => $categoryData['color'] ?? null,
-                    'allocated_amount' => $categoryData['allocated_amount'],
-                    'sort_order' => $sortOrder++,
-                ]);
+
+            if ($wizardData['type'] === 'traditional' && !empty($wizardData['goals'])) {
+                // Create goals for traditional budget
+                foreach ($wizardData['goals'] as $goalData) {
+                    BudgetGoal::create([
+                        'budget_id' => $budget->id,
+                        'name' => $goalData['name'],
+                        'description' => $goalData['description'] ?? null,
+                        'type' => $goalData['type'],
+                        'target_amount' => $goalData['target_amount'],
+                        'icon' => $goalData['icon'] ?? null,
+                        'sort_order' => $sortOrder++,
+                    ]);
+                }
+            } elseif (!empty($wizardData['categories'])) {
+                // Create categories for envelope budget
+                foreach ($wizardData['categories'] as $categoryData) {
+                    BudgetCategory::create([
+                        'budget_id' => $budget->id,
+                        'name' => $categoryData['name'],
+                        'icon' => $categoryData['icon'] ?? null,
+                        'color' => $categoryData['color'] ?? null,
+                        'allocated_amount' => $categoryData['allocated_amount'],
+                        'sort_order' => $sortOrder++,
+                    ]);
+                }
             }
 
             // Create budget shares for selected family members
@@ -1046,6 +1099,20 @@ class ExpensesController extends Controller
                 ->get();
         }
 
+        // Get goals for traditional budgets with calculated current amounts
+        $goals = collect();
+        if (!$showAllBudgets && $budget && $budget->is_traditional) {
+            $goals = $budget->goals()->active()->ordered()->get();
+
+            // Calculate current amount for each goal based on period transactions
+            foreach ($goals as $goal) {
+                $goal->calculated_current = $goal->calculateCurrentFromTransactions(
+                    $periodDates['start'],
+                    $periodDates['end']
+                );
+            }
+        }
+
         // Get children for shared expense selection (co-parenting)
         $children = FamilyMember::forCurrentTenant()
             ->where(function ($q) {
@@ -1076,6 +1143,8 @@ class ExpensesController extends Controller
             'periodDates' => $periodDates,
             'availablePeriods' => $availablePeriods,
             'currentPeriodLabel' => $currentPeriodLabel,
+            // Goals for traditional budgets
+            'goals' => $goals,
         ]);
     }
 
