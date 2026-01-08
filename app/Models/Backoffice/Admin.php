@@ -1,0 +1,111 @@
+<?php
+
+namespace App\Models\Backoffice;
+
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Admin extends Authenticatable
+{
+    use Notifiable;
+
+    protected $table = 'backoffice_admins';
+
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        'security_code',
+        'security_code_expires_at',
+        'is_active',
+        'last_login_at',
+        'last_login_ip',
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
+        'security_code',
+    ];
+
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+        'security_code_expires_at' => 'datetime',
+        'last_login_at' => 'datetime',
+        'is_active' => 'boolean',
+    ];
+
+    /**
+     * Get the view codes for this admin.
+     */
+    public function viewCodes(): HasMany
+    {
+        return $this->hasMany(ViewCode::class, 'admin_id');
+    }
+
+    /**
+     * Get the activity logs for this admin.
+     */
+    public function activityLogs(): HasMany
+    {
+        return $this->hasMany(ActivityLog::class, 'admin_id');
+    }
+
+    /**
+     * Generate a new security code for login.
+     */
+    public function generateSecurityCode(): string
+    {
+        $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        $this->update([
+            'security_code' => bcrypt($code),
+            'security_code_expires_at' => now()->addMinutes(10),
+        ]);
+
+        return $code;
+    }
+
+    /**
+     * Verify security code.
+     */
+    public function verifySecurityCode(string $code): bool
+    {
+        if (!$this->security_code || !$this->security_code_expires_at) {
+            return false;
+        }
+
+        if ($this->security_code_expires_at->isPast()) {
+            return false;
+        }
+
+        return password_verify($code, $this->security_code);
+    }
+
+    /**
+     * Clear security code after successful verification.
+     */
+    public function clearSecurityCode(): void
+    {
+        $this->update([
+            'security_code' => null,
+            'security_code_expires_at' => null,
+        ]);
+    }
+
+    /**
+     * Log activity.
+     */
+    public function logActivity(string $action, ?string $tenantId = null, ?string $details = null): void
+    {
+        $this->activityLogs()->create([
+            'action' => $action,
+            'tenant_id' => $tenantId,
+            'details' => $details,
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+        ]);
+    }
+}
