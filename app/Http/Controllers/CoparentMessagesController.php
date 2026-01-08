@@ -402,18 +402,36 @@ class CoparentMessagesController extends Controller
     /**
      * Export conversation to PDF.
      */
-    public function exportPdf(CoparentConversation $conversation)
+    public function exportPdf(Request $request, CoparentConversation $conversation)
     {
         $user = auth()->user();
 
         // Verify user is a participant
         abort_unless($conversation->isParticipant($user->id), 403);
 
-        // Load all messages with relationships
-        $messages = $conversation->messages()
+        // Get date range from request
+        $startDate = $request->input('start_date') ? \Carbon\Carbon::parse($request->input('start_date'))->startOfDay() : null;
+        $endDate = $request->input('end_date') ? \Carbon\Carbon::parse($request->input('end_date'))->endOfDay() : null;
+
+        // Get export options
+        $includeTimestamps = $request->boolean('include_timestamps', true);
+        $includeReadReceipts = $request->boolean('include_read_receipts', true);
+        $includeEditHistory = $request->boolean('include_edit_history', false);
+
+        // Build query
+        $query = $conversation->messages()
             ->with(['sender', 'attachments', 'edits', 'reads.user'])
-            ->orderBy('created_at', 'asc')
-            ->get();
+            ->orderBy('created_at', 'asc');
+
+        // Apply date filters
+        if ($startDate) {
+            $query->where('created_at', '>=', $startDate);
+        }
+        if ($endDate) {
+            $query->where('created_at', '<=', $endDate);
+        }
+
+        $messages = $query->get();
 
         // Get participants
         $participants = $conversation->getParticipants();
@@ -426,12 +444,134 @@ class CoparentMessagesController extends Controller
             'conversation',
             'messages',
             'participants',
-            'child'
+            'child',
+            'includeTimestamps',
+            'includeReadReceipts',
+            'includeEditHistory',
+            'startDate',
+            'endDate'
         ));
 
-        $filename = 'conversation-' . $conversation->id . '-' . now()->format('Y-m-d') . '.pdf';
+        $dateRange = '';
+        if ($startDate && $endDate) {
+            $dateRange = '-' . $startDate->format('Ymd') . '-to-' . $endDate->format('Ymd');
+        }
+
+        $filename = 'conversation-' . $conversation->id . $dateRange . '.pdf';
 
         return $pdf->download($filename);
+    }
+
+    /**
+     * Export conversation to CSV.
+     */
+    public function exportCsv(Request $request, CoparentConversation $conversation)
+    {
+        $user = auth()->user();
+
+        // Verify user is a participant
+        abort_unless($conversation->isParticipant($user->id), 403);
+
+        // Get date range from request
+        $startDate = $request->input('start_date') ? \Carbon\Carbon::parse($request->input('start_date'))->startOfDay() : null;
+        $endDate = $request->input('end_date') ? \Carbon\Carbon::parse($request->input('end_date'))->endOfDay() : null;
+
+        // Get export options
+        $includeTimestamps = $request->boolean('include_timestamps', true);
+        $includeReadReceipts = $request->boolean('include_read_receipts', true);
+        $includeEditHistory = $request->boolean('include_edit_history', false);
+
+        // Build query
+        $query = $conversation->messages()
+            ->with(['sender', 'attachments', 'edits', 'reads.user'])
+            ->orderBy('created_at', 'asc');
+
+        // Apply date filters
+        if ($startDate) {
+            $query->where('created_at', '>=', $startDate);
+        }
+        if ($endDate) {
+            $query->where('created_at', '<=', $endDate);
+        }
+
+        $messages = $query->get();
+
+        // Get child info
+        $child = $conversation->child;
+        $childName = $child->familyMember->full_name ?? 'Unknown';
+
+        // Build CSV headers
+        $headers = ['Date', 'Time', 'Sender', 'Category', 'Message'];
+        if ($includeReadReceipts) {
+            $headers[] = 'Read By';
+            $headers[] = 'Read At';
+        }
+        if ($includeEditHistory) {
+            $headers[] = 'Edited';
+            $headers[] = 'Edit Count';
+        }
+        $headers[] = 'Attachments';
+
+        // Build CSV data
+        $csvData = [];
+        $csvData[] = $headers;
+
+        foreach ($messages as $message) {
+            $row = [];
+
+            if ($includeTimestamps) {
+                $row[] = $message->created_at->format('Y-m-d');
+                $row[] = $message->created_at->format('H:i:s');
+            } else {
+                $row[] = $message->created_at->format('Y-m-d');
+                $row[] = '';
+            }
+
+            $row[] = $message->sender->name;
+            $row[] = $message->category;
+            $row[] = $message->content;
+
+            if ($includeReadReceipts) {
+                $reads = $message->reads->where('user_id', '!=', $message->sender_id);
+                $readByNames = $reads->pluck('user.name')->join(', ');
+                $readAt = $reads->first()?->read_at?->format('Y-m-d H:i:s') ?? '';
+                $row[] = $readByNames;
+                $row[] = $readAt;
+            }
+
+            if ($includeEditHistory) {
+                $row[] = $message->wasEdited() ? 'Yes' : 'No';
+                $row[] = $message->edits->count();
+            }
+
+            $row[] = $message->attachments->pluck('original_filename')->join(', ');
+
+            $csvData[] = $row;
+        }
+
+        // Generate CSV content
+        $output = fopen('php://temp', 'r+');
+        // Add BOM for Excel UTF-8 compatibility
+        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+
+        foreach ($csvData as $row) {
+            fputcsv($output, $row);
+        }
+
+        rewind($output);
+        $csv = stream_get_contents($output);
+        fclose($output);
+
+        $dateRange = '';
+        if ($startDate && $endDate) {
+            $dateRange = '-' . $startDate->format('Ymd') . '-to-' . $endDate->format('Ymd');
+        }
+
+        $filename = 'conversation-' . $conversation->id . $dateRange . '.csv';
+
+        return response($csv)
+            ->header('Content-Type', 'text/csv; charset=UTF-8')
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
     }
 
     /**

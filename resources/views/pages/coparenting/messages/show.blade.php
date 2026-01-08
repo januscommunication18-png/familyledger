@@ -52,9 +52,9 @@
                     </span>
                     Connecting...
                 </div>
-                <a href="{{ route('coparenting.messages.exportPdf', $conversation) }}" class="btn btn-ghost btn-sm btn-circle hover:bg-slate-100" title="Export to PDF">
+                <button type="button" onclick="openExportModal()" class="btn btn-ghost btn-sm btn-circle hover:bg-slate-100" title="Export Conversation">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                </a>
+                </button>
             </div>
         </div>
         @if($conversation->subject)
@@ -232,6 +232,120 @@
                 <div class="flex items-center justify-between mt-2 px-1">
                     <span class="text-xs text-slate-400">Press Enter to send</span>
                     <span id="char-count" class="text-xs text-slate-400">0 / 5000</span>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- Export Modal --}}
+<div id="export-modal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeExportModal()"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md relative animate-fadeIn">
+            {{-- Modal Header --}}
+            <div class="flex items-center justify-between p-5 border-b border-slate-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-slate-800">Export Conversation</h3>
+                        <p class="text-xs text-slate-500">Download messages for your records</p>
+                    </div>
+                </div>
+                <button onclick="closeExportModal()" class="btn btn-ghost btn-sm btn-circle">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+            </div>
+
+            {{-- Modal Body --}}
+            <form id="export-form" method="GET" action="{{ route('coparenting.messages.exportPdf', $conversation) }}">
+                <div class="p-5 space-y-5">
+                    {{-- Date Range --}}
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-3">Date Range</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-slate-500 mb-1">Start Date</label>
+                                <input type="date" name="start_date" id="export-start-date"
+                                    value="{{ $messages->first()?->created_at->format('Y-m-d') ?? now()->format('Y-m-d') }}"
+                                    min="{{ $messages->first()?->created_at->format('Y-m-d') ?? now()->format('Y-m-d') }}"
+                                    max="{{ now()->format('Y-m-d') }}"
+                                    class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-500 mb-1">End Date</label>
+                                <input type="date" name="end_date" id="export-end-date"
+                                    value="{{ now()->format('Y-m-d') }}"
+                                    min="{{ $messages->first()?->created_at->format('Y-m-d') ?? now()->format('Y-m-d') }}"
+                                    max="{{ now()->format('Y-m-d') }}"
+                                    class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500">
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-2">
+                            Conversation started: {{ $messages->first()?->created_at->format('M j, Y') ?? 'No messages' }}
+                        </p>
+                    </div>
+
+                    {{-- Format Selection --}}
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-3">Export Format</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="format" value="pdf" class="hidden peer" checked>
+                                <div class="flex items-center gap-3 p-4 rounded-xl border-2 border-slate-200 peer-checked:border-purple-500 peer-checked:bg-purple-50 transition-all">
+                                    <div class="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-slate-800 text-sm">PDF</p>
+                                        <p class="text-xs text-slate-500">Best for printing</p>
+                                    </div>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="format" value="csv" class="hidden peer">
+                                <div class="flex items-center gap-3 p-4 rounded-xl border-2 border-slate-200 peer-checked:border-purple-500 peer-checked:bg-purple-50 transition-all">
+                                    <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="8" x2="16" y1="13" y2="13"/><line x1="8" x2="16" y1="17" y2="17"/></svg>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-slate-800 text-sm">CSV</p>
+                                        <p class="text-xs text-slate-500">For spreadsheets</p>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    {{-- Include Options --}}
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-3">Include in Export</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" name="include_timestamps" value="1" checked class="checkbox checkbox-sm checkbox-primary">
+                                <span class="text-sm text-slate-600">Timestamps</span>
+                            </label>
+                            <label class="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" name="include_read_receipts" value="1" checked class="checkbox checkbox-sm checkbox-primary">
+                                <span class="text-sm text-slate-600">Read receipts</span>
+                            </label>
+                            <label class="flex items-center gap-3 cursor-pointer">
+                                <input type="checkbox" name="include_edit_history" value="1" class="checkbox checkbox-sm checkbox-primary">
+                                <span class="text-sm text-slate-600">Edit history</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Modal Footer --}}
+                <div class="flex items-center justify-end gap-3 p-5 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+                    <button type="button" onclick="closeExportModal()" class="btn btn-ghost">Cancel</button>
+                    <button type="submit" class="btn bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white border-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                        Download
+                    </button>
                 </div>
             </form>
         </div>
@@ -590,6 +704,41 @@ document.addEventListener('DOMContentLoaded', function() {
             form.dispatchEvent(new Event('submit'));
         }
     });
+});
+
+// Export Modal Functions
+function openExportModal() {
+    document.getElementById('export-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeExportModal() {
+    document.getElementById('export-modal').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+// Handle export form submission
+document.getElementById('export-form').addEventListener('submit', function(e) {
+    const format = this.querySelector('input[name="format"]:checked').value;
+
+    // Update form action based on format
+    if (format === 'csv') {
+        this.action = '{{ route("coparenting.messages.exportCsv", $conversation) }}';
+    } else {
+        this.action = '{{ route("coparenting.messages.exportPdf", $conversation) }}';
+    }
+
+    // Close modal after short delay to allow download to start
+    setTimeout(() => {
+        closeExportModal();
+    }, 500);
+});
+
+// Close modal on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeExportModal();
+    }
 });
 </script>
 @endsection

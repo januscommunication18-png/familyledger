@@ -162,7 +162,13 @@
             </tr>
             <tr>
                 <td class="label">Date Range:</td>
-                <td>{{ $messages->first()?->created_at->format('M j, Y') ?? 'N/A' }} - {{ $messages->last()?->created_at->format('M j, Y') ?? 'N/A' }}</td>
+                <td>
+                    @if(isset($startDate) && isset($endDate))
+                        {{ $startDate->format('M j, Y') }} - {{ $endDate->format('M j, Y') }}
+                    @else
+                        {{ $messages->first()?->created_at->format('M j, Y') ?? 'N/A' }} - {{ $messages->last()?->created_at->format('M j, Y') ?? 'N/A' }}
+                    @endif
+                </td>
             </tr>
             <tr>
                 <td class="label">Total Messages:</td>
@@ -181,12 +187,14 @@
                     <span class="sender-name">{{ $message->sender->name }}</span>
                     <span class="category-badge category-{{ $message->category }}">{{ $message->category }}</span>
                 </div>
+                @if(!isset($includeTimestamps) || $includeTimestamps)
                 <div class="message-meta">
                     {{ $message->created_at->format('M j, Y \a\t g:i A') }}
                     @if($message->ip_address)
                     <br>IP: {{ $message->ip_address }}
                     @endif
                 </div>
+                @endif
             </div>
 
             <div class="message-content">{{ $message->content }}</div>
@@ -200,7 +208,7 @@
             </div>
             @endif
 
-            @if($message->edits->count() > 0)
+            @if((!isset($includeEditHistory) || $includeEditHistory) && $message->edits->count() > 0)
             <div class="edit-history">
                 <div class="edit-history-title">Edit History ({{ $message->edits->count() }} edit{{ $message->edits->count() > 1 ? 's' : '' }})</div>
                 @foreach($message->edits as $edit)
@@ -213,7 +221,7 @@
             </div>
             @endif
 
-            @if($message->reads->count() > 0)
+            @if((!isset($includeReadReceipts) || $includeReadReceipts) && $message->reads->count() > 0)
             <div class="read-receipts">
                 Read by:
                 @foreach($message->reads as $read)

@@ -424,6 +424,7 @@ Route::middleware(['security.code', 'auth'])->group(function () {
             Route::get('/{conversation}', [CoparentMessagesController::class, 'show'])->name('show');
             Route::post('/{conversation}/messages', [CoparentMessagesController::class, 'storeMessage'])->name('storeMessage');
             Route::get('/{conversation}/export-pdf', [CoparentMessagesController::class, 'exportPdf'])->name('exportPdf');
+            Route::get('/{conversation}/export-csv', [CoparentMessagesController::class, 'exportCsv'])->name('exportCsv');
             Route::post('/{conversation}/attachments', [CoparentMessagesController::class, 'uploadAttachment'])->name('uploadAttachment');
         });
     });
