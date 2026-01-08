@@ -43,11 +43,11 @@
                 </div>
                 <div class="form-control w-full sm:w-auto">
                     <label class="label py-1"><span class="label-text text-xs">From</span></label>
-                    <input type="date" name="start_date" value="{{ $filters['start_date'] ?? '' }}" class="input input-bordered input-sm">
+                    <input type="text" name="start_date" value="{{ $filters['start_date'] ?? '' }}" class="input input-bordered input-sm" data-datepicker placeholder="Start date">
                 </div>
                 <div class="form-control w-full sm:w-auto">
                     <label class="label py-1"><span class="label-text text-xs">To</span></label>
-                    <input type="date" name="end_date" value="{{ $filters['end_date'] ?? '' }}" class="input input-bordered input-sm">
+                    <input type="text" name="end_date" value="{{ $filters['end_date'] ?? '' }}" class="input input-bordered input-sm" data-datepicker placeholder="End date">
                 </div>
                 <div class="flex gap-2">
                     <button type="submit" class="btn btn-primary btn-sm">Filter</button>
@@ -200,7 +200,7 @@
                             </div>
                             <div class="form-control">
                                 <label class="label py-1"><span class="label-text font-medium text-sm">Date</span></label>
-                                <input type="date" name="transaction_date" class="input input-bordered input-sm" value="{{ now()->format('Y-m-d') }}" required>
+                                <input type="text" name="transaction_date" class="input input-bordered input-sm" value="{{ now()->format('Y-m-d') }}" data-datepicker placeholder="Select date" required>
                             </div>
                         </div>
 

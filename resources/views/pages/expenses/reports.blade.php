@@ -22,11 +22,11 @@
             <form action="{{ route('expenses.reports') }}" method="GET" class="flex flex-wrap items-end gap-3">
                 <div class="form-control">
                     <label class="label py-1"><span class="label-text text-xs">From</span></label>
-                    <input type="date" name="start_date" value="{{ $startDate }}" class="input input-bordered input-sm">
+                    <input type="text" name="start_date" value="{{ $startDate }}" class="input input-bordered input-sm" data-datepicker placeholder="Start date">
                 </div>
                 <div class="form-control">
                     <label class="label py-1"><span class="label-text text-xs">To</span></label>
-                    <input type="date" name="end_date" value="{{ $endDate }}" class="input input-bordered input-sm">
+                    <input type="text" name="end_date" value="{{ $endDate }}" class="input input-bordered input-sm" data-datepicker placeholder="End date">
                 </div>
                 <button type="submit" class="btn btn-primary btn-sm">Apply</button>
                 <div class="flex gap-1 ml-auto">

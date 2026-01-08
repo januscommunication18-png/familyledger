@@ -206,7 +206,7 @@
                         <label class="label">
                             <span class="label-text font-medium">Start Date</span>
                         </label>
-                        <input type="date" name="start_date" class="input input-bordered" value="{{ $wizardData['start_date'] ?? now()->startOfMonth()->format('Y-m-d') }}" required>
+                        <input type="text" name="start_date" class="input input-bordered" value="{{ $wizardData['start_date'] ?? now()->startOfMonth()->format('Y-m-d') }}" data-datepicker placeholder="Select date" required>
                     </div>
 
                     {{-- Income Field for Envelope Budgeting --}}

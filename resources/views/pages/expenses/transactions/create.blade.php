@@ -48,7 +48,7 @@
                         </div>
                         <div class="form-control">
                             <label class="label py-1"><span class="label-text font-medium">Date</span></label>
-                            <input type="date" name="transaction_date" class="input input-bordered" value="{{ now()->format('Y-m-d') }}" required>
+                            <input type="text" name="transaction_date" class="input input-bordered" value="{{ now()->format('Y-m-d') }}" data-datepicker placeholder="Select date" required>
                         </div>
                     </div>
 
