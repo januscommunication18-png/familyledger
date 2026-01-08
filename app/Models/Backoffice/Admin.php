@@ -18,6 +18,8 @@ class Admin extends Authenticatable
         'password',
         'security_code',
         'security_code_expires_at',
+        'access_code',
+        'access_code_expires_at',
         'is_active',
         'last_login_at',
         'last_login_ip',
@@ -27,12 +29,14 @@ class Admin extends Authenticatable
         'password',
         'remember_token',
         'security_code',
+        'access_code',
     ];
 
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'security_code_expires_at' => 'datetime',
+        'access_code_expires_at' => 'datetime',
         'last_login_at' => 'datetime',
         'is_active' => 'boolean',
     ];
@@ -92,6 +96,48 @@ class Admin extends Authenticatable
         $this->update([
             'security_code' => null,
             'security_code_expires_at' => null,
+        ]);
+    }
+
+    /**
+     * Generate a new access code for pre-authentication.
+     */
+    public function generateAccessCode(): string
+    {
+        $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        $this->update([
+            'access_code' => bcrypt($code),
+            'access_code_expires_at' => now()->addMinutes(5),
+        ]);
+
+        return $code;
+    }
+
+    /**
+     * Verify access code.
+     */
+    public function verifyAccessCode(string $code): bool
+    {
+        if (!$this->access_code || !$this->access_code_expires_at) {
+            return false;
+        }
+
+        if ($this->access_code_expires_at->isPast()) {
+            return false;
+        }
+
+        return password_verify($code, $this->access_code);
+    }
+
+    /**
+     * Clear access code after successful verification.
+     */
+    public function clearAccessCode(): void
+    {
+        $this->update([
+            'access_code' => null,
+            'access_code_expires_at' => null,
         ]);
     }
 

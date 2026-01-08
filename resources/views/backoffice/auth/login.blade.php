@@ -3,8 +3,8 @@
 @section('content')
     <div x-data="{ showPassword: false }">
         <div class="mb-8">
-            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Welcome back</h2>
-            <p class="text-gray-600 dark:text-gray-400">Sign in to access the backoffice portal</p>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Enter Password</h2>
+            <p class="text-gray-600 dark:text-gray-400">Enter your password to continue</p>
         </div>
 
         @if (session('message'))
@@ -34,11 +34,9 @@
                     type="email"
                     id="email"
                     name="email"
-                    value="{{ old('email') }}"
-                    required
-                    autofocus
-                    class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                    placeholder="admin@familyledger.com"
+                    value="{{ $email }}"
+                    readonly
+                    class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white cursor-not-allowed"
                 >
             </div>
 
@@ -52,6 +50,7 @@
                         id="password"
                         name="password"
                         required
+                        autofocus
                         class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors pr-12"
                         placeholder="Enter your password"
                     >
@@ -93,5 +92,11 @@
                 Sign In
             </button>
         </form>
+
+        <div class="mt-4 text-center">
+            <a href="{{ route('backoffice.request-access') }}" class="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                &larr; Use a different email
+            </a>
+        </div>
     </div>
 @endsection

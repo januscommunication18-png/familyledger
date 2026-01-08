@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Backoffice;
 
 use App\Http\Controllers\Controller;
+use App\Mail\BackofficeAccessCode;
 use App\Mail\BackofficeSecurityCode;
 use App\Models\Backoffice\Admin;
 use App\Models\Backoffice\ActivityLog;
@@ -17,15 +18,144 @@ use Illuminate\Http\RedirectResponse;
 class AuthController extends Controller
 {
     /**
-     * Show login form.
+     * Show request access form (enter email only).
      */
-    public function showLogin(): View|RedirectResponse
+    public function showRequestAccess(): View|RedirectResponse
     {
+        // If already has access, redirect to login
+        if (session('backoffice_access_granted')) {
+            return redirect()->route('backoffice.login');
+        }
+
+        // If already logged in, redirect to dashboard
         if (Auth::guard('backoffice')->check()) {
             return redirect()->route('backoffice.dashboard');
         }
 
-        return view('backoffice.auth.login');
+        return view('backoffice.auth.request-access');
+    }
+
+    /**
+     * Handle request access - send access code to email.
+     */
+    public function requestAccess(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $admin = Admin::where('email', $request->email)->first();
+
+        if (!$admin) {
+            return back()->withErrors(['email' => 'This email is not authorized for backoffice access.'])->withInput();
+        }
+
+        if (!$admin->is_active) {
+            return back()->withErrors(['email' => 'Your account has been deactivated.'])->withInput();
+        }
+
+        // Generate and send access code
+        $code = $admin->generateAccessCode();
+
+        // Store admin ID in session
+        session(['backoffice_pending_access_admin_id' => $admin->id]);
+
+        // Send access code email
+        Mail::to($admin->email)->send(new BackofficeAccessCode($code, $admin->name));
+
+        return redirect()->route('backoffice.verify-access')
+            ->with('message', 'An access code has been sent to your email.');
+    }
+
+    /**
+     * Show verify access form.
+     */
+    public function showVerifyAccess(): View|RedirectResponse
+    {
+        if (!session('backoffice_pending_access_admin_id')) {
+            return redirect()->route('backoffice.request-access');
+        }
+
+        return view('backoffice.auth.verify-access');
+    }
+
+    /**
+     * Verify access code.
+     */
+    public function verifyAccess(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'code' => 'required|string|size:6',
+        ]);
+
+        $adminId = session('backoffice_pending_access_admin_id');
+
+        if (!$adminId) {
+            return redirect()->route('backoffice.request-access')
+                ->withErrors(['code' => 'Session expired. Please start again.']);
+        }
+
+        $admin = Admin::find($adminId);
+
+        if (!$admin || !$admin->verifyAccessCode($request->code)) {
+            return back()->withErrors(['code' => 'Invalid or expired access code.']);
+        }
+
+        // Clear access code
+        $admin->clearAccessCode();
+
+        // Grant access and clear pending
+        session()->forget('backoffice_pending_access_admin_id');
+        session(['backoffice_access_granted' => true]);
+        session(['backoffice_access_email' => $admin->email]);
+
+        return redirect()->route('backoffice.login')
+            ->with('message', 'Access verified. Please enter your password to login.');
+    }
+
+    /**
+     * Resend access code.
+     */
+    public function resendAccessCode(): RedirectResponse
+    {
+        $adminId = session('backoffice_pending_access_admin_id');
+
+        if (!$adminId) {
+            return redirect()->route('backoffice.request-access');
+        }
+
+        $admin = Admin::find($adminId);
+
+        if (!$admin) {
+            return redirect()->route('backoffice.request-access');
+        }
+
+        $code = $admin->generateAccessCode();
+
+        // Send access code email
+        Mail::to($admin->email)->send(new BackofficeAccessCode($code, $admin->name));
+
+        return back()->with('message', 'A new access code has been sent to your email.');
+    }
+
+    /**
+     * Show login form (only after access verification).
+     */
+    public function showLogin(): View|RedirectResponse
+    {
+        // If not access granted, redirect to request access
+        if (!session('backoffice_access_granted')) {
+            return redirect()->route('backoffice.request-access');
+        }
+
+        // If already logged in, redirect to dashboard
+        if (Auth::guard('backoffice')->check()) {
+            return redirect()->route('backoffice.dashboard');
+        }
+
+        $email = session('backoffice_access_email');
+
+        return view('backoffice.auth.login', compact('email'));
     }
 
     /**
@@ -33,6 +163,11 @@ class AuthController extends Controller
      */
     public function login(Request $request): RedirectResponse
     {
+        // Ensure access was granted
+        if (!session('backoffice_access_granted')) {
+            return redirect()->route('backoffice.request-access');
+        }
+
         $request->validate([
             'email' => 'required|email',
             'password' => 'required',
@@ -41,11 +176,11 @@ class AuthController extends Controller
         $admin = Admin::where('email', $request->email)->first();
 
         if (!$admin || !Hash::check($request->password, $admin->password)) {
-            return back()->withErrors(['email' => 'Invalid credentials.'])->withInput();
+            return back()->withErrors(['password' => 'Invalid password.'])->withInput();
         }
 
         if (!$admin->is_active) {
-            return back()->withErrors(['email' => 'Your account has been deactivated.'])->withInput();
+            return back()->withErrors(['password' => 'Your account has been deactivated.'])->withInput();
         }
 
         // Generate and send security code
@@ -67,7 +202,7 @@ class AuthController extends Controller
     public function showVerifyCode(): View|RedirectResponse
     {
         if (!session('backoffice_pending_admin_id')) {
-            return redirect()->route('backoffice.login');
+            return redirect()->route('backoffice.request-access');
         }
 
         return view('backoffice.auth.verify-code');
@@ -85,7 +220,7 @@ class AuthController extends Controller
         $adminId = session('backoffice_pending_admin_id');
 
         if (!$adminId) {
-            return redirect()->route('backoffice.login')
+            return redirect()->route('backoffice.request-access')
                 ->withErrors(['code' => 'Session expired. Please login again.']);
         }
 
@@ -110,8 +245,12 @@ class AuthController extends Controller
         // Login the admin
         Auth::guard('backoffice')->login($admin, $request->boolean('remember'));
 
-        // Clear session
-        session()->forget('backoffice_pending_admin_id');
+        // Clear all session data
+        session()->forget([
+            'backoffice_pending_admin_id',
+            'backoffice_access_granted',
+            'backoffice_access_email',
+        ]);
 
         return redirect()->intended(route('backoffice.dashboard'));
     }
@@ -124,13 +263,13 @@ class AuthController extends Controller
         $adminId = session('backoffice_pending_admin_id');
 
         if (!$adminId) {
-            return redirect()->route('backoffice.login');
+            return redirect()->route('backoffice.request-access');
         }
 
         $admin = Admin::find($adminId);
 
         if (!$admin) {
-            return redirect()->route('backoffice.login');
+            return redirect()->route('backoffice.request-access');
         }
 
         $code = $admin->generateSecurityCode();
@@ -138,8 +277,7 @@ class AuthController extends Controller
         // Send security code email
         Mail::to($admin->email)->send(new BackofficeSecurityCode($code, $admin->name));
 
-        return back()
-            ->with('message', 'A new security code has been sent to your email.');
+        return back()->with('message', 'A new security code has been sent to your email.');
     }
 
     /**
@@ -157,7 +295,7 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('backoffice.login');
+        return redirect()->route('backoffice.request-access');
     }
 
     /**
@@ -218,7 +356,7 @@ class AuthController extends Controller
         );
 
         return $status === Password::PASSWORD_RESET
-            ? redirect()->route('backoffice.login')->with('message', 'Password has been reset successfully.')
+            ? redirect()->route('backoffice.request-access')->with('message', 'Password has been reset successfully.')
             : back()->withErrors(['email' => __($status)]);
     }
 }

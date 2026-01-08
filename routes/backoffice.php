@@ -18,8 +18,20 @@ use Illuminate\Support\Facades\Route;
 
 // Guest routes (not logged in)
 Route::middleware('guest:backoffice')->group(function () {
+    // Step 1: Request Access (enter email)
+    Route::get('/', [AuthController::class, 'showRequestAccess'])->name('backoffice.request-access');
+    Route::post('/request-access', [AuthController::class, 'requestAccess'])->name('backoffice.request-access.submit');
+
+    // Step 2: Verify Access Code
+    Route::get('/verify-access', [AuthController::class, 'showVerifyAccess'])->name('backoffice.verify-access');
+    Route::post('/verify-access', [AuthController::class, 'verifyAccess'])->name('backoffice.verify-access.submit');
+    Route::post('/resend-access-code', [AuthController::class, 'resendAccessCode'])->name('backoffice.resend-access-code');
+
+    // Step 3: Login (enter password)
     Route::get('/login', [AuthController::class, 'showLogin'])->name('backoffice.login');
     Route::post('/login', [AuthController::class, 'login'])->name('backoffice.login.submit');
+
+    // Step 4: Verify Security Code
     Route::get('/verify-code', [AuthController::class, 'showVerifyCode'])->name('backoffice.verify-code');
     Route::post('/verify-code', [AuthController::class, 'verifyCode'])->name('backoffice.verify-code.submit');
     Route::post('/resend-code', [AuthController::class, 'resendCode'])->name('backoffice.resend-code');
@@ -36,7 +48,7 @@ Route::middleware('auth:backoffice')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('backoffice.logout');
 
     // Dashboard
-    Route::get('/', [DashboardController::class, 'index'])->name('backoffice.dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('backoffice.dashboard');
 
     // Clients
     Route::prefix('clients')->name('backoffice.clients.')->group(function () {
