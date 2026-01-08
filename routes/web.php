@@ -28,7 +28,9 @@ use App\Http\Controllers\PetController;
 use App\Http\Controllers\JournalController;
 use App\Http\Controllers\CollaboratorController;
 use App\Http\Controllers\CoparentingController;
+use App\Http\Controllers\CoparentMessagesController;
 use App\Http\Controllers\ExpensesController;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -110,6 +112,9 @@ Route::middleware('web')->group(function () {
 */
 
 Route::middleware(['security.code', 'auth'])->group(function () {
+    // Broadcast authentication routes for real-time features
+    Broadcast::routes();
+
     // Logout
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
@@ -399,9 +404,28 @@ Route::middleware(['security.code', 'auth'])->group(function () {
 
         // Placeholder pages
         Route::get('/child-info', [CoparentingController::class, 'childInfo'])->name('child-info');
-        Route::get('/messages', [CoparentingController::class, 'messages'])->name('messages');
         Route::get('/expenses', [CoparentingController::class, 'expenses'])->name('expenses');
         Route::get('/parenting-plan', [CoparentingController::class, 'parentingPlan'])->name('parenting-plan');
+
+        // Secure Messages
+        Route::prefix('messages')->name('messages.')->group(function () {
+            // Static routes first (before wildcard routes)
+            Route::get('/', [CoparentMessagesController::class, 'index'])->name('index');
+            Route::get('/create', [CoparentMessagesController::class, 'create'])->name('create');
+            Route::post('/', [CoparentMessagesController::class, 'store'])->name('store');
+            Route::get('/templates', [CoparentMessagesController::class, 'templates'])->name('templates');
+            Route::get('/attachments/{attachment}/download', [CoparentMessagesController::class, 'downloadAttachment'])->name('downloadAttachment');
+            Route::get('/message/{message}/edit', [CoparentMessagesController::class, 'edit'])->name('editMessage');
+            Route::put('/message/{message}', [CoparentMessagesController::class, 'update'])->name('updateMessage');
+            Route::get('/message/{message}/history', [CoparentMessagesController::class, 'showEditHistory'])->name('editHistory');
+            Route::post('/message/{message}/reaction', [CoparentMessagesController::class, 'toggleReaction'])->name('toggleReaction');
+
+            // Conversation routes (wildcard - must be last)
+            Route::get('/{conversation}', [CoparentMessagesController::class, 'show'])->name('show');
+            Route::post('/{conversation}/messages', [CoparentMessagesController::class, 'storeMessage'])->name('storeMessage');
+            Route::get('/{conversation}/export-pdf', [CoparentMessagesController::class, 'exportPdf'])->name('exportPdf');
+            Route::post('/{conversation}/attachments', [CoparentMessagesController::class, 'uploadAttachment'])->name('uploadAttachment');
+        });
     });
 
     // Reminders
