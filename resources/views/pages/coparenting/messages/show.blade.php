@@ -3,10 +3,74 @@
 @section('page-name', 'Conversation')
 
 @push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/airbnb.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <style>
     /* Hide footer on this page */
     footer { display: none !important; }
     main { padding-bottom: 0 !important; }
+
+    /* Flatpickr custom styling for FlyonUI */
+    .flatpickr-calendar {
+        border-radius: 12px !important;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+        border: 1px solid #e2e8f0 !important;
+        font-family: inherit !important;
+    }
+    .flatpickr-months {
+        background: linear-gradient(to right, #7c3aed, #8b5cf6) !important;
+        border-radius: 12px 12px 0 0 !important;
+        padding: 8px 0 !important;
+    }
+    .flatpickr-months .flatpickr-month {
+        color: white !important;
+        fill: white !important;
+    }
+    .flatpickr-current-month .flatpickr-monthDropdown-months,
+    .flatpickr-current-month input.cur-year {
+        color: white !important;
+        font-weight: 600 !important;
+    }
+    .flatpickr-months .flatpickr-prev-month,
+    .flatpickr-months .flatpickr-next-month {
+        fill: white !important;
+    }
+    .flatpickr-months .flatpickr-prev-month:hover,
+    .flatpickr-months .flatpickr-next-month:hover {
+        fill: #f1f5f9 !important;
+    }
+    .flatpickr-weekdays {
+        background: #f8fafc !important;
+    }
+    .flatpickr-weekday {
+        color: #64748b !important;
+        font-weight: 600 !important;
+    }
+    .flatpickr-day {
+        border-radius: 8px !important;
+        color: #334155 !important;
+    }
+    .flatpickr-day:hover {
+        background: #f1f5f9 !important;
+        border-color: #f1f5f9 !important;
+    }
+    .flatpickr-day.selected,
+    .flatpickr-day.selected:hover {
+        background: #7c3aed !important;
+        border-color: #7c3aed !important;
+        color: white !important;
+    }
+    .flatpickr-day.today {
+        border-color: #7c3aed !important;
+    }
+    .flatpickr-day.today:hover {
+        background: #7c3aed !important;
+        color: white !important;
+    }
+    .flatpickr-day.disabled {
+        color: #cbd5e1 !important;
+    }
 </style>
 @endpush
 
@@ -268,19 +332,33 @@
                         <div class="grid grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-xs text-slate-500 mb-1">Start Date</label>
-                                <input type="date" name="start_date" id="export-start-date"
-                                    value="{{ $messages->first()?->created_at->format('Y-m-d') ?? now()->format('Y-m-d') }}"
-                                    min="{{ $messages->first()?->created_at->format('Y-m-d') ?? now()->format('Y-m-d') }}"
-                                    max="{{ now()->format('Y-m-d') }}"
-                                    class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500">
+                                <div class="relative">
+                                    <input type="text" name="start_date" id="export-start-date"
+                                        data-default="{{ $messages->first()?->created_at->format('Y-m-d') ?? now()->format('Y-m-d') }}"
+                                        data-min="{{ $messages->first()?->created_at->format('Y-m-d') ?? now()->format('Y-m-d') }}"
+                                        data-max="{{ now()->format('Y-m-d') }}"
+                                        class="input input-bordered w-full pr-10 text-sm"
+                                        placeholder="Select start date"
+                                        readonly>
+                                    <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                                    </span>
+                                </div>
                             </div>
                             <div>
                                 <label class="block text-xs text-slate-500 mb-1">End Date</label>
-                                <input type="date" name="end_date" id="export-end-date"
-                                    value="{{ now()->format('Y-m-d') }}"
-                                    min="{{ $messages->first()?->created_at->format('Y-m-d') ?? now()->format('Y-m-d') }}"
-                                    max="{{ now()->format('Y-m-d') }}"
-                                    class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500">
+                                <div class="relative">
+                                    <input type="text" name="end_date" id="export-end-date"
+                                        data-default="{{ now()->format('Y-m-d') }}"
+                                        data-min="{{ $messages->first()?->created_at->format('Y-m-d') ?? now()->format('Y-m-d') }}"
+                                        data-max="{{ now()->format('Y-m-d') }}"
+                                        class="input input-bordered w-full pr-10 text-sm"
+                                        placeholder="Select end date"
+                                        readonly>
+                                    <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                                    </span>
+                                </div>
                             </div>
                         </div>
                         <p class="text-xs text-slate-400 mt-2">
@@ -707,14 +785,65 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Export Modal Functions
+let startDatePicker = null;
+let endDatePicker = null;
+
 function openExportModal() {
     document.getElementById('export-modal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+
+    // Initialize Flatpickr if not already done
+    initDatePickers();
 }
 
 function closeExportModal() {
     document.getElementById('export-modal').classList.add('hidden');
     document.body.style.overflow = '';
+}
+
+function initDatePickers() {
+    const startInput = document.getElementById('export-start-date');
+    const endInput = document.getElementById('export-end-date');
+
+    // Only initialize if not already done
+    if (startDatePicker) return;
+
+    const minDate = startInput.dataset.min;
+    const maxDate = startInput.dataset.max;
+
+    // Initialize start date picker
+    startDatePicker = flatpickr(startInput, {
+        dateFormat: 'Y-m-d',
+        altInput: true,
+        altFormat: 'F j, Y',
+        defaultDate: startInput.dataset.default,
+        minDate: minDate,
+        maxDate: maxDate,
+        monthSelectorType: 'static',
+        onChange: function(selectedDates, dateStr) {
+            // Update end date picker's min date
+            if (endDatePicker) {
+                endDatePicker.set('minDate', dateStr);
+            }
+        }
+    });
+
+    // Initialize end date picker
+    endDatePicker = flatpickr(endInput, {
+        dateFormat: 'Y-m-d',
+        altInput: true,
+        altFormat: 'F j, Y',
+        defaultDate: endInput.dataset.default,
+        minDate: minDate,
+        maxDate: maxDate,
+        monthSelectorType: 'static',
+        onChange: function(selectedDates, dateStr) {
+            // Update start date picker's max date
+            if (startDatePicker) {
+                startDatePicker.set('maxDate', dateStr);
+            }
+        }
+    });
 }
 
 // Handle export form submission
