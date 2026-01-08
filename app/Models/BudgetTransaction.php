@@ -6,6 +6,7 @@ use App\Traits\BelongsToTenant;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class BudgetTransaction extends Model
@@ -29,6 +30,8 @@ class BudgetTransaction extends Model
         'metadata',
         'is_shared',
         'shared_for_child_id',
+        'receipt_path',
+        'receipt_original_filename',
     ];
 
     protected $casts = [
@@ -80,6 +83,16 @@ class BudgetTransaction extends Model
     public function sharedForChild(): BelongsTo
     {
         return $this->belongsTo(FamilyMember::class, 'shared_for_child_id');
+    }
+
+    public function paymentRequests(): HasMany
+    {
+        return $this->hasMany(SharedExpensePayment::class, 'transaction_id');
+    }
+
+    public function pendingPaymentRequest()
+    {
+        return $this->paymentRequests()->pending()->first();
     }
 
     // ==================== SCOPES ====================
@@ -282,5 +295,51 @@ class BudgetTransaction extends Model
         }
 
         return $this->sharedForChild?->coparents ?? collect();
+    }
+
+    /**
+     * Check if transaction has a receipt.
+     */
+    public function hasReceipt(): bool
+    {
+        return !empty($this->receipt_path);
+    }
+
+    /**
+     * Get the receipt URL.
+     */
+    public function getReceiptUrlAttribute(): ?string
+    {
+        if (!$this->receipt_path) {
+            return null;
+        }
+
+        return \Storage::url($this->receipt_path);
+    }
+
+    /**
+     * Check if receipt is an image.
+     */
+    public function isReceiptImage(): bool
+    {
+        if (!$this->receipt_path) {
+            return false;
+        }
+
+        $extension = strtolower(pathinfo($this->receipt_path, PATHINFO_EXTENSION));
+        return in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+    }
+
+    /**
+     * Check if receipt is a PDF.
+     */
+    public function isReceiptPdf(): bool
+    {
+        if (!$this->receipt_path) {
+            return false;
+        }
+
+        $extension = strtolower(pathinfo($this->receipt_path, PATHINFO_EXTENSION));
+        return $extension === 'pdf';
     }
 }

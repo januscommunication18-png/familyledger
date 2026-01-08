@@ -10,11 +10,13 @@ use App\Models\BudgetShare;
 use App\Models\BudgetTransaction;
 use App\Models\Collaborator;
 use App\Models\FamilyMember;
+use App\Models\SharedExpensePayment;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class ExpensesController extends Controller
@@ -521,14 +523,40 @@ class ExpensesController extends Controller
         $categories = $budget->categories()->ordered()->get();
 
         // Get children for shared expense selection (co-parenting)
-        $children = FamilyMember::forCurrentTenant()
+        // Include both own children and children accessible via co-parenting
+        $user = Auth::user();
+
+        // Get children from current tenant (if user owns them)
+        $ownChildren = FamilyMember::forCurrentTenant()
+            ->with(['coparents.user'])
             ->where(function ($q) {
                 $q->where('is_minor', true)
                     ->orWhere('relationship', 'child')
                     ->orWhere('relationship', 'stepchild');
             })
-            ->orderBy('first_name')
             ->get();
+
+        // Get children accessible via co-parenting relationship (any collaborator with coparent children)
+        $coparentChildren = collect();
+        $collaborator = Collaborator::where('user_id', $user->id)
+            ->where('is_active', true)
+            ->whereHas('coparentChildren') // Has co-parenting children assigned
+            ->first();
+
+        if ($collaborator) {
+            $coparentChildren = $collaborator->coparentChildren()
+                ->with(['familyCircle.creator'])
+                ->get()
+                ->map(function ($child) use ($collaborator) {
+                    $owner = $child->familyCircle?->creator;
+                    $child->otherParentName = $owner?->name ?? 'Parent';
+                    $child->otherParentId = $owner?->id;
+                    $child->isCoparentChild = true;
+                    return $child;
+                });
+        }
+
+        $children = $ownChildren->merge($coparentChildren)->unique('id')->sortBy('first_name')->values();
 
         return view('pages.expenses.transactions.index', [
             'budget' => $budget,
@@ -536,6 +564,66 @@ class ExpensesController extends Controller
             'categories' => $categories,
             'children' => $children,
             'filters' => $request->only(['category_id', 'type', 'start_date', 'end_date', 'search']),
+        ]);
+    }
+
+    /**
+     * Show create transaction form.
+     */
+    public function createTransaction()
+    {
+        session(['expenses_mode' => true]);
+
+        $budget = $this->getSelectedBudget();
+
+        if (!$budget) {
+            return redirect()->route('expenses.intro');
+        }
+
+        $categories = $budget->categories()->ordered()->get();
+
+        // Get children for shared expense selection (co-parenting)
+        // Include both own children and children accessible via co-parenting
+        $user = Auth::user();
+
+        // Get children from current tenant (if user owns them)
+        $ownChildren = FamilyMember::forCurrentTenant()
+            ->with(['coparents.user'])
+            ->where(function ($q) {
+                $q->where('is_minor', true)
+                    ->orWhere('relationship', 'child')
+                    ->orWhere('relationship', 'stepchild');
+            })
+            ->get();
+
+        // Get children accessible via co-parenting relationship (any collaborator with coparent children)
+        $coparentChildren = collect();
+        $collaborator = Collaborator::where('user_id', $user->id)
+            ->where('is_active', true)
+            ->whereHas('coparentChildren') // Has co-parenting children assigned
+            ->first();
+
+        if ($collaborator) {
+            $coparentChildren = $collaborator->coparentChildren()
+                ->with(['familyCircle.creator']) // Load the owner
+                ->get()
+                ->map(function ($child) use ($collaborator) {
+                    // For co-parent, the "other parent" is the family circle owner
+                    $owner = $child->familyCircle?->creator;
+                    $child->otherParentName = $owner?->name ?? 'Parent';
+                    $child->otherParentId = $owner?->id;
+                    $child->isCoparentChild = true;
+                    return $child;
+                });
+        }
+
+        // Merge and dedupe by ID
+        $children = $ownChildren->merge($coparentChildren)->unique('id')->sortBy('first_name')->values();
+
+        return view('pages.expenses.transactions.create', [
+            'budget' => $budget,
+            'categories' => $categories,
+            'children' => $children,
         ]);
     }
 
@@ -561,9 +649,23 @@ class ExpensesController extends Controller
             'transaction_date' => 'required|date',
             'is_shared' => 'nullable|boolean',
             'shared_for_child_id' => 'nullable|exists:family_members,id',
+            'receipt' => 'nullable|file|mimes:jpg,jpeg,png,gif,webp,pdf|max:5120',
+            'request_payment' => 'nullable|boolean',
+            'split_percentage' => 'nullable|string',
+            'custom_split_percentage' => 'nullable|numeric|min:1|max:100',
+            'payment_note' => 'nullable|string|max:500',
         ]);
 
-        BudgetTransaction::create([
+        // Handle receipt upload
+        $receiptPath = null;
+        $receiptOriginalFilename = null;
+        if ($request->hasFile('receipt')) {
+            $file = $request->file('receipt');
+            $receiptPath = $file->store('receipts/' . Auth::user()->tenant_id, 'public');
+            $receiptOriginalFilename = $file->getClientOriginalName();
+        }
+
+        $transaction = BudgetTransaction::create([
             'tenant_id' => Auth::user()->tenant_id,
             'budget_id' => $budget->id,
             'created_by' => Auth::id(),
@@ -576,7 +678,59 @@ class ExpensesController extends Controller
             'source' => 'manual',
             'is_shared' => $request->boolean('is_shared'),
             'shared_for_child_id' => $request->boolean('is_shared') ? ($validated['shared_for_child_id'] ?? null) : null,
+            'receipt_path' => $receiptPath,
+            'receipt_original_filename' => $receiptOriginalFilename,
         ]);
+
+        // Create payment request if requested - send to ALL co-parents
+        if ($request->boolean('request_payment') && $request->boolean('is_shared') && !empty($validated['shared_for_child_id'])) {
+            $child = FamilyMember::with(['coparents.user', 'familyCircle.creator'])->find($validated['shared_for_child_id']);
+            if ($child) {
+                $user = Auth::user();
+                $requestedFromUserIds = [];
+
+                // Check if current user is the owner of the child (request from all co-parents)
+                if ($child->tenant_id === $user->tenant_id) {
+                    // Get all co-parents for this child
+                    foreach ($child->coparents as $coparent) {
+                        if ($coparent->user && $coparent->user_id !== $user->id) {
+                            $requestedFromUserIds[] = $coparent->user_id;
+                        }
+                    }
+                } else {
+                    // Current user is a co-parent, request from the owner
+                    $owner = $child->familyCircle?->creator;
+                    if ($owner && $owner->id !== $user->id) {
+                        $requestedFromUserIds[] = $owner->id;
+                    }
+                }
+
+                if (!empty($requestedFromUserIds)) {
+                    // Calculate split percentage
+                    $splitPercentage = 50;
+                    if ($validated['split_percentage'] === 'custom' && !empty($validated['custom_split_percentage'])) {
+                        $splitPercentage = $validated['custom_split_percentage'];
+                    }
+
+                    $requestAmount = ($validated['amount'] * $splitPercentage / 100);
+
+                    // Create payment request for each co-parent
+                    foreach ($requestedFromUserIds as $requestedFromUserId) {
+                        SharedExpensePayment::create([
+                            'tenant_id' => $child->tenant_id, // Use child's tenant for visibility
+                            'transaction_id' => $transaction->id,
+                            'requested_by' => Auth::id(),
+                            'requested_from' => $requestedFromUserId,
+                            'child_id' => $child->id,
+                            'amount' => $requestAmount,
+                            'split_percentage' => $splitPercentage,
+                            'note' => $validated['payment_note'] ?? null,
+                            'status' => SharedExpensePayment::STATUS_PENDING,
+                        ]);
+                    }
+                }
+            }
+        }
 
         // Check alerts
         $this->checkBudgetAlerts($budget);
@@ -600,9 +754,10 @@ class ExpensesController extends Controller
             'transaction_date' => 'required|date',
             'is_shared' => 'nullable|boolean',
             'shared_for_child_id' => 'nullable|exists:family_members,id',
+            'receipt' => 'nullable|file|mimes:jpg,jpeg,png,gif,webp,pdf|max:5120',
         ]);
 
-        $transaction->update([
+        $updateData = [
             'type' => $validated['type'],
             'amount' => $validated['amount'],
             'description' => $validated['description'],
@@ -611,9 +766,64 @@ class ExpensesController extends Controller
             'transaction_date' => $validated['transaction_date'],
             'is_shared' => $request->boolean('is_shared'),
             'shared_for_child_id' => $request->boolean('is_shared') ? ($validated['shared_for_child_id'] ?? null) : null,
-        ]);
+        ];
+
+        // Handle receipt upload
+        if ($request->hasFile('receipt')) {
+            // Delete old receipt if exists
+            if ($transaction->receipt_path) {
+                Storage::disk('public')->delete($transaction->receipt_path);
+            }
+            $file = $request->file('receipt');
+            $updateData['receipt_path'] = $file->store('receipts/' . Auth::user()->tenant_id, 'public');
+            $updateData['receipt_original_filename'] = $file->getClientOriginalName();
+        }
+
+        $transaction->update($updateData);
 
         return back()->with('success', 'Transaction updated successfully!');
+    }
+
+    /**
+     * Show transaction details.
+     */
+    public function showTransaction(BudgetTransaction $transaction)
+    {
+        session(['expenses_mode' => true]);
+
+        $this->authorizeBudgetAccess($transaction->budget, 'view');
+
+        $transaction->load(['category', 'creator', 'sharedForChild']);
+
+        // Get payment request for this transaction that involves the current user
+        $user = Auth::user();
+        $paymentRequest = SharedExpensePayment::with(['requester', 'payer'])
+            ->where('transaction_id', $transaction->id)
+            ->where(function ($q) use ($user) {
+                $q->where('requested_by', $user->id)
+                    ->orWhere('requested_from', $user->id);
+            })
+            ->first();
+
+        return view('pages.expenses.transactions.show', compact('transaction', 'paymentRequest'));
+    }
+
+    /**
+     * Delete receipt from transaction.
+     */
+    public function deleteReceipt(BudgetTransaction $transaction)
+    {
+        $this->authorizeBudgetAccess($transaction->budget, 'edit');
+
+        if ($transaction->receipt_path) {
+            Storage::disk('public')->delete($transaction->receipt_path);
+            $transaction->update([
+                'receipt_path' => null,
+                'receipt_original_filename' => null,
+            ]);
+        }
+
+        return back()->with('success', 'Receipt deleted successfully!');
     }
 
     /**
@@ -1468,5 +1678,146 @@ class ExpensesController extends Controller
         if ($hasLevel < $needLevel) {
             abort(403, 'You do not have sufficient permissions for this action.');
         }
+    }
+
+    // ==================== PAYMENT REQUESTS ====================
+
+    /**
+     * Show payment requests list.
+     */
+    public function paymentRequests()
+    {
+        session(['expenses_mode' => true]);
+
+        $user = Auth::user();
+
+        // Get requests sent to the current user (pending payments)
+        $pendingRequests = SharedExpensePayment::with(['transaction', 'requester', 'child'])
+            ->where('requested_from', $user->id)
+            ->pending()
+            ->orderByDesc('created_at')
+            ->get();
+
+        // Get requests the user has sent
+        $sentRequests = SharedExpensePayment::with(['transaction', 'payer', 'child'])
+            ->where('requested_by', $user->id)
+            ->orderByDesc('created_at')
+            ->get();
+
+        // Get history of received requests
+        $receivedHistory = SharedExpensePayment::with(['transaction', 'requester', 'child'])
+            ->where('requested_from', $user->id)
+            ->whereIn('status', ['paid', 'declined'])
+            ->orderByDesc('responded_at')
+            ->limit(20)
+            ->get();
+
+        return view('pages.expenses.payment-requests.index', compact('pendingRequests', 'sentRequests', 'receivedHistory'));
+    }
+
+    /**
+     * Show single payment request.
+     */
+    public function showPaymentRequest(SharedExpensePayment $payment)
+    {
+        session(['expenses_mode' => true]);
+
+        $user = Auth::user();
+
+        // Check access - only requester or payer can view
+        if ($payment->requested_by !== $user->id && $payment->requested_from !== $user->id) {
+            abort(403, 'You do not have access to this payment request.');
+        }
+
+        $payment->load(['transaction.category', 'requester', 'payer', 'child']);
+
+        return view('pages.expenses.payment-requests.show', compact('payment'));
+    }
+
+    /**
+     * Submit payment for a request.
+     */
+    public function submitPayment(Request $request, SharedExpensePayment $payment)
+    {
+        $user = Auth::user();
+
+        // Only the payer can submit payment
+        if ($payment->requested_from !== $user->id) {
+            abort(403, 'You cannot submit payment for this request.');
+        }
+
+        if (!$payment->isPending()) {
+            return back()->withErrors(['error' => 'This payment request is no longer pending.']);
+        }
+
+        $validated = $request->validate([
+            'payment_method' => 'required|string|in:' . implode(',', array_keys(SharedExpensePayment::PAYMENT_METHODS)),
+            'receipt' => 'nullable|file|mimes:jpg,jpeg,png,gif,webp,pdf|max:5120',
+            'response_note' => 'nullable|string|max:500',
+        ]);
+
+        // Handle receipt upload
+        $receiptPath = null;
+        $receiptFilename = null;
+        if ($request->hasFile('receipt')) {
+            $file = $request->file('receipt');
+            $receiptPath = $file->store('payment-receipts/' . $user->tenant_id, 'public');
+            $receiptFilename = $file->getClientOriginalName();
+        }
+
+        $payment->markAsPaid(
+            $validated['payment_method'],
+            $receiptPath,
+            $receiptFilename,
+            $validated['response_note'] ?? null
+        );
+
+        return redirect()->route('expenses.payment-requests')->with('success', 'Payment submitted successfully!');
+    }
+
+    /**
+     * Decline a payment request.
+     */
+    public function declinePayment(Request $request, SharedExpensePayment $payment)
+    {
+        $user = Auth::user();
+
+        // Only the payer can decline
+        if ($payment->requested_from !== $user->id) {
+            abort(403, 'You cannot decline this payment request.');
+        }
+
+        if (!$payment->isPending()) {
+            return back()->withErrors(['error' => 'This payment request is no longer pending.']);
+        }
+
+        $validated = $request->validate([
+            'response_note' => 'nullable|string|max:500',
+        ]);
+
+        $payment->markAsDeclined($validated['response_note'] ?? null);
+
+        return redirect()->route('expenses.payment-requests')->with('success', 'Payment request declined.');
+    }
+
+    /**
+     * Cancel a payment request (by the requester).
+     */
+    public function cancelPaymentRequest(SharedExpensePayment $payment)
+    {
+        $user = Auth::user();
+
+        // Only the requester can cancel
+        if ($payment->requested_by !== $user->id) {
+            abort(403, 'You cannot cancel this payment request.');
+        }
+
+        if (!$payment->isPending()) {
+            return back()->withErrors(['error' => 'This payment request is no longer pending.']);
+        }
+
+        $payment->cancel();
+
+        return back()->with('success', 'Payment request cancelled.');
     }
 }

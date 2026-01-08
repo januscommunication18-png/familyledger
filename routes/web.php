@@ -431,9 +431,12 @@ Route::middleware(['security.code', 'auth'])->group(function () {
 
         // Transactions
         Route::get('/transactions', [ExpensesController::class, 'transactions'])->name('transactions');
+        Route::get('/transactions/create', [ExpensesController::class, 'createTransaction'])->name('transactions.create');
+        Route::get('/transactions/{transaction}', [ExpensesController::class, 'showTransaction'])->name('transactions.show');
         Route::post('/transactions', [ExpensesController::class, 'storeTransaction'])->name('transactions.store');
         Route::put('/transactions/{transaction}', [ExpensesController::class, 'updateTransaction'])->name('transactions.update');
         Route::delete('/transactions/{transaction}', [ExpensesController::class, 'deleteTransaction'])->name('transactions.delete');
+        Route::delete('/transactions/{transaction}/receipt', [ExpensesController::class, 'deleteReceipt'])->name('transactions.receipt.delete');
 
         // CSV Import
         Route::get('/import', [ExpensesController::class, 'importForm'])->name('import');
@@ -455,6 +458,13 @@ Route::middleware(['security.code', 'auth'])->group(function () {
         Route::get('/alerts', [ExpensesController::class, 'alerts'])->name('alerts');
         Route::post('/alerts', [ExpensesController::class, 'storeAlert'])->name('alerts.store');
         Route::delete('/alerts/{alert}', [ExpensesController::class, 'deleteAlert'])->name('alerts.delete');
+
+        // Payment Requests (Co-Parenting)
+        Route::get('/payment-requests', [ExpensesController::class, 'paymentRequests'])->name('payment-requests');
+        Route::get('/payment-requests/{payment}', [ExpensesController::class, 'showPaymentRequest'])->name('payment-requests.show');
+        Route::post('/payment-requests/{payment}/pay', [ExpensesController::class, 'submitPayment'])->name('payment-requests.pay');
+        Route::post('/payment-requests/{payment}/decline', [ExpensesController::class, 'declinePayment'])->name('payment-requests.decline');
+        Route::post('/payment-requests/{payment}/cancel', [ExpensesController::class, 'cancelPaymentRequest'])->name('payment-requests.cancel');
 
         // Mode toggle
         Route::post('/enter-mode', [ExpensesController::class, 'enterMode'])->name('enter-mode');
