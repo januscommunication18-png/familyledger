@@ -163,8 +163,8 @@
                 </div>
 
                 <div class="flex gap-2 mt-6">
-                    <button type="button" onclick="closeModal()" class="btn btn-ghost flex-1">Cancel</button>
                     <button type="submit" class="btn btn-primary flex-1">Save Category</button>
+                    <button type="button" onclick="closeModal()" class="btn btn-ghost flex-1">Cancel</button>
                 </div>
             </form>
         </div>

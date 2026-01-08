@@ -204,8 +204,8 @@
 
                 {{-- Footer --}}
                 <div class="flex gap-3 p-6 border-t border-slate-200 bg-slate-50 rounded-b-xl">
-                    <a href="{{ route('expenses.transactions') }}" class="btn btn-ghost flex-1">Cancel</a>
                     <button type="submit" class="btn btn-primary flex-1">Save Transaction</button>
+                    <a href="{{ route('expenses.transactions') }}" class="btn btn-ghost flex-1">Cancel</a>
                 </div>
             </form>
         </div>
