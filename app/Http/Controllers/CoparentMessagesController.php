@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\CoparentMessageNotification;
 use App\Events\CoparentMessageSent;
 use App\Models\Collaborator;
 use App\Models\CoparentChild;
@@ -166,6 +167,9 @@ class CoparentMessagesController extends Controller
         // Broadcast the message for real-time updates
         broadcast(new CoparentMessageSent($message))->toOthers();
 
+        // Send notification to other participants
+        $this->notifyOtherParticipants($conversation, $message, $user->id);
+
         return redirect()->route('coparenting.messages.show', $conversation)
             ->with('success', 'Message sent successfully!');
     }
@@ -250,6 +254,9 @@ class CoparentMessagesController extends Controller
 
         // Broadcast the message for real-time updates
         broadcast(new CoparentMessageSent($message))->toOthers();
+
+        // Send notification to other participants
+        $this->notifyOtherParticipants($conversation, $message, $user->id);
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -372,6 +379,9 @@ class CoparentMessagesController extends Controller
         // Broadcast the message for real-time updates
         broadcast(new CoparentMessageSent($message))->toOthers();
 
+        // Send notification to other participants
+        $this->notifyOtherParticipants($conversation, $message, $user->id);
+
         return redirect()->route('coparenting.messages.show', $conversation)
             ->with('success', 'File shared successfully!');
     }
@@ -488,6 +498,23 @@ class CoparentMessagesController extends Controller
             'action' => $action,
             'reactions' => $reactions,
         ]);
+    }
+
+    /**
+     * Send notification to other participants in the conversation.
+     */
+    private function notifyOtherParticipants(CoparentConversation $conversation, CoparentMessage $message, int $senderId): void
+    {
+        $participants = $conversation->getParticipants();
+
+        foreach ($participants as $participant) {
+            // Don't notify the sender
+            if ($participant->id === $senderId) {
+                continue;
+            }
+
+            broadcast(new CoparentMessageNotification($message, $participant->id));
+        }
     }
 
     /**

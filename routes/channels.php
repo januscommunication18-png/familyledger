@@ -17,3 +17,8 @@ Broadcast::channel('coparent.conversation.{conversationId}', function ($user, $c
 
     return $conversation->isParticipant($user->id);
 });
+
+// User notifications channel - for global notifications
+Broadcast::channel('user.notifications.{userId}', function ($user, $userId) {
+    return (int) $user->id === (int) $userId;
+});

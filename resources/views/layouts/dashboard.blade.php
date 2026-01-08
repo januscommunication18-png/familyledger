@@ -666,6 +666,125 @@
     {{-- Image Verification Modal --}}
     @include('partials.image-verification-modal')
 
+    {{-- Global Notification Listener for Co-parent Messages --}}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check if Echo is available
+        if (typeof window.Echo !== 'undefined') {
+            const userId = {{ auth()->id() }};
+
+            // Listen on the user's private notification channel
+            window.Echo.private(`user.notifications.${userId}`)
+                .listen('.coparent.message.received', (data) => {
+                    // Don't show notification if already on that conversation page
+                    if (window.location.pathname.includes(`/coparenting/messages/${data.conversation_id}`)) {
+                        return;
+                    }
+
+                    // Show toast notification
+                    showMessageNotification(data);
+                });
+        }
+    });
+
+    function showMessageNotification(data) {
+        // Create toast container if it doesn't exist
+        let toastContainer = document.getElementById('message-toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'message-toast-container';
+            toastContainer.className = 'fixed top-20 right-4 z-[100] flex flex-col gap-2';
+            document.body.appendChild(toastContainer);
+        }
+
+        // Category colors
+        const categoryColors = {
+            'General': { bg: 'bg-blue-500', icon: '💬' },
+            'Schedule': { bg: 'bg-purple-500', icon: '📅' },
+            'Medical': { bg: 'bg-red-500', icon: '🏥' },
+            'Expense': { bg: 'bg-green-500', icon: '💰' },
+            'Emergency': { bg: 'bg-orange-500', icon: '🚨' }
+        };
+
+        const cat = categoryColors[data.category] || categoryColors['General'];
+
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = 'animate-slideIn bg-white rounded-xl shadow-2xl border border-slate-200 p-4 max-w-sm cursor-pointer hover:shadow-xl transition-shadow';
+        toast.innerHTML = `
+            <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-full ${cat.bg} flex items-center justify-center text-white text-lg flex-shrink-0">
+                    ${cat.icon}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                        <p class="font-semibold text-slate-800 text-sm">${escapeHtml(data.sender_name)}</p>
+                        <span class="text-xs text-slate-400">now</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mb-1">Re: ${escapeHtml(data.child_name)}</p>
+                    <p class="text-sm text-slate-600 line-clamp-2">${escapeHtml(data.message_preview)}</p>
+                </div>
+                <button onclick="event.stopPropagation(); this.closest('.animate-slideIn').remove();" class="text-slate-400 hover:text-slate-600 flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+            </div>
+        `;
+
+        // Click to go to conversation
+        toast.onclick = function() {
+            window.location.href = `/coparenting/messages/${data.conversation_id}`;
+        };
+
+        // Add to container
+        toastContainer.appendChild(toast);
+
+        // Play notification sound
+        try {
+            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2Onraxu8DGysnJxse+sJ2QhHdqY2Zve46epbK9xtPY3N7a1MrBs6SRfm9jXV5iaXeJm6m2wcvT2tzc2tXNwrSjkH5vYl1dYGd0hZiktL/K1Nvc3drVzcKzo5B+b2JdXWBnd4WZpLS/ytTb3N3a1c3CtKOQfm9iXV1gZ3eFmKS0v8rU29zd2tXNwrSjkH5vYl1dYGd3hZiktL/K1Nvc3drVzcK0o5B+b2JdXWBnd4WYpLS/ytTb3N3a1c3CtKOQfm9iXV1gZ3eFmKS0v8rU29zd2tXNwrSjkH5vYl1dYGd3');
+            audio.volume = 0.5;
+            audio.play().catch(() => {});
+        } catch(e) {}
+
+        // Auto remove after 8 seconds
+        setTimeout(() => {
+            toast.style.animation = 'slideOut 0.3s ease-out forwards';
+            setTimeout(() => toast.remove(), 300);
+        }, 8000);
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    </script>
+
+    <style>
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    @keyframes slideOut {
+        from {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        to {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+    }
+    .animate-slideIn {
+        animation: slideIn 0.3s ease-out forwards;
+    }
+    </style>
+
     @stack('scripts')
 </body>
 </html>
