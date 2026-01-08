@@ -85,27 +85,31 @@ return new class extends Migration
         });
 
         // Insurance Policies table
-        Schema::table('insurance_policies', function (Blueprint $table) {
-            $table->text('provider_name')->nullable()->change();
-            $table->text('policy_number')->nullable()->change();
-            $table->text('group_number')->nullable()->change();
-            $table->text('plan_name')->nullable()->change();
-            $table->text('agent_name')->nullable()->change();
-            $table->text('agent_phone')->nullable()->change();
-            $table->text('agent_email')->nullable()->change();
-            $table->text('claims_phone')->nullable()->change();
-            $table->text('coverage_details')->nullable()->change();
-            $table->text('notes')->nullable()->change();
-        });
+        if (Schema::hasTable('insurance_policies')) {
+            Schema::table('insurance_policies', function (Blueprint $table) {
+                $table->text('provider_name')->nullable()->change();
+                $table->text('policy_number')->nullable()->change();
+                $table->text('group_number')->nullable()->change();
+                $table->text('plan_name')->nullable()->change();
+                $table->text('agent_name')->nullable()->change();
+                $table->text('agent_phone')->nullable()->change();
+                $table->text('agent_email')->nullable()->change();
+                $table->text('claims_phone')->nullable()->change();
+                $table->text('coverage_details')->nullable()->change();
+                $table->text('notes')->nullable()->change();
+            });
+        }
 
         // Tax Returns table
-        Schema::table('tax_returns', function (Blueprint $table) {
-            $table->text('cpa_name')->nullable()->change();
-            $table->text('cpa_phone')->nullable()->change();
-            $table->text('cpa_email')->nullable()->change();
-            $table->text('cpa_firm')->nullable()->change();
-            $table->text('notes')->nullable()->change();
-        });
+        if (Schema::hasTable('tax_returns')) {
+            Schema::table('tax_returns', function (Blueprint $table) {
+                $table->text('cpa_name')->nullable()->change();
+                $table->text('cpa_phone')->nullable()->change();
+                $table->text('cpa_email')->nullable()->change();
+                $table->text('cpa_firm')->nullable()->change();
+                $table->text('notes')->nullable()->change();
+            });
+        }
 
         // People (Personal CRM) table - drop index first if exists
         $indexExists = collect(DB::select("SHOW INDEX FROM people WHERE Key_name = 'people_tenant_id_full_name_index'"))->isNotEmpty();
@@ -222,27 +226,31 @@ return new class extends Migration
         });
 
         // Revert insurance_policies
-        Schema::table('insurance_policies', function (Blueprint $table) {
-            $table->string('provider_name')->nullable()->change();
-            $table->string('policy_number')->nullable()->change();
-            $table->string('group_number')->nullable()->change();
-            $table->string('plan_name')->nullable()->change();
-            $table->string('agent_name')->nullable()->change();
-            $table->string('agent_phone')->nullable()->change();
-            $table->string('agent_email')->nullable()->change();
-            $table->string('claims_phone')->nullable()->change();
-            $table->text('coverage_details')->nullable()->change();
-            $table->text('notes')->nullable()->change();
-        });
+        if (Schema::hasTable('insurance_policies')) {
+            Schema::table('insurance_policies', function (Blueprint $table) {
+                $table->string('provider_name')->nullable()->change();
+                $table->string('policy_number')->nullable()->change();
+                $table->string('group_number')->nullable()->change();
+                $table->string('plan_name')->nullable()->change();
+                $table->string('agent_name')->nullable()->change();
+                $table->string('agent_phone')->nullable()->change();
+                $table->string('agent_email')->nullable()->change();
+                $table->string('claims_phone')->nullable()->change();
+                $table->text('coverage_details')->nullable()->change();
+                $table->text('notes')->nullable()->change();
+            });
+        }
 
         // Revert tax_returns
-        Schema::table('tax_returns', function (Blueprint $table) {
-            $table->string('cpa_name')->nullable()->change();
-            $table->string('cpa_phone')->nullable()->change();
-            $table->string('cpa_email')->nullable()->change();
-            $table->string('cpa_firm')->nullable()->change();
-            $table->text('notes')->nullable()->change();
-        });
+        if (Schema::hasTable('tax_returns')) {
+            Schema::table('tax_returns', function (Blueprint $table) {
+                $table->string('cpa_name')->nullable()->change();
+                $table->string('cpa_phone')->nullable()->change();
+                $table->string('cpa_email')->nullable()->change();
+                $table->string('cpa_firm')->nullable()->change();
+                $table->text('notes')->nullable()->change();
+            });
+        }
 
         // Revert people
         Schema::table('people', function (Blueprint $table) {
