@@ -13,15 +13,6 @@
             </div>
         @endif
 
-        @if (session('security_code_debug'))
-            <div class="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                <p class="text-sm text-yellow-800 dark:text-yellow-300">
-                    <strong>Debug Mode:</strong> Your code is <span class="font-mono font-bold">{{ session('security_code_debug') }}</span>
-                </p>
-                <p class="text-xs text-yellow-600 dark:text-yellow-400 mt-1">This will be sent via email in production.</p>
-            </div>
-        @endif
-
         @if ($errors->any())
             <div class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                 <ul class="text-sm text-red-800 dark:text-red-300 space-y-1">

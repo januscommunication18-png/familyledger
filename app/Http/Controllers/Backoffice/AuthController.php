@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Backoffice;
 
 use App\Http\Controllers\Controller;
+use App\Mail\BackofficeSecurityCode;
 use App\Models\Backoffice\Admin;
 use App\Models\Backoffice\ActivityLog;
 use Illuminate\Http\Request;
@@ -53,11 +54,10 @@ class AuthController extends Controller
         // Store admin ID in session for next step
         session(['backoffice_pending_admin_id' => $admin->id]);
 
-        // In production, send email. For now, we'll flash the code (remove in production)
-        // Mail::to($admin->email)->send(new SecurityCodeMail($code));
+        // Send security code email
+        Mail::to($admin->email)->send(new BackofficeSecurityCode($code, $admin->name));
 
         return redirect()->route('backoffice.verify-code')
-            ->with('security_code_debug', $code) // Remove in production
             ->with('message', 'A security code has been sent to your email.');
     }
 
@@ -135,11 +135,10 @@ class AuthController extends Controller
 
         $code = $admin->generateSecurityCode();
 
-        // In production, send email
-        // Mail::to($admin->email)->send(new SecurityCodeMail($code));
+        // Send security code email
+        Mail::to($admin->email)->send(new BackofficeSecurityCode($code, $admin->name));
 
         return back()
-            ->with('security_code_debug', $code) // Remove in production
             ->with('message', 'A new security code has been sent to your email.');
     }
 
