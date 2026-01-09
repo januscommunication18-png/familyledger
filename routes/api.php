@@ -9,6 +9,16 @@ use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\FamilyCircleController;
 use App\Http\Controllers\Api\V1\FamilyMemberController;
 use App\Http\Controllers\Api\V1\AssetController;
+use App\Http\Controllers\Api\V1\DocumentController;
+use App\Http\Controllers\Api\V1\ExpenseController;
+use App\Http\Controllers\Api\V1\GoalController;
+use App\Http\Controllers\Api\V1\JournalController;
+use App\Http\Controllers\Api\V1\PetController;
+use App\Http\Controllers\Api\V1\ShoppingController;
+use App\Http\Controllers\Api\V1\ReminderController;
+use App\Http\Controllers\Api\V1\PeopleController;
+use App\Http\Controllers\Api\V1\ResourceController;
+use App\Http\Controllers\Api\V1\BudgetController;
 
 /*
 |--------------------------------------------------------------------------
@@ -82,5 +92,61 @@ Route::prefix('v1')->group(function () {
         Route::get('/assets/category/{category}', [AssetController::class, 'byCategory'])
             ->where('category', 'property|vehicle|valuable|inventory');
         Route::get('/assets/{asset}', [AssetController::class, 'show']);
+
+        // Documents (Insurance, Tax Returns)
+        Route::get('/documents', [DocumentController::class, 'index']);
+        Route::get('/documents/insurance', [DocumentController::class, 'insurancePolicies']);
+        Route::get('/documents/insurance/{policy}', [DocumentController::class, 'showInsurancePolicy']);
+        Route::get('/documents/tax-returns', [DocumentController::class, 'taxReturns']);
+        Route::get('/documents/tax-returns/{taxReturn}', [DocumentController::class, 'showTaxReturn']);
+
+        // Expenses
+        Route::get('/expenses', [ExpenseController::class, 'index']);
+        Route::get('/expenses/category/{category}', [ExpenseController::class, 'byCategory']);
+        Route::get('/expenses/{expense}', [ExpenseController::class, 'show']);
+
+        // Budgets
+        Route::get('/budgets', [BudgetController::class, 'index']);
+        Route::get('/budgets/{budget}', [BudgetController::class, 'show']);
+
+        // Goals & Tasks
+        Route::get('/goals', [GoalController::class, 'index']);
+        Route::get('/goals/{goal}', [GoalController::class, 'show']);
+        Route::get('/tasks', [GoalController::class, 'tasks']);
+        Route::get('/tasks/{task}', [GoalController::class, 'showTask']);
+
+        // Journal
+        Route::get('/journal', [JournalController::class, 'index']);
+        Route::get('/journal/type/{type}', [JournalController::class, 'byType']);
+        Route::get('/journal/tags', [JournalController::class, 'tags']);
+        Route::get('/journal/{entry}', [JournalController::class, 'show']);
+
+        // Pets
+        Route::get('/pets', [PetController::class, 'index']);
+        Route::get('/pets/{pet}', [PetController::class, 'show']);
+        Route::get('/pets/{pet}/vaccinations', [PetController::class, 'vaccinations']);
+        Route::get('/pets/{pet}/medications', [PetController::class, 'medications']);
+
+        // Shopping
+        Route::get('/shopping', [ShoppingController::class, 'index']);
+        Route::get('/shopping/{list}', [ShoppingController::class, 'show']);
+        Route::get('/shopping/{list}/items', [ShoppingController::class, 'items']);
+
+        // Reminders
+        Route::get('/reminders', [ReminderController::class, 'index']);
+        Route::get('/reminders/overdue', [ReminderController::class, 'overdue']);
+        Route::get('/reminders/upcoming', [ReminderController::class, 'upcoming']);
+        Route::get('/reminders/{reminder}', [ReminderController::class, 'show']);
+
+        // People (Contacts)
+        Route::get('/people', [PeopleController::class, 'index']);
+        Route::get('/people/search', [PeopleController::class, 'search']);
+        Route::get('/people/relationship/{relationship}', [PeopleController::class, 'byRelationship']);
+        Route::get('/people/{person}', [PeopleController::class, 'show']);
+
+        // Family Resources
+        Route::get('/resources', [ResourceController::class, 'index']);
+        Route::get('/resources/type/{type}', [ResourceController::class, 'byType']);
+        Route::get('/resources/{resource}', [ResourceController::class, 'show']);
     });
 });
