@@ -41,6 +41,8 @@ class Cors
         $allowedOrigins = [
             'http://localhost:8081',      // Expo web dev
             'http://127.0.0.1:8081',      // Expo web dev
+            'http://localhost:8082',      // Expo web dev alt port
+            'http://127.0.0.1:8082',      // Expo web dev alt port
             'http://localhost:19006',     // Expo web dev alt port
             'http://localhost:3000',      // Local dev
             'http://127.0.0.1:8000',      // Laravel dev

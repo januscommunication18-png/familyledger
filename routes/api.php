@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\Auth\OtpController;
+use App\Http\Controllers\Api\V1\Auth\PasswordResetController;
 use App\Http\Controllers\Api\V1\Auth\SocialController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\OnboardingController;
@@ -49,6 +50,11 @@ Route::prefix('v1')->group(function () {
         // Social Authentication (Mobile flow - receives tokens from native SDKs)
         Route::post('/social/{provider}', [SocialController::class, 'authenticate'])
             ->where('provider', 'google|apple');
+
+        // Password Reset
+        Route::post('/password/forgot', [PasswordResetController::class, 'sendResetCode']);
+        Route::post('/password/reset', [PasswordResetController::class, 'resetPassword']);
+        Route::post('/password/resend', [PasswordResetController::class, 'resendCode']);
     });
 
     /*
