@@ -29,7 +29,7 @@
       "bundler": "metro",
       "output": "static",
       "favicon": "./assets/favicon.png",
-      "baseUrl": "/app"
+      "baseUrl": "/mobile"
     },
     "plugins": [
       "expo-router",
