@@ -15,6 +15,8 @@
 @endsection
 
 @section('content')
+
+    
 <div id="family-circle-space">
     <!-- Circle Header -->
     <div class="card bg-gradient-to-r from-violet-600 to-purple-600 text-white mb-6">
