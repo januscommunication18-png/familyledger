@@ -218,12 +218,19 @@ class FamilyMemberController extends Controller
             abort(403);
         }
 
+        // Get all family circles for the current user's tenant with member counts
+        $allCircles = FamilyCircle::where('tenant_id', Auth::user()->tenant_id)
+            ->withCount('members')
+            ->orderBy('name')
+            ->get();
+
         return view('family-circle.member.edit', [
             'circle' => $familyCircle,
             'member' => $member,
             'relationships' => FamilyMember::RELATIONSHIPS,
             'immigrationStatuses' => FamilyMember::IMMIGRATION_STATUSES,
             'access' => $permissionService->forView(),
+            'allCircles' => $allCircles,
         ]);
     }
 
@@ -263,7 +270,22 @@ class FamilyMemberController extends Controller
             'co_parenting_enabled' => 'boolean',
             'immigration_status' => 'nullable|string|in:' . implode(',', array_keys(FamilyMember::IMMIGRATION_STATUSES)),
             'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'family_circle_id' => 'nullable|exists:family_circles,id',
         ]);
+
+        // Check if moving to a different circle
+        $newCircleId = $validated['family_circle_id'] ?? null;
+        $newCircle = null;
+        if ($newCircleId && $newCircleId != $familyCircle->id) {
+            // Verify user owns the new circle
+            $newCircle = FamilyCircle::where('id', $newCircleId)
+                ->where('tenant_id', Auth::user()->tenant_id)
+                ->first();
+
+            if (!$newCircle) {
+                return back()->withErrors(['family_circle_id' => 'Invalid family circle selected.']);
+            }
+        }
 
         $data = [
             'first_name' => $validated['first_name'],
@@ -279,6 +301,11 @@ class FamilyMemberController extends Controller
             'co_parenting_enabled' => $request->boolean('co_parenting_enabled'),
             'immigration_status' => $validated['immigration_status'] ?? null,
         ];
+
+        // If moving to a new circle, update the family_circle_id
+        if ($newCircle) {
+            $data['family_circle_id'] = $newCircle->id;
+        }
 
         if ($request->hasFile('profile_image')) {
             // Delete old profile image if exists
@@ -312,6 +339,9 @@ class FamilyMemberController extends Controller
                 ->update($syncData);
         }
 
+        // Determine which circle to redirect to
+        $redirectCircle = $newCircle ?? $familyCircle;
+
         if ($request->wantsJson()) {
             return response()->json([
                 'message' => 'Family member updated successfully',
@@ -319,7 +349,7 @@ class FamilyMemberController extends Controller
             ]);
         }
 
-        return redirect()->route('family-circle.member.show', [$familyCircle, $member])
+        return redirect()->route('family-circle.member.show', [$redirectCircle, $member])
             ->with('success', 'Family member updated successfully');
     }
 

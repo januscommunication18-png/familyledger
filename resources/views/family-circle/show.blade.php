@@ -21,15 +21,19 @@
         <div class="card-body">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div class="flex items-center gap-4">
-                    <div class="w-16 h-16 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <div class="w-16 h-16 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center overflow-hidden">
+                        @if($circle->cover_image)
+                            <img src="{{ Storage::disk('do_spaces')->url($circle->cover_image) }}" alt="{{ $circle->name }}" class="w-full h-full object-cover">
+                        @else
+                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        @endif
                     </div>
                     <div>
                         <h1 class="text-2xl font-bold">{{ $circle->name }}</h1>
                         @if($circle->description)
                             <p class="text-white/80 mt-1">{{ $circle->description }}</p>
                         @endif
-                        <p class="text-white/60 text-sm mt-2">{{ $circle->members->count() + 1 }} member{{ $circle->members->count() + 1 != 1 ? 's' : '' }}</p>
+                        <p class="text-white/60 text-sm mt-2">{{ $circle->members->count() }} member{{ $circle->members->count() != 1 ? 's' : '' }}</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
@@ -48,14 +52,18 @@
 
     <!-- Family Members Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Owner Self Card (from users table) -->
         @php
+            // Check if the owner included themselves in this circle
+            $selfMember = $circle->members->where('relationship', 'self')->where('linked_user_id', auth()->id())->first();
             $owner = auth()->user();
             $ownerNameParts = explode(' ', $owner->name, 2);
             $ownerFirstName = $ownerNameParts[0];
             $ownerLastName = $ownerNameParts[1] ?? '';
             $ownerAge = $owner->date_of_birth ? \Carbon\Carbon::parse($owner->date_of_birth)->age : null;
         @endphp
+
+        <!-- Owner Self Card (only shown if owner included themselves) -->
+        @if($selfMember)
         <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow border-2 border-violet-200">
             <div class="card-body">
                 <!-- Owner Header -->
@@ -117,9 +125,10 @@
                 </div>
             </div>
         </div>
+        @endif
 
-        <!-- Other Family Members -->
-        @foreach($circle->members as $member)
+        <!-- Other Family Members (excluding self to avoid duplicate) -->
+        @foreach($circle->members->where('relationship', '!=', 'self') as $member)
                 <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
                     <div class="card-body">
                         <!-- Member Header -->
@@ -251,10 +260,36 @@
                 </div>
 
                 <!-- Body -->
-                <form action="{{ route('family-circle.update', $circle) }}" method="POST">
+                <form action="{{ route('family-circle.update', $circle) }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     @method('PUT')
                     <div style="padding: 1.5rem;">
+                        <!-- Cover Image Upload -->
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #334155; margin-bottom: 0.5rem;">
+                                Circle Photo <span style="color: #94a3b8; font-weight: 400;">(Optional)</span>
+                            </label>
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div id="editCircleImagePreview" style="width: 80px; height: 80px; border-radius: 12px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px solid white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+                                    @if($circle->cover_image)
+                                        <img id="editCircleImageImg" src="{{ Storage::disk('do_spaces')->url($circle->cover_image) }}" alt="{{ $circle->name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                        <svg id="editCircleDefaultIcon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                    @else
+                                        <img id="editCircleImageImg" src="" alt="Preview" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                                        <svg id="editCircleDefaultIcon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                    @endif
+                                </div>
+                                <div style="flex: 1;">
+                                    <label for="edit_cover_image" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: white; border: 1px solid #cbd5e1; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 500; color: #334155; cursor: pointer;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                                        {{ $circle->cover_image ? 'Change Photo' : 'Choose Photo' }}
+                                    </label>
+                                    <input type="file" name="cover_image" id="edit_cover_image" accept="image/*" style="display: none;" onchange="previewEditCircleImage(this)">
+                                    <p style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">JPG, PNG or GIF. Max 2MB.</p>
+                                </div>
+                            </div>
+                        </div>
+
                         <div style="margin-bottom: 1rem;">
                             <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #334155; margin-bottom: 0.5rem;">
                                 Circle Name <span style="color: #ef4444;">*</span>
@@ -265,6 +300,13 @@
                         <div>
                             <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #334155; margin-bottom: 0.5rem;">Description</label>
                             <textarea name="description" maxlength="1000" style="width: 100%; padding: 0.625rem 1rem; border: 1px solid #cbd5e1; border-radius: 0.5rem; font-size: 0.875rem; outline: none; height: 6rem; resize: none;">{{ $circle->description }}</textarea>
+                        </div>
+
+                        <div class="flex items-start gap-3 p-4 bg-violet-50 rounded-lg border border-violet-100 mt-4">
+                            <input type="checkbox" name="include_me" id="edit_include_me" value="1" {{ $selfMember ? 'checked' : '' }} class="mt-0.5 h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500">
+                            <label for="edit_include_me" class="flex-1 cursor-pointer">
+                                <span class="block text-sm font-medium text-slate-700">{{ explode(' ', auth()->user()->name)[0] }}, would you like to include yourself in this circle?</span>
+                            </label>
                         </div>
                     </div>
 
@@ -282,6 +324,24 @@
 
 @push('scripts')
 <script>
+// Edit Circle Image Preview
+function previewEditCircleImage(input) {
+    const preview = document.getElementById('editCircleImageImg');
+    const defaultIcon = document.getElementById('editCircleDefaultIcon');
+
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+            if (defaultIcon) {
+                defaultIcon.style.display = 'none';
+            }
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
 // Edit Circle Modal functions
 function openEditCircleModal() {
     const modal = document.getElementById('editCircleModal');
