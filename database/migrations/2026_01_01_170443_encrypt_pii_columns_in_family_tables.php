@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -129,11 +128,13 @@ return new class extends Migration
 
         // People (Personal CRM) table - drop index first if exists
         if (Schema::hasTable('people')) {
-            $indexExists = collect(DB::select("SHOW INDEX FROM people WHERE Key_name = 'people_tenant_id_full_name_index'"))->isNotEmpty();
-            if ($indexExists) {
+            // Safely try to drop index (works with both MySQL and SQLite)
+            try {
                 Schema::table('people', function (Blueprint $table) {
                     $table->dropIndex('people_tenant_id_full_name_index');
                 });
+            } catch (\Exception $e) {
+                // Index doesn't exist, continue
             }
 
             Schema::table('people', function (Blueprint $table) {
