@@ -86,8 +86,12 @@
                 <a href="{{ route('family-circle.show', $circle) }}" class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
                     <div class="card-body">
                         <div class="flex items-start gap-4">
-                            <div class="w-14 h-14 shrink-0 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            <div class="w-14 h-14 shrink-0 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center overflow-hidden">
+                                @if($circle->cover_image)
+                                    <img src="{{ Storage::disk('do_spaces')->url($circle->cover_image) }}" alt="{{ $circle->name }}" class="w-full h-full object-cover">
+                                @else
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                @endif
                             </div>
                             <div class="flex-1 min-w-0">
                                 <h3 class="text-lg font-semibold text-slate-900 group-hover:text-violet-600 transition-colors truncate">{{ $circle->name }}</h3>
@@ -203,9 +207,30 @@
                     </button>
                 </div>
                 <!-- Body -->
-                <form id="createCircleForm" action="{{ route('family-circle.store') }}" method="POST">
+                <form id="createCircleForm" action="{{ route('family-circle.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <div class="px-6 py-5 space-y-5">
+                        <!-- Cover Image Upload -->
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">
+                                Circle Photo <span class="text-slate-400 font-normal">(Optional)</span>
+                            </label>
+                            <div class="flex items-center gap-4">
+                                <div id="createCircleImagePreview" class="w-20 h-20 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center overflow-hidden border-2 border-white shadow-lg">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                    <img id="createCircleImageImg" src="" alt="Preview" class="w-full h-full object-cover hidden">
+                                </div>
+                                <div class="flex-1">
+                                    <label for="create_cover_image" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                                        Choose Photo
+                                    </label>
+                                    <input type="file" name="cover_image" id="create_cover_image" accept="image/*" class="hidden" onchange="previewCreateCircleImage(this)">
+                                    <p class="text-xs text-slate-500 mt-1">JPG, PNG or GIF. Max 2MB.</p>
+                                </div>
+                            </div>
+                        </div>
+
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-2">
                                 Circle Name <span class="text-rose-500">*</span>
@@ -239,6 +264,24 @@
 </div>
 
 <script>
+function previewCreateCircleImage(input) {
+    const preview = document.getElementById('createCircleImageImg');
+    const container = document.getElementById('createCircleImagePreview');
+    const defaultIcon = container.querySelector('svg');
+
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.classList.remove('hidden');
+            if (defaultIcon) {
+                defaultIcon.classList.add('hidden');
+            }
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
 function openCreateModal() {
     const modal = document.getElementById('createCircleModal');
     if (modal) {

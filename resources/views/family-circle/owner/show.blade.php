@@ -5,6 +5,8 @@
     $firstName = $ownerNameParts[0];
     $lastName = $ownerNameParts[1] ?? '';
     $age = $owner->date_of_birth ? \Carbon\Carbon::parse($owner->date_of_birth)->age : null;
+    // Get the self member record for this circle
+    $selfMember = $circle->members->where('relationship', 'self')->where('linked_user_id', auth()->id())->first();
 @endphp
 
 @section('title', $owner->name)
@@ -40,10 +42,17 @@
                         <p class="text-xs text-slate-400">Account owner details</p>
                     </div>
                 </div>
-                <a href="{{ route('settings.index') }}" class="btn btn-sm btn-ghost gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                    Edit
-                </a>
+                @if($selfMember)
+                    <a href="{{ route('family-circle.member.edit', [$circle, $selfMember]) }}" class="btn btn-sm btn-ghost gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                        Edit
+                    </a>
+                @else
+                    <a href="{{ route('settings.index') }}" class="btn btn-sm btn-ghost gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                        Edit
+                    </a>
+                @endif
             </div>
 
             <div class="flex flex-col md:flex-row gap-6">

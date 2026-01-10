@@ -1,5 +1,9 @@
 @extends('layouts.dashboard')
 
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+@endpush
+
 @section('title', 'Edit ' . $member->full_name)
 @section('page-name', 'Edit Member')
 
@@ -102,72 +106,34 @@
                             <div class="flex gap-2">
                                 <!-- Month -->
                                 <div class="flex-1">
-                                    <select name="dob_month" id="dob_month" data-select='{
-                                        "placeholder": "Month",
-                                        "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
-                                        "toggleClasses": "advance-select-toggle w-full",
-                                        "hasSearch": true,
-                                        "searchPlaceholder": "Search...",
-                                        "dropdownClasses": "advance-select-menu",
-                                        "optionClasses": "advance-select-option selected:select-active",
-                                        "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
-                                        "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/90 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                                    }' class="hidden">
+                                    <select name="dob_month" id="dob_month" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-slate-900 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 bg-white">
                                         <option value="">Month</option>
-                                        <option value="01" {{ old('dob_month', $member->date_of_birth->format('m')) == '01' ? 'selected' : '' }}>January</option>
-                                        <option value="02" {{ old('dob_month', $member->date_of_birth->format('m')) == '02' ? 'selected' : '' }}>February</option>
-                                        <option value="03" {{ old('dob_month', $member->date_of_birth->format('m')) == '03' ? 'selected' : '' }}>March</option>
-                                        <option value="04" {{ old('dob_month', $member->date_of_birth->format('m')) == '04' ? 'selected' : '' }}>April</option>
-                                        <option value="05" {{ old('dob_month', $member->date_of_birth->format('m')) == '05' ? 'selected' : '' }}>May</option>
-                                        <option value="06" {{ old('dob_month', $member->date_of_birth->format('m')) == '06' ? 'selected' : '' }}>June</option>
-                                        <option value="07" {{ old('dob_month', $member->date_of_birth->format('m')) == '07' ? 'selected' : '' }}>July</option>
-                                        <option value="08" {{ old('dob_month', $member->date_of_birth->format('m')) == '08' ? 'selected' : '' }}>August</option>
-                                        <option value="09" {{ old('dob_month', $member->date_of_birth->format('m')) == '09' ? 'selected' : '' }}>September</option>
-                                        <option value="10" {{ old('dob_month', $member->date_of_birth->format('m')) == '10' ? 'selected' : '' }}>October</option>
-                                        <option value="11" {{ old('dob_month', $member->date_of_birth->format('m')) == '11' ? 'selected' : '' }}>November</option>
-                                        <option value="12" {{ old('dob_month', $member->date_of_birth->format('m')) == '12' ? 'selected' : '' }}>December</option>
+                                        <option value="01" {{ old('dob_month', $member->date_of_birth?->format('m')) == '01' ? 'selected' : '' }}>January</option>
+                                        <option value="02" {{ old('dob_month', $member->date_of_birth?->format('m')) == '02' ? 'selected' : '' }}>February</option>
+                                        <option value="03" {{ old('dob_month', $member->date_of_birth?->format('m')) == '03' ? 'selected' : '' }}>March</option>
+                                        <option value="04" {{ old('dob_month', $member->date_of_birth?->format('m')) == '04' ? 'selected' : '' }}>April</option>
+                                        <option value="05" {{ old('dob_month', $member->date_of_birth?->format('m')) == '05' ? 'selected' : '' }}>May</option>
+                                        <option value="06" {{ old('dob_month', $member->date_of_birth?->format('m')) == '06' ? 'selected' : '' }}>June</option>
+                                        <option value="07" {{ old('dob_month', $member->date_of_birth?->format('m')) == '07' ? 'selected' : '' }}>July</option>
+                                        <option value="08" {{ old('dob_month', $member->date_of_birth?->format('m')) == '08' ? 'selected' : '' }}>August</option>
+                                        <option value="09" {{ old('dob_month', $member->date_of_birth?->format('m')) == '09' ? 'selected' : '' }}>September</option>
+                                        <option value="10" {{ old('dob_month', $member->date_of_birth?->format('m')) == '10' ? 'selected' : '' }}>October</option>
+                                        <option value="11" {{ old('dob_month', $member->date_of_birth?->format('m')) == '11' ? 'selected' : '' }}>November</option>
+                                        <option value="12" {{ old('dob_month', $member->date_of_birth?->format('m')) == '12' ? 'selected' : '' }}>December</option>
                                     </select>
                                 </div>
                                 <!-- Day -->
-                                <div class="flex-1">
-                                    <select name="dob_day" id="dob_day" data-select='{
-                                        "placeholder": "Day",
-                                        "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
-                                        "toggleClasses": "advance-select-toggle w-full",
-                                        "hasSearch": true,
-                                        "searchPlaceholder": "Search...",
-                                        "dropdownClasses": "advance-select-menu",
-                                        "optionClasses": "advance-select-option selected:select-active",
-                                        "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
-                                        "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/90 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                                    }' class="hidden">
-                                        <option value="">Day</option>
-                                        @for($i = 1; $i <= 31; $i++)
-                                            <option value="{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}" {{ old('dob_day', $member->date_of_birth->format('d')) == str_pad($i, 2, '0', STR_PAD_LEFT) ? 'selected' : '' }}>{{ $i }}</option>
-                                        @endfor
-                                    </select>
+                                <div class="w-20">
+                                    <input type="number" name="dob_day" id="dob_day" value="{{ old('dob_day', $member->date_of_birth?->format('d')) }}" placeholder="Day" min="1" max="31"
+                                        class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20">
                                 </div>
                                 <!-- Year -->
-                                <div class="flex-1">
-                                    <select name="dob_year" id="dob_year" data-select='{
-                                        "placeholder": "Year",
-                                        "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
-                                        "toggleClasses": "advance-select-toggle w-full",
-                                        "hasSearch": true,
-                                        "searchPlaceholder": "Search...",
-                                        "dropdownClasses": "advance-select-menu",
-                                        "optionClasses": "advance-select-option selected:select-active",
-                                        "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
-                                        "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/90 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                                    }' class="hidden">
-                                        <option value="">Year</option>
-                                        @for($year = date('Y'); $year >= 1900; $year--)
-                                            <option value="{{ $year }}" {{ old('dob_year', $member->date_of_birth->format('Y')) == $year ? 'selected' : '' }}>{{ $year }}</option>
-                                        @endfor
-                                    </select>
+                                <div class="w-24">
+                                    <input type="number" name="dob_year" id="dob_year" value="{{ old('dob_year', $member->date_of_birth?->format('Y')) }}" placeholder="Year" min="1900" max="{{ date('Y') }}"
+                                        class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20">
                                 </div>
                             </div>
-                            <input type="hidden" name="date_of_birth" id="date_of_birth" value="{{ $member->date_of_birth->format('m/d/Y') }}" required>
+                            <input type="hidden" name="date_of_birth" id="date_of_birth" value="{{ $member->date_of_birth?->format('m/d/Y') }}" required>
                             @error('date_of_birth')
                                 <p class="mt-1 text-sm text-rose-500">{{ $message }}</p>
                             @enderror
@@ -177,23 +143,33 @@
                             <label class="block text-sm font-medium text-slate-700 mb-2">
                                 Relationship <span class="text-rose-500">*</span>
                             </label>
-                            <select name="relationship" id="relationship-select" required data-select='{
-                                "placeholder": "Select relationship",
-                                "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
-                                "toggleClasses": "advance-select-toggle",
-                                "hasSearch": true,
-                                "searchPlaceholder": "Search...",
-                                "dropdownClasses": "advance-select-menu",
-                                "optionClasses": "advance-select-option selected:select-active",
-                                "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
-                                "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/90 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                            }' class="hidden">
+                            <select name="relationship" id="relationship-select" required class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 bg-white">
                                 <option value="">Choose</option>
                                 @foreach($relationships as $key => $label)
                                     <option value="{{ $key }}" {{ old('relationship', $member->relationship) === $key ? 'selected' : '' }}>{{ $label }}</option>
                                 @endforeach
                             </select>
                             @error('relationship')
+                                <p class="mt-1 text-sm text-rose-500">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">
+                                Family Circle
+                            </label>
+                            <select name="family_circle_id" id="family_circle_select" class="w-full">
+                                @foreach($allCircles as $circleOption)
+                                    <option value="{{ $circleOption->id }}"
+                                        data-image="{{ $circleOption->cover_image ? Storage::disk('do_spaces')->url($circleOption->cover_image) : '' }}"
+                                        data-members="{{ $circleOption->members_count }}"
+                                        {{ old('family_circle_id', $member->family_circle_id) == $circleOption->id ? 'selected' : '' }}>
+                                        {{ $circleOption->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <p class="mt-1 text-xs text-slate-500">Select a different circle to move this member</p>
+                            @error('family_circle_id')
                                 <p class="mt-1 text-sm text-rose-500">{{ $message }}</p>
                             @enderror
                         </div>
@@ -262,17 +238,7 @@
                     <div class="space-y-5">
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-2">Immigration Status</label>
-                            <select name="immigration_status" id="immigration-status-select" data-select='{
-                                "placeholder": "Select status",
-                                "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
-                                "toggleClasses": "advance-select-toggle",
-                                "hasSearch": true,
-                                "searchPlaceholder": "Search...",
-                                "dropdownClasses": "advance-select-menu",
-                                "optionClasses": "advance-select-option selected:select-active",
-                                "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
-                                "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/90 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                            }' class="hidden">
+                            <select name="immigration_status" id="immigration-status-select" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 bg-white">
                                 <option value="">Choose</option>
                                 @foreach($immigrationStatuses as $key => $label)
                                     <option value="{{ $key }}" {{ old('immigration_status', $member->immigration_status) === $key ? 'selected' : '' }}>{{ $label }}</option>
@@ -319,6 +285,8 @@
 @endsection
 
 @push('scripts')
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 // Profile image preview
 function previewImage(input) {
@@ -348,7 +316,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Combine date parts into hidden field
     function updateDateOfBirth() {
         const month = dobMonth.value;
-        const day = dobDay.value;
+        const day = dobDay.value ? String(dobDay.value).padStart(2, '0') : '';
         const year = dobYear.value;
 
         if (month && day && year) {
@@ -360,11 +328,126 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Update on change
     dobMonth.addEventListener('change', updateDateOfBirth);
-    dobDay.addEventListener('change', updateDateOfBirth);
-    dobYear.addEventListener('change', updateDateOfBirth);
+    dobDay.addEventListener('input', updateDateOfBirth);
+    dobYear.addEventListener('input', updateDateOfBirth);
 
     // Initial update
     updateDateOfBirth();
 });
+
+// Family Circle Select2 initialization - separate jQuery ready block
+$(document).ready(function() {
+    function formatCircleOption(option) {
+        if (!option.id) {
+            return option.text;
+        }
+
+        var $option = $(option.element);
+        var imageUrl = $option.data('image');
+        var membersCount = $option.data('members') || 0;
+
+        var imageHtml;
+        if (imageUrl) {
+            imageHtml = '<img src="' + imageUrl + '" style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover;" alt="' + option.text + '">';
+        } else {
+            imageHtml = '<div style="width: 40px; height: 40px; border-radius: 8px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); display: flex; align-items: center; justify-content: center;">' +
+                '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' +
+            '</div>';
+        }
+
+        var $result = $(
+            '<div style="display: flex; align-items: center; gap: 12px; padding: 4px 0;">' +
+                imageHtml +
+                '<div style="flex: 1;">' +
+                    '<div style="font-weight: 500; color: #1e293b;">' + option.text + '</div>' +
+                    '<div style="font-size: 12px; color: #64748b;">' + membersCount + ' member' + (membersCount !== 1 ? 's' : '') + '</div>' +
+                '</div>' +
+            '</div>'
+        );
+
+        return $result;
+    }
+
+    function formatCircleSelection(option) {
+        if (!option.id) {
+            return option.text;
+        }
+
+        var $option = $(option.element);
+        var imageUrl = $option.data('image');
+
+        var imageHtml;
+        if (imageUrl) {
+            imageHtml = '<img src="' + imageUrl + '" style="width: 24px; height: 24px; border-radius: 4px; object-fit: cover;" alt="' + option.text + '">';
+        } else {
+            imageHtml = '<div style="width: 24px; height: 24px; border-radius: 4px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); display: flex; align-items: center; justify-content: center;">' +
+                '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' +
+            '</div>';
+        }
+
+        var $result = $(
+            '<div style="display: flex; align-items: center; gap: 8px;">' +
+                imageHtml +
+                '<span>' + option.text + '</span>' +
+            '</div>'
+        );
+
+        return $result;
+    }
+
+    $('#family_circle_select').select2({
+        templateResult: formatCircleOption,
+        templateSelection: formatCircleSelection,
+        width: '100%',
+        dropdownAutoWidth: false
+    });
+});
 </script>
+
+<style>
+/* Select2 Custom Styles */
+.select2-container--default .select2-selection--single {
+    height: 42px;
+    padding: 6px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    background-color: white;
+}
+
+.select2-container--default .select2-selection--single:focus,
+.select2-container--default.select2-container--open .select2-selection--single {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+    outline: none;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 28px;
+    padding-left: 0;
+    color: #0f172a;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 40px;
+}
+
+.select2-dropdown {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #f5f3ff;
+    color: #5b21b6;
+}
+
+.select2-container--default .select2-results__option[aria-selected=true] {
+    background-color: #ede9fe;
+}
+
+.select2-results__option {
+    padding: 8px 12px;
+}
+</style>
 @endpush

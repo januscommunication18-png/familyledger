@@ -109,6 +109,7 @@ class FamilyCircleController extends Controller
                 'first_name' => $firstName,
                 'last_name' => $lastName,
                 'email' => $user->email,
+                'date_of_birth' => $user->date_of_birth ?? now()->subYears(25),
                 'relationship' => FamilyMember::RELATIONSHIP_SELF,
             ]);
         }
@@ -158,6 +159,7 @@ class FamilyCircleController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
             'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'include_me' => 'nullable|boolean',
         ]);
 
         $data = [
@@ -175,6 +177,35 @@ class FamilyCircleController extends Controller
         }
 
         $familyCircle->update($data);
+
+        // Handle "Include Me" checkbox
+        $user = Auth::user();
+        $selfMember = FamilyMember::where('family_circle_id', $familyCircle->id)
+            ->where('relationship', FamilyMember::RELATIONSHIP_SELF)
+            ->where('linked_user_id', $user->id)
+            ->first();
+
+        if ($request->boolean('include_me') && !$selfMember) {
+            // Add creator as a family member
+            $nameParts = explode(' ', $user->name, 2);
+            $firstName = $nameParts[0];
+            $lastName = $nameParts[1] ?? '';
+
+            FamilyMember::create([
+                'tenant_id' => $user->tenant_id,
+                'family_circle_id' => $familyCircle->id,
+                'created_by' => $user->id,
+                'linked_user_id' => $user->id,
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'email' => $user->email,
+                'date_of_birth' => $user->date_of_birth ?? now()->subYears(25),
+                'relationship' => FamilyMember::RELATIONSHIP_SELF,
+            ]);
+        } elseif (!$request->boolean('include_me') && $selfMember) {
+            // Remove self member
+            $selfMember->delete();
+        }
 
         if ($request->wantsJson()) {
             return response()->json([
