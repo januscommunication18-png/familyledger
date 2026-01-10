@@ -219,6 +219,13 @@
                             </label>
                             <textarea name="description" placeholder="A brief description of this family circle..." class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-slate-900 placeholder:text-slate-400 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 h-24 resize-none" maxlength="1000"></textarea>
                         </div>
+
+                        <div class="flex items-start gap-3 p-4 bg-violet-50 rounded-lg border border-violet-100">
+                            <input type="checkbox" name="include_me" id="include_me" value="1" checked class="mt-0.5 h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500">
+                            <label for="include_me" class="flex-1 cursor-pointer">
+                                <span class="block text-sm font-medium text-slate-700">{{ explode(' ', Auth::user()->name)[0] }}, would you like to include yourself in this circle?</span>
+                            </label>
+                        </div>
                     </div>
                     <!-- Footer -->
                     <div style="display: flex; justify-content: flex-start; gap: 0.75rem; border-top: 1px solid #f1f5f9; padding: 1rem 1.5rem; background: #f8fafc; border-radius: 0 0 1rem 1rem;">

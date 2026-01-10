@@ -64,6 +64,7 @@ class FamilyCircleController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
             'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'include_me' => 'nullable|boolean',
         ]);
 
         $user = Auth::user();
@@ -93,8 +94,24 @@ class FamilyCircleController extends Controller
 
         $circle = FamilyCircle::create($data);
 
-        // Note: Owner is displayed as "Self" card directly from users table
-        // No separate FamilyMember record is created for the owner
+        // Add creator as a family member if "Include Me" is checked
+        if ($request->boolean('include_me')) {
+            // Parse user's name into first and last name
+            $nameParts = explode(' ', $user->name, 2);
+            $firstName = $nameParts[0];
+            $lastName = $nameParts[1] ?? '';
+
+            FamilyMember::create([
+                'tenant_id' => $user->tenant_id,
+                'family_circle_id' => $circle->id,
+                'created_by' => $user->id,
+                'linked_user_id' => $user->id,
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'email' => $user->email,
+                'relationship' => FamilyMember::RELATIONSHIP_SELF,
+            ]);
+        }
 
         if ($request->wantsJson()) {
             return response()->json([

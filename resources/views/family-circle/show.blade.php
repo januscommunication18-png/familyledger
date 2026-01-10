@@ -29,7 +29,7 @@
                         @if($circle->description)
                             <p class="text-white/80 mt-1">{{ $circle->description }}</p>
                         @endif
-                        <p class="text-white/60 text-sm mt-2">{{ $circle->members->count() + 1 }} member{{ $circle->members->count() + 1 != 1 ? 's' : '' }}</p>
+                        <p class="text-white/60 text-sm mt-2">{{ $circle->members->count() }} member{{ $circle->members->count() != 1 ? 's' : '' }}</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
@@ -48,14 +48,18 @@
 
     <!-- Family Members Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Owner Self Card (from users table) -->
         @php
+            // Check if the owner included themselves in this circle
+            $selfMember = $circle->members->where('relationship', 'self')->where('linked_user_id', auth()->id())->first();
             $owner = auth()->user();
             $ownerNameParts = explode(' ', $owner->name, 2);
             $ownerFirstName = $ownerNameParts[0];
             $ownerLastName = $ownerNameParts[1] ?? '';
             $ownerAge = $owner->date_of_birth ? \Carbon\Carbon::parse($owner->date_of_birth)->age : null;
         @endphp
+
+        <!-- Owner Self Card (only shown if owner included themselves) -->
+        @if($selfMember)
         <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow border-2 border-violet-200">
             <div class="card-body">
                 <!-- Owner Header -->
@@ -117,9 +121,10 @@
                 </div>
             </div>
         </div>
+        @endif
 
-        <!-- Other Family Members -->
-        @foreach($circle->members as $member)
+        <!-- Other Family Members (excluding self to avoid duplicate) -->
+        @foreach($circle->members->where('relationship', '!=', 'self') as $member)
                 <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
                     <div class="card-body">
                         <!-- Member Header -->
