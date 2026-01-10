@@ -34,6 +34,9 @@
 /storage/framework
 /storage/logs
 
+/bootstrap/cache/packages.php
+/bootstrap/cache/services.php
+
 Homestead.json
 Homestead.yaml
 Thumbs.db
