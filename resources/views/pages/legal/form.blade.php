@@ -73,15 +73,7 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Document Type <span class="text-rose-500">*</span></label>
-                        <select name="document_type" id="document_type" required data-select='{
-                            "placeholder": "Select type...",
-                            "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
-                            "toggleClasses": "advance-select-toggle",
-                            "dropdownClasses": "advance-select-menu",
-                            "optionClasses": "advance-select-option selected:select-active",
-                            "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
-                            "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/50 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                        }' class="hidden">
+                        <select name="document_type" id="document_type" required class="select select-bordered w-full">
                             <option value="">Choose type</option>
                             @foreach($documentTypes as $key => $label)
                                 <option value="{{ $key }}" {{ old('document_type', $selectedType ?? $document?->document_type) === $key ? 'selected' : '' }}>{{ $label }}</option>
@@ -105,15 +97,7 @@
 
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Status</label>
-                        <select name="status" data-select='{
-                            "placeholder": "Select status...",
-                            "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
-                            "toggleClasses": "advance-select-toggle",
-                            "dropdownClasses": "advance-select-menu",
-                            "optionClasses": "advance-select-option selected:select-active",
-                            "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
-                            "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/50 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                        }' class="hidden">
+                        <select name="status" class="select select-bordered w-full">
                             @foreach($statuses as $key => $label)
                                 <option value="{{ $key }}" {{ old('status', $document?->status ?? 'active') === $key ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach

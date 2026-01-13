@@ -1,7 +1,7 @@
-<div class="border border-base-200 rounded-xl p-4 hover:border-primary/30 transition-colors {{ $task->is_overdue ? 'border-l-4 border-l-error' : '' }} {{ $task->is_series_paused ? 'bg-amber-50/50' : '' }}">
+<div class="border border-base-200 rounded-xl p-4 hover:border-primary/30 transition-colors {{ $task->is_overdue ? 'border-l-4 border-l-error' : '' }} {{ $task->is_series_paused ? 'bg-amber-50/50' : '' }} cursor-pointer" onclick="toggleTask({{ $task->id }})">
     <div class="flex items-start gap-3">
         <!-- Checkbox -->
-        <button onclick="toggleTask({{ $task->id }})" class="mt-1 w-5 h-5 rounded border-2 {{ $task->status === 'completed' ? 'bg-primary border-primary' : 'border-slate-300 hover:border-primary' }} flex items-center justify-center transition-colors">
+        <button onclick="event.stopPropagation(); toggleTask({{ $task->id }})" class="mt-1 w-5 h-5 rounded border-2 {{ $task->status === 'completed' ? 'bg-primary border-primary' : 'border-slate-300 hover:border-primary' }} flex items-center justify-center transition-colors shrink-0">
             @if($task->status === 'completed')
                 <span class="icon-[tabler--check] size-3 text-white"></span>
             @endif
@@ -38,7 +38,7 @@
 
                 <!-- Goal Link -->
                 @if($task->goal)
-                    <a href="{{ route('goals-todo.goals.show', $task->goal) }}" class="flex items-center gap-1 px-2 py-0.5 text-xs rounded-full {{ $task->goal->color_light_class }}">
+                    <a href="{{ route('goals-todo.goals.show', $task->goal) }}" onclick="event.stopPropagation()" class="flex items-center gap-1 px-2 py-0.5 text-xs rounded-full {{ $task->goal->color_light_class }}">
                         <span class="{{ $task->goal->icon_class }} size-3"></span>
                         {{ Str::limit($task->goal->title, 15) }}
                     </a>
@@ -141,25 +141,25 @@
         </div>
 
         <!-- Actions -->
-        <div class="dropdown dropdown-end">
-            <button tabindex="0" class="btn btn-ghost btn-sm btn-square">
+        <div class="relative" id="taskDropdown{{ $task->id }}">
+            <button type="button" class="btn btn-ghost btn-sm btn-square" onclick="toggleDropdown('taskDropdown{{ $task->id }}', event)">
                 <svg xmlns="http://www.w3.org/2000/svg" class="size-5 text-slate-500" viewBox="0 0 24 24" fill="currentColor">
                     <circle cx="12" cy="5" r="2"/>
                     <circle cx="12" cy="12" r="2"/>
                     <circle cx="12" cy="19" r="2"/>
                 </svg>
             </button>
-            <ul tabindex="0" class="dropdown-menu dropdown-open:opacity-100 hidden z-50 p-2 shadow-xl bg-base-100 rounded-xl w-52 border border-base-200">
+            <ul class="dropdown-content hidden absolute right-0 top-full mt-1 z-50 p-2 shadow-xl bg-base-100 rounded-xl w-52 border border-base-200">
                 @if($task->is_recurring)
                     <li>
-                        <a href="javascript:void(0)" onclick="openEditScopeModal({{ $task->id }}, '{{ route('goals-todo.tasks.edit', $task) }}')" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100">
+                        <a href="javascript:void(0)" onclick="event.stopPropagation(); openEditScopeModal({{ $task->id }}, '{{ route('goals-todo.tasks.edit', $task) }}')" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100">
                             <span class="icon-[tabler--edit] shrink-0 size-4 text-slate-400"></span>
                             Edit Task
                         </a>
                     </li>
                 @else
                     <li>
-                        <a href="{{ route('goals-todo.tasks.edit', $task) }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100">
+                        <a href="{{ route('goals-todo.tasks.edit', $task) }}" onclick="event.stopPropagation()" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100">
                             <span class="icon-[tabler--edit] shrink-0 size-4 text-slate-400"></span>
                             Edit Task
                         </a>
@@ -167,7 +167,7 @@
                 @endif
                 @if($task->is_recurring)
                     <li>
-                        <a href="javascript:void(0)" onclick="toggleSeries({{ $task->id }})" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100">
+                        <a href="javascript:void(0)" onclick="event.stopPropagation(); confirmToggleSeries({{ $task->id }}, {{ $task->is_series_paused ? 'true' : 'false' }}, '{{ addslashes($task->title) }}')" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100">
                             @if($task->is_series_paused)
                                 <span class="icon-[tabler--player-play] shrink-0 size-4 text-emerald-600"></span>
                                 <span>Resume Series</span>
@@ -178,7 +178,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="javascript:void(0)" onclick="showOccurrences({{ $task->id }})" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100">
+                        <a href="javascript:void(0)" onclick="event.stopPropagation(); showOccurrences({{ $task->id }})" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100">
                             <span class="icon-[tabler--calendar-stats] shrink-0 size-4 text-slate-400"></span>
                             View Occurrences
                         </a>
@@ -186,7 +186,7 @@
                 @endif
                 <li class="my-1 border-t border-base-200"></li>
                 <li>
-                    <a href="javascript:void(0)" onclick="confirmDelete('{{ route('goals-todo.tasks.destroy', $task) }}', 'Are you sure you want to delete this task{{ $task->is_recurring ? ' and all its occurrences' : '' }}?')" class="flex items-center gap-3 px-3 py-2 rounded-lg text-error hover:bg-error/10">
+                    <a href="javascript:void(0)" onclick="event.stopPropagation(); confirmDelete('{{ route('goals-todo.tasks.destroy', $task) }}', 'Are you sure you want to delete this task{{ $task->is_recurring ? ' and all its occurrences' : '' }}?')" class="flex items-center gap-3 px-3 py-2 rounded-lg text-error hover:bg-error/10">
                         <span class="icon-[tabler--trash] shrink-0 size-4"></span>
                         Delete
                     </a>

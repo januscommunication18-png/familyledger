@@ -111,7 +111,7 @@
                 <!-- Actions -->
                 <div class="flex gap-2">
                     @if($task->is_recurring)
-                        <button onclick="toggleSeries({{ $task->id }})" class="btn btn-ghost btn-sm gap-1">
+                        <button onclick="confirmToggleSeries({{ $task->is_series_paused ? 'true' : 'false' }})" class="btn btn-ghost btn-sm gap-1">
                             @if($task->is_series_paused)
                                 <span class="icon-[tabler--player-play] size-4"></span>
                                 Resume
@@ -363,8 +363,9 @@
                 @csrf
                 <div class="flex gap-2">
                     <input type="text" name="content" placeholder="Add a comment..." class="input input-bordered flex-1" required>
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn btn-primary gap-2">
                         <span class="icon-[tabler--send] size-4"></span>
+                        <span class="hidden sm:inline">Comment</span>
                     </button>
                 </div>
             </form>
@@ -380,6 +381,9 @@
     </div>
 </div>
 
+<!-- Confirmation Modal Component -->
+<x-confirm-modal />
+
 <script>
 // Toggle task completion
 function toggleTask(taskId) {
@@ -388,6 +392,7 @@ function toggleTask(taskId) {
         headers: {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json'
         }
     })
@@ -395,6 +400,25 @@ function toggleTask(taskId) {
     .then(data => {
         if (data.success) {
             location.reload();
+        }
+    });
+}
+
+// Confirm before toggling series pause/resume
+function confirmToggleSeries(isPaused) {
+    const taskTitle = @json($task->title);
+    const type = isPaused ? 'play' : 'pause';
+
+    showConfirmModal({
+        title: isPaused ? 'Resume Series?' : 'Pause Series?',
+        message: isPaused
+            ? `Resume generating new occurrences for "${taskTitle}"?`
+            : `Pause all future occurrences for "${taskTitle}"? Existing occurrences will remain.`,
+        type: type,
+        btnText: isPaused ? 'Resume' : 'Pause',
+        btnIcon: isPaused ? 'icon-[tabler--player-play]' : 'icon-[tabler--player-pause]',
+        onConfirm: function() {
+            toggleSeries({{ $task->id }});
         }
     });
 }
@@ -406,6 +430,7 @@ function toggleSeries(taskId) {
         headers: {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json'
         }
     })
@@ -413,7 +438,13 @@ function toggleSeries(taskId) {
     .then(data => {
         if (data.success) {
             location.reload();
+        } else {
+            alert(data.message || 'An error occurred');
         }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        location.reload();
     });
 }
 
@@ -424,6 +455,7 @@ function completeOccurrence(occurrenceId) {
         headers: {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json'
         }
     })
@@ -442,6 +474,7 @@ function skipOccurrence(occurrenceId) {
         headers: {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json'
         }
     })
@@ -465,6 +498,7 @@ function openSnoozeModal(occurrenceId) {
         headers: {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json'
         },
         body: JSON.stringify({ until: tomorrow.toISOString() })

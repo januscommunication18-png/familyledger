@@ -17,10 +17,8 @@
 @section('page-title', $goal->title)
 @section('page-description', $goal->description ?? 'Track progress towards this goal')
 
-<style>[x-cloak] { display: none !important; }</style>
-
 @section('content')
-<div class="space-y-6" x-data="goalDetail()">
+<div class="space-y-6">
     @if(session('success'))
         <div class="alert alert-success">
             <span class="icon-[tabler--check] size-5"></span>
@@ -79,25 +77,28 @@
 
                 <!-- Actions -->
                 <div class="flex items-center gap-2">
-                    @if($goal->needs_check_in)
-                        <button @click="showCheckIn = true" class="btn btn-primary btn-sm gap-1">
+                    @if($goal->status === 'active' || $goal->status === 'in_progress')
+                        <button onclick="openCheckInModal()" class="btn {{ $goal->needs_check_in ? 'btn-primary' : 'btn-outline btn-primary' }} btn-sm gap-1">
                             <span class="icon-[tabler--message-check] size-4"></span>
                             Check In
+                            @if($goal->needs_check_in)
+                                <span class="badge badge-xs badge-warning">Due</span>
+                            @endif
                         </button>
                     @endif
                     <a href="{{ route('goals-todo.goals.edit', $goal) }}" class="btn btn-ghost btn-sm gap-1">
                         <span class="icon-[tabler--edit] size-4"></span>
                         Edit
                     </a>
-                    <div class="dropdown dropdown-end">
-                        <button tabindex="0" class="btn btn-ghost btn-sm btn-square">
+                    <div class="relative" id="goalActionsDropdown">
+                        <button type="button" class="btn btn-ghost btn-sm btn-square" onclick="toggleDropdown('goalActionsDropdown', event)">
                             <svg xmlns="http://www.w3.org/2000/svg" class="size-5 text-slate-500" viewBox="0 0 24 24" fill="currentColor">
                                 <circle cx="12" cy="5" r="2"/>
                                 <circle cx="12" cy="12" r="2"/>
                                 <circle cx="12" cy="19" r="2"/>
                             </svg>
                         </button>
-                        <ul tabindex="0" class="dropdown-menu dropdown-open:opacity-100 hidden z-50 p-2 shadow-xl bg-base-100 rounded-xl w-52 border border-base-200">
+                        <ul class="dropdown-content hidden absolute right-0 top-full mt-1 z-50 p-2 shadow-xl bg-base-100 rounded-xl w-52 border border-base-200">
                             @if($goal->status !== 'done')
                                 <li>
                                     <a href="javascript:void(0)" onclick="markGoalDone()" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100">
@@ -161,8 +162,8 @@
 
                     <div class="mt-4 flex items-center gap-3">
                         <span class="text-sm text-slate-600">Add progress:</span>
-                        <input type="number" x-model="progressToAdd" min="1" class="input input-bordered input-sm w-24" placeholder="+1">
-                        <button @click="addProgress" class="btn btn-primary btn-sm">Add</button>
+                        <input type="number" id="progressToAdd" min="1" value="1" class="input input-bordered input-sm w-24" placeholder="+1">
+                        <button onclick="addProgress()" class="btn btn-primary btn-sm">Add</button>
                     </div>
                 </div>
             @endif
@@ -181,7 +182,7 @@
                             </div>
                         </div>
                         @if($goal->status === 'done' && !$goal->reward_claimed)
-                            <button @click="claimReward" class="btn btn-warning btn-sm">Claim Reward!</button>
+                            <button onclick="claimReward()" class="btn btn-warning btn-sm">Claim Reward!</button>
                         @elseif($goal->reward_claimed)
                             <span class="badge badge-success">Claimed!</span>
                         @else
@@ -214,77 +215,80 @@
     </div>
 
     <!-- Check-in Modal -->
-    <div x-show="showCheckIn" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @keydown.escape="showCheckIn = false">
-        <div class="bg-base-100 rounded-2xl max-w-md w-full mx-4 p-6" @click.away="showCheckIn = false">
-            <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
-                <span class="text-2xl">{{ $goal->category_emoji }}</span>
-                Check In
-            </h3>
-            <p class="text-slate-600 mb-6">{{ $goal->check_in_prompt }}</p>
+    <div id="checkInModal" class="hidden fixed inset-0 z-50">
+        <div class="fixed inset-0 bg-black/50" onclick="closeCheckInModal()"></div>
+        <div class="fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
+            <div class="bg-base-100 rounded-2xl max-w-md w-full p-6 shadow-2xl pointer-events-auto">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <span class="text-2xl">{{ $goal->category_emoji }}</span>
+                    Check In
+                </h3>
+                <p class="text-slate-600 mb-6">{{ $goal->check_in_prompt }}</p>
 
-            <!-- Status Selection -->
-            <div class="grid grid-cols-3 gap-3 mb-6">
-                <label class="cursor-pointer">
-                    <input type="radio" x-model="checkInStatus" value="done" class="hidden peer">
-                    <div class="text-center p-4 rounded-lg border-2 peer-checked:border-success peer-checked:bg-success/10 transition-all">
-                        <div class="text-2xl mb-1">✅</div>
-                        <div class="text-sm font-medium">Done!</div>
+                <form id="checkInForm" onsubmit="submitCheckIn(event)">
+                    <!-- Status Selection -->
+                    <div class="grid grid-cols-3 gap-3 mb-6">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="check_in_status" value="done" class="hidden peer">
+                            <div class="text-center p-4 rounded-lg border-2 border-base-300 peer-checked:border-success peer-checked:bg-success/10 transition-all hover:border-success/50">
+                                <div class="text-2xl mb-1">✅</div>
+                                <div class="text-sm font-medium">Done!</div>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="check_in_status" value="in_progress" class="hidden peer">
+                            <div class="text-center p-4 rounded-lg border-2 border-base-300 peer-checked:border-info peer-checked:bg-info/10 transition-all hover:border-info/50">
+                                <div class="text-2xl mb-1">💪</div>
+                                <div class="text-sm font-medium">In Progress</div>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="check_in_status" value="skipped" class="hidden peer">
+                            <div class="text-center p-4 rounded-lg border-2 border-base-300 peer-checked:border-warning peer-checked:bg-warning/10 transition-all hover:border-warning/50">
+                                <div class="text-2xl mb-1">⏭️</div>
+                                <div class="text-sm font-medium">Skip</div>
+                            </div>
+                        </label>
                     </div>
-                </label>
-                <label class="cursor-pointer">
-                    <input type="radio" x-model="checkInStatus" value="in_progress" class="hidden peer">
-                    <div class="text-center p-4 rounded-lg border-2 peer-checked:border-info peer-checked:bg-info/10 transition-all">
-                        <div class="text-2xl mb-1">💪</div>
-                        <div class="text-sm font-medium">In Progress</div>
+
+                    @if($goal->goal_type === 'milestone')
+                        <!-- Progress Added -->
+                        <div class="form-control mb-4">
+                            <label class="label">
+                                <span class="label-text font-medium">Progress to add</span>
+                            </label>
+                            <input type="number" name="check_in_progress" min="0" class="input input-bordered" placeholder="e.g., 5">
+                        </div>
+                    @endif
+
+                    @if($goal->is_kid_goal)
+                        <!-- Star Rating -->
+                        <div class="form-control mb-4">
+                            <label class="label">
+                                <span class="label-text font-medium">How did it go?</span>
+                            </label>
+                            <div class="flex gap-2" id="starRating">
+                                <button type="button" onclick="setStars(1)" class="text-3xl transition-transform hover:scale-110 opacity-30" data-star="1">⭐</button>
+                                <button type="button" onclick="setStars(2)" class="text-3xl transition-transform hover:scale-110 opacity-30" data-star="2">⭐</button>
+                                <button type="button" onclick="setStars(3)" class="text-3xl transition-transform hover:scale-110 opacity-30" data-star="3">⭐</button>
+                            </div>
+                            <input type="hidden" name="star_rating" id="starRatingInput" value="">
+                        </div>
+                    @endif
+
+                    <!-- Note -->
+                    <div class="form-control mb-6">
+                        <label class="label">
+                            <span class="label-text font-medium">Add a note (optional)</span>
+                        </label>
+                        <textarea name="check_in_note" rows="2" class="textarea textarea-bordered" placeholder="How did it go?"></textarea>
                     </div>
-                </label>
-                <label class="cursor-pointer">
-                    <input type="radio" x-model="checkInStatus" value="skipped" class="hidden peer">
-                    <div class="text-center p-4 rounded-lg border-2 peer-checked:border-warning peer-checked:bg-warning/10 transition-all">
-                        <div class="text-2xl mb-1">⏭️</div>
-                        <div class="text-sm font-medium">Skip</div>
+
+                    <div class="flex gap-3">
+                        <button type="button" onclick="closeCheckInModal()" class="btn btn-ghost flex-1">Cancel</button>
+                        <button type="submit" class="btn btn-primary flex-1">Save Check-in</button>
                     </div>
-                </label>
-            </div>
-
-            @if($goal->goal_type === 'milestone')
-                <!-- Progress Added -->
-                <div class="form-control mb-4">
-                    <label class="label">
-                        <span class="label-text font-medium">Progress to add</span>
-                    </label>
-                    <input type="number" x-model="checkInProgress" min="0" class="input input-bordered" placeholder="e.g., 5">
-                </div>
-            @endif
-
-            @if($goal->is_kid_goal)
-                <!-- Star Rating -->
-                <div class="form-control mb-4">
-                    <label class="label">
-                        <span class="label-text font-medium">How did it go?</span>
-                    </label>
-                    <div class="flex gap-2">
-                        <template x-for="star in [1, 2, 3]" :key="star">
-                            <button type="button" @click="checkInStars = star" class="text-3xl transition-transform hover:scale-110"
-                                    :class="star <= checkInStars ? 'opacity-100' : 'opacity-30'">
-                                ⭐
-                            </button>
-                        </template>
-                    </div>
-                </div>
-            @endif
-
-            <!-- Note -->
-            <div class="form-control mb-6">
-                <label class="label">
-                    <span class="label-text font-medium">Add a note (optional)</span>
-                </label>
-                <textarea x-model="checkInNote" rows="2" class="textarea textarea-bordered" placeholder="How did it go?"></textarea>
-            </div>
-
-            <div class="flex gap-3">
-                <button @click="showCheckIn = false" class="btn btn-ghost flex-1">Cancel</button>
-                <button @click="submitCheckIn" class="btn btn-primary flex-1" :disabled="!checkInStatus">Save Check-in</button>
+                </form>
             </div>
         </div>
     </div>
@@ -375,15 +379,15 @@
                                     </span>
                                 @endif
                             </div>
-                            <div class="dropdown dropdown-end">
-                                <button tabindex="0" class="btn btn-ghost btn-xs btn-square">
+                            <div class="relative" id="taskDropdown{{ $task->id }}">
+                                <button type="button" class="btn btn-ghost btn-xs btn-square" onclick="toggleDropdown('taskDropdown{{ $task->id }}', event)">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="size-4 text-slate-400" viewBox="0 0 24 24" fill="currentColor">
                                         <circle cx="5" cy="12" r="2"/>
                                         <circle cx="12" cy="12" r="2"/>
                                         <circle cx="19" cy="12" r="2"/>
                                     </svg>
                                 </button>
-                                <ul tabindex="0" class="dropdown-menu dropdown-open:opacity-100 hidden z-50 p-2 shadow-xl bg-base-100 rounded-xl w-44 border border-base-200">
+                                <ul class="dropdown-content hidden absolute right-0 top-full mt-1 z-50 p-2 shadow-xl bg-base-100 rounded-xl w-44 border border-base-200">
                                     <li>
                                         <a href="{{ route('goals-todo.tasks.edit', $task) }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100">
                                             <span class="icon-[tabler--edit] shrink-0 size-4 text-slate-400"></span>
@@ -428,111 +432,199 @@
     </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
-<dialog id="deleteConfirmModal" class="modal modal-bottom sm:modal-middle">
-    <div class="modal-box max-w-sm">
-        <div class="flex flex-col items-center text-center">
-            <div class="w-16 h-16 rounded-full bg-error/10 flex items-center justify-center mb-4">
-                <span class="icon-[tabler--trash] shrink-0 size-8 text-error"></span>
-            </div>
-            <h3 class="font-bold text-lg mb-2">Delete Item?</h3>
-            <p class="text-slate-500 text-sm" id="deleteMessage">Are you sure you want to delete this item? This action cannot be undone.</p>
-        </div>
-        <div class="modal-action justify-center gap-3 mt-6">
-            <form method="dialog">
-                <button class="btn btn-ghost min-w-24">Cancel</button>
-            </form>
-            <form id="deleteForm" method="POST">
-                @csrf
-                @method('DELETE')
-                <button type="submit" class="btn btn-error min-w-24 gap-2">
-                    <span class="icon-[tabler--trash] shrink-0 size-4"></span>
-                    Delete
-                </button>
-            </form>
-        </div>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-        <button>close</button>
-    </form>
-</dialog>
+<!-- Delete Confirmation Modal Component -->
+<x-delete-confirm-modal />
 
 <script>
-function goalDetail() {
-    return {
-        showCheckIn: false,
-        checkInStatus: '',
-        checkInNote: '',
-        checkInProgress: null,
-        checkInStars: 0,
-        progressToAdd: 1,
+let currentStars = 0;
+let activeDropdown = null;
+let dropdownJustOpened = false;
 
-        submitCheckIn() {
-            fetch('{{ route('goals-todo.goals.check-in', $goal) }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    status: this.checkInStatus,
-                    note: this.checkInNote,
-                    progress_added: this.checkInProgress,
-                    star_rating: this.checkInStars || null
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                }
-            });
-        },
+function toggleDropdown(dropdownId, event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
 
-        addProgress() {
-            fetch('{{ route('goals-todo.goals.progress', $goal) }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    progress: {{ $goal->milestone_current ?? 0 }} + parseInt(this.progressToAdd)
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                }
-            });
-        },
+    const dropdown = document.getElementById(dropdownId);
+    if (!dropdown) return;
 
-        claimReward() {
-            fetch('{{ route('goals-todo.goals.claim-reward', $goal) }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                }
-            });
+    const menu = dropdown.querySelector('.dropdown-content');
+    if (!menu) return;
+
+    // Close any other open dropdown
+    if (activeDropdown && activeDropdown !== dropdownId) {
+        const prevDropdown = document.getElementById(activeDropdown);
+        if (prevDropdown) {
+            const prevMenu = prevDropdown.querySelector('.dropdown-content');
+            if (prevMenu) prevMenu.classList.add('hidden');
         }
+    }
+
+    // Toggle current dropdown
+    const isHidden = menu.classList.contains('hidden');
+    if (isHidden) {
+        menu.classList.remove('hidden');
+        activeDropdown = dropdownId;
+        // Set flag to prevent immediate close
+        dropdownJustOpened = true;
+        setTimeout(() => { dropdownJustOpened = false; }, 100);
+    } else {
+        menu.classList.add('hidden');
+        activeDropdown = null;
     }
 }
 
-function confirmDelete(url, message = 'Are you sure you want to delete this item?') {
-    document.getElementById('deleteForm').action = url;
-    document.getElementById('deleteMessage').textContent = message;
-    document.getElementById('deleteConfirmModal').showModal();
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    // Skip if dropdown was just opened
+    if (dropdownJustOpened) return;
+    if (!activeDropdown) return;
+
+    const dropdown = document.getElementById(activeDropdown);
+    if (!dropdown) {
+        activeDropdown = null;
+        return;
+    }
+
+    // Check if click is inside the dropdown
+    if (!dropdown.contains(event.target)) {
+        dropdown.querySelector('.dropdown-content')?.classList.add('hidden');
+        activeDropdown = null;
+    }
+});
+
+// Check-in Modal functions
+function openCheckInModal() {
+    document.getElementById('checkInModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeCheckInModal() {
+    document.getElementById('checkInModal').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+function setStars(rating) {
+    currentStars = rating;
+    document.getElementById('starRatingInput').value = rating;
+    document.querySelectorAll('#starRating button').forEach((btn, index) => {
+        btn.classList.toggle('opacity-30', index >= rating);
+        btn.classList.toggle('opacity-100', index < rating);
+    });
+}
+
+function submitCheckIn(event) {
+    event.preventDefault();
+    const form = document.getElementById('checkInForm');
+    const formData = new FormData(form);
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    const status = formData.get('check_in_status');
+    if (!status) {
+        alert('Please select a status');
+        return;
+    }
+
+    // Disable button while submitting
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving...';
+
+    fetch('{{ route('goals-todo.goals.check-in', $goal) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            status: status,
+            note: formData.get('check_in_note'),
+            progress_added: formData.get('check_in_progress') || null,
+            star_rating: formData.get('star_rating') || null
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close modal
+            closeCheckInModal();
+
+            // Show success message
+            showSuccessMessage('Check-in recorded successfully!');
+
+            // Reload page after short delay to show message
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            alert('Failed to save check-in. Please try again.');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Save Check-in';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save Check-in';
+    });
+}
+
+function showSuccessMessage(message) {
+    // Create toast notification
+    const toast = document.createElement('div');
+    toast.className = 'fixed top-4 right-4 z-[100] bg-success text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2';
+    toast.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>' + message;
+    document.body.appendChild(toast);
+
+    // Remove after 3 seconds
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
+function addProgress() {
+    const progressInput = document.getElementById('progressToAdd');
+    const progressToAdd = parseInt(progressInput?.value || 1);
+
+    fetch('{{ route('goals-todo.goals.progress', $goal) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            progress: {{ $goal->milestone_current ?? 0 }} + progressToAdd
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    });
+}
+
+function claimReward() {
+    fetch('{{ route('goals-todo.goals.claim-reward', $goal) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    });
 }
 
 function toggleTask(taskId) {
@@ -558,6 +650,7 @@ function markGoalDone() {
         headers: {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json'
         }
     })
@@ -575,6 +668,7 @@ function skipGoal() {
         headers: {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json'
         }
     })
@@ -592,6 +686,7 @@ function updateGoalStatus(status) {
         headers: {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json'
         },
         body: JSON.stringify({ status: status })

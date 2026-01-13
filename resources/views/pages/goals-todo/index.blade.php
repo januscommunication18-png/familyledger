@@ -94,34 +94,11 @@
     </form>
 </dialog>
 
-<!-- Delete Confirmation Modal -->
-<dialog id="deleteConfirmModal" class="modal modal-bottom sm:modal-middle">
-    <div class="modal-box max-w-sm">
-        <div class="flex flex-col items-center text-center">
-            <div class="w-16 h-16 rounded-full bg-error/10 flex items-center justify-center mb-4">
-                <span class="icon-[tabler--trash] shrink-0 size-8 text-error"></span>
-            </div>
-            <h3 class="font-bold text-lg mb-2">Delete Item?</h3>
-            <p class="text-slate-500 text-sm" id="deleteMessage">Are you sure you want to delete this item? This action cannot be undone.</p>
-        </div>
-        <div class="modal-action justify-center gap-3 mt-6">
-            <form method="dialog">
-                <button class="btn btn-ghost min-w-24">Cancel</button>
-            </form>
-            <form id="deleteForm" method="POST">
-                @csrf
-                @method('DELETE')
-                <button type="submit" class="btn btn-error min-w-24 gap-2">
-                    <span class="icon-[tabler--trash] shrink-0 size-4"></span>
-                    Delete
-                </button>
-            </form>
-        </div>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-        <button>close</button>
-    </form>
-</dialog>
+<!-- Delete Confirmation Modal Component -->
+<x-delete-confirm-modal />
+
+<!-- Generic Confirmation Modal Component -->
+<x-confirm-modal />
 
 <!-- Snooze Modal -->
 <dialog id="snoozeModal" class="modal">
@@ -152,11 +129,60 @@
 </dialog>
 
 <script>
-function confirmDelete(url, message = 'Are you sure you want to delete this item? This action cannot be undone.') {
-    document.getElementById('deleteForm').action = url;
-    document.getElementById('deleteMessage').textContent = message;
-    document.getElementById('deleteConfirmModal').showModal();
+// Dropdown functionality
+let activeDropdown = null;
+let dropdownJustOpened = false;
+
+function toggleDropdown(dropdownId, event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+
+    const dropdown = document.getElementById(dropdownId);
+    if (!dropdown) return;
+
+    const menu = dropdown.querySelector('.dropdown-content');
+    if (!menu) return;
+
+    // Close any other open dropdown
+    if (activeDropdown && activeDropdown !== dropdownId) {
+        const prevDropdown = document.getElementById(activeDropdown);
+        if (prevDropdown) {
+            const prevMenu = prevDropdown.querySelector('.dropdown-content');
+            if (prevMenu) prevMenu.classList.add('hidden');
+        }
+    }
+
+    // Toggle current dropdown
+    const isHidden = menu.classList.contains('hidden');
+    if (isHidden) {
+        menu.classList.remove('hidden');
+        activeDropdown = dropdownId;
+        dropdownJustOpened = true;
+        setTimeout(() => { dropdownJustOpened = false; }, 100);
+    } else {
+        menu.classList.add('hidden');
+        activeDropdown = null;
+    }
 }
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    if (dropdownJustOpened) return;
+    if (!activeDropdown) return;
+
+    const dropdown = document.getElementById(activeDropdown);
+    if (!dropdown) {
+        activeDropdown = null;
+        return;
+    }
+
+    if (!dropdown.contains(event.target)) {
+        dropdown.querySelector('.dropdown-content')?.classList.add('hidden');
+        activeDropdown = null;
+    }
+});
 
 // Open edit scope modal for recurring tasks
 function openEditScopeModal(taskId, editUrl) {
@@ -179,6 +205,7 @@ function toggleTask(taskId) {
         headers: {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json'
         }
     })
@@ -187,16 +214,38 @@ function toggleTask(taskId) {
         if (data.success) {
             location.reload();
         }
+    })
+    .catch(error => {
+        console.error('Error:', error);
     });
 }
 
-// Toggle recurring series pause/resume
+// Confirm and toggle recurring series pause/resume
+function confirmToggleSeries(taskId, isPaused, taskTitle) {
+    const action = isPaused ? 'resume' : 'pause';
+    const type = isPaused ? 'play' : 'pause';
+
+    showConfirmModal({
+        title: isPaused ? 'Resume Series?' : 'Pause Series?',
+        message: isPaused
+            ? `Resume generating new occurrences for "${taskTitle}"?`
+            : `Pause all future occurrences for "${taskTitle}"? Existing occurrences will remain.`,
+        type: type,
+        btnText: isPaused ? 'Resume' : 'Pause',
+        btnIcon: isPaused ? 'icon-[tabler--player-play]' : 'icon-[tabler--player-pause]',
+        onConfirm: function() {
+            toggleSeries(taskId);
+        }
+    });
+}
+
 function toggleSeries(taskId) {
     fetch(`{{ url('/goals-todo/tasks') }}/${taskId}/toggle-series`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json'
         }
     })
@@ -204,7 +253,13 @@ function toggleSeries(taskId) {
     .then(data => {
         if (data.success) {
             location.reload();
+        } else {
+            alert(data.message || 'An error occurred');
         }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        location.reload();
     });
 }
 

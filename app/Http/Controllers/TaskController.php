@@ -67,7 +67,16 @@ class TaskController extends Controller
             $tasksQuery->recurring();
         }
         if ($request->boolean('missed_recurring')) {
-            $tasksQuery->missedRecurring();
+            // Include both: recurring tasks with missed occurrences AND overdue non-recurring tasks
+            $tasksQuery->where(function ($q) {
+                $q->missedRecurring()
+                  ->orWhere(function ($q2) {
+                      $q2->where('is_recurring', false)
+                         ->whereNotNull('due_date')
+                         ->where('due_date', '<', now()->startOfDay())
+                         ->whereNotIn('status', ['completed', 'skipped']);
+                  });
+            });
         }
         if ($request->boolean('upcoming_this_week')) {
             $tasksQuery->upcomingThisWeek();

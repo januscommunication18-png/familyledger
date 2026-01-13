@@ -122,19 +122,7 @@
                     <!-- Tax Year -->
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Tax Year <span class="text-rose-500">*</span></label>
-                        <select name="tax_year" id="tax_year_select" required data-select='{
-                            "placeholder": "Select year...",
-                            "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
-                            "toggleClasses": "advance-select-toggle",
-                            "hasSearch": true,
-                            "searchPlaceholder": "Search...",
-                            "searchClasses": "input input-sm",
-                            "searchWrapperClasses": "bg-base-100 p-2 sticky top-0",
-                            "dropdownClasses": "advance-select-menu max-h-52 overflow-y-auto",
-                            "optionClasses": "advance-select-option selected:select-active",
-                            "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
-                            "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/50 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                        }' class="hidden">
+                        <select name="tax_year" id="tax_year_select" required class="select select-bordered w-full">
                             @for($year = date('Y') + 1; $year >= 2010; $year--)
                                 <option value="{{ $year }}" {{ old('tax_year', $taxReturn?->tax_year ?? date('Y')) == $year ? 'selected' : '' }}>{{ $year }}</option>
                             @endfor
@@ -142,44 +130,70 @@
                     </div>
 
                     <!-- Taxpayers -->
-                    <div>
+                    @php
+                        $taxpayerIds = $taxReturn ? $taxReturn->taxpayers->pluck('id')->map(fn($id) => (string)$id)->toArray() : [];
+                    @endphp
+                    <div x-data="taxpayerSelect()">
                         <label class="block text-sm font-medium text-slate-700 mb-1">Taxpayer</label>
-                        @php
-                            $taxpayerIds = $taxReturn ? $taxReturn->taxpayers->pluck('id')->toArray() : [];
-                        @endphp
-                        <select name="taxpayers[]" id="taxpayer_select" multiple data-select='{
-                            "placeholder": "Select taxpayers...",
-                            "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
-                            "toggleClasses": "advance-select-toggle",
-                            "dropdownClasses": "advance-select-menu max-h-52 overflow-y-auto",
-                            "optionClasses": "advance-select-option selected:select-active",
-                            "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
-                            "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/50 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                        }' class="hidden">
-                            @foreach($familyMembers as $member)
-                                <option value="{{ $member->id }}" {{ in_array($member->id, old('taxpayers', $taxpayerIds)) ? 'selected' : '' }}>
-                                    {{ $member->first_name }} {{ $member->last_name ?? '' }}{{ !empty($member->is_owner) ? ' (You)' : '' }}
-                                </option>
-                            @endforeach
-                        </select>
+
+                        <!-- Dropdown Input -->
+                        <div class="relative">
+                            <div class="relative">
+                                <input type="text" x-model="search" @focus="openDropdown()" @click="openDropdown()"
+                                       class="input input-bordered w-full pr-8"
+                                       placeholder="Select taxpayers...">
+                                <button type="button" @click="open ? closeDropdown() : openDropdown()" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <!-- Dropdown Menu -->
+                            <div x-show="open" x-cloak @click.outside="closeDropdown()"
+                                 class="absolute z-50 mt-1 w-full bg-base-100 border border-base-300 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                                <template x-for="member in filteredMembers" :key="member.id">
+                                    <div @click="toggleMember(member.id)"
+                                         class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-base-200"
+                                         :class="{ 'bg-primary/5': isSelected(member.id) }">
+                                        <input type="checkbox" :checked="isSelected(member.id)" class="checkbox checkbox-sm checkbox-primary" @click.stop>
+                                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center text-xs font-bold text-emerald-700"
+                                             x-text="member.initial"></div>
+                                        <div class="flex-1">
+                                            <span class="font-medium text-sm" x-text="member.name"></span>
+                                        </div>
+                                    </div>
+                                </template>
+                                <div x-show="filteredMembers.length === 0" class="px-3 py-2 text-sm text-slate-500">
+                                    No members found
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Selected Tags Below Input -->
+                        <div class="flex flex-wrap gap-2 mt-2" x-show="selected.length > 0">
+                            <template x-for="id in selected" :key="id">
+                                <span class="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm">
+                                    <span x-text="getMemberName(id)"></span>
+                                    <button type="button" @click="toggleMember(id)" class="hover:text-error">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </span>
+                            </template>
+                        </div>
+
+                        <!-- Hidden inputs for form submission -->
+                        <template x-for="id in selected" :key="'input-' + id">
+                            <input type="hidden" name="taxpayers[]" :value="id">
+                        </template>
                     </div>
 
                     <!-- Filing Status -->
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Filing Status</label>
-                        <select name="filing_status" id="filing_status_select" data-select='{
-                            "placeholder": "Select filing status...",
-                            "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
-                            "toggleClasses": "advance-select-toggle",
-                            "hasSearch": true,
-                            "searchPlaceholder": "Search...",
-                            "searchClasses": "input input-sm",
-                            "searchWrapperClasses": "bg-base-100 p-2 sticky top-0",
-                            "dropdownClasses": "advance-select-menu max-h-52 overflow-y-auto",
-                            "optionClasses": "advance-select-option selected:select-active",
-                            "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
-                            "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/50 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                        }' class="hidden">
+                        <select name="filing_status" id="filing_status_select" class="select select-bordered w-full">
                             <option value="">Select filing status...</option>
                             @foreach($filingStatuses as $key => $label)
                                 <option value="{{ $key }}" {{ old('filing_status', $taxReturn?->filing_status) === $key ? 'selected' : '' }}>{{ $label }}</option>
@@ -190,19 +204,7 @@
                     <!-- Status -->
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Status</label>
-                        <select name="status" id="status_select" data-select='{
-                            "placeholder": "Select status...",
-                            "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
-                            "toggleClasses": "advance-select-toggle",
-                            "hasSearch": true,
-                            "searchPlaceholder": "Search...",
-                            "searchClasses": "input input-sm",
-                            "searchWrapperClasses": "bg-base-100 p-2 sticky top-0",
-                            "dropdownClasses": "advance-select-menu max-h-52 overflow-y-auto",
-                            "optionClasses": "advance-select-option selected:select-active",
-                            "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
-                            "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/50 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                        }' class="hidden">
+                        <select name="status" id="status_select" class="select select-bordered w-full">
                             @foreach($statuses as $key => $label)
                                 <option value="{{ $key }}" {{ old('status', $taxReturn?->status ?? 'not_started') === $key ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
@@ -212,19 +214,7 @@
                     <!-- Tax Jurisdiction -->
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Tax Jurisdiction</label>
-                        <select name="tax_jurisdiction" id="jurisdiction_select" data-select='{
-                            "placeholder": "Select jurisdiction...",
-                            "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
-                            "toggleClasses": "advance-select-toggle",
-                            "hasSearch": true,
-                            "searchPlaceholder": "Search...",
-                            "searchClasses": "input input-sm",
-                            "searchWrapperClasses": "bg-base-100 p-2 sticky top-0",
-                            "dropdownClasses": "advance-select-menu max-h-52 overflow-y-auto",
-                            "optionClasses": "advance-select-option selected:select-active",
-                            "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
-                            "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/50 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                        }' class="hidden">
+                        <select name="tax_jurisdiction" id="jurisdiction_select" class="select select-bordered w-full">
                             @foreach($jurisdictions as $key => $label)
                                 <option value="{{ $key }}" {{ old('tax_jurisdiction', $taxReturn?->tax_jurisdiction ?? 'federal') === $key ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
@@ -234,19 +224,7 @@
                     <!-- State -->
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">State</label>
-                        <select name="state_jurisdiction" id="state_select" data-select='{
-                            "placeholder": "Select state...",
-                            "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
-                            "toggleClasses": "advance-select-toggle",
-                            "hasSearch": true,
-                            "searchPlaceholder": "Search states...",
-                            "searchClasses": "input input-sm",
-                            "searchWrapperClasses": "bg-base-100 p-2 sticky top-0",
-                            "dropdownClasses": "advance-select-menu max-h-52 overflow-y-auto",
-                            "optionClasses": "advance-select-option selected:select-active",
-                            "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
-                            "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/50 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                        }' class="hidden">
+                        <select name="state_jurisdiction" id="state_select" class="select select-bordered w-full">
                             <option value="">Select state...</option>
                             @foreach($usStates as $code => $name)
                                 <option value="{{ $code }}" {{ old('state_jurisdiction', $taxReturn?->state_jurisdiction) === $code ? 'selected' : '' }}>{{ $name }}</option>
@@ -275,7 +253,7 @@
                             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">$</span>
                             <input type="number" name="refund_amount" value="{{ old('refund_amount', $taxReturn?->refund_amount) }}"
                                    step="0.01" min="0" placeholder="0.00"
-                                   class="input w-full pl-7" />
+                                   class="input input-bordered w-full pl-7" />
                         </div>
                     </div>
 
@@ -286,7 +264,7 @@
                             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">$</span>
                             <input type="number" name="amount_owed" value="{{ old('amount_owed', $taxReturn?->amount_owed) }}"
                                    step="0.01" min="0" placeholder="0.00"
-                                   class="input w-full pl-7" />
+                                   class="input input-bordered w-full pl-7" />
                         </div>
                     </div>
                 </div>
@@ -310,25 +288,25 @@
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">CPA Name</label>
                         <input type="text" name="cpa_name" value="{{ old('cpa_name', $taxReturn?->cpa_name) }}"
-                               class="input w-full" placeholder="Accountant name" />
+                               class="input input-bordered w-full" placeholder="Accountant name" />
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Firm Name</label>
                         <input type="text" name="cpa_firm" value="{{ old('cpa_firm', $taxReturn?->cpa_firm) }}"
-                               class="input w-full" placeholder="Accounting firm" />
+                               class="input input-bordered w-full" placeholder="Accounting firm" />
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Phone</label>
                         <input type="tel" name="cpa_phone" value="{{ old('cpa_phone', $taxReturn?->cpa_phone) }}"
-                               class="input w-full" placeholder="(555) 123-4567" />
+                               class="input input-bordered w-full" placeholder="(555) 123-4567" />
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
                         <input type="email" name="cpa_email" value="{{ old('cpa_email', $taxReturn?->cpa_email) }}"
-                               class="input w-full" placeholder="cpa@example.com" />
+                               class="input input-bordered w-full" placeholder="cpa@example.com" />
                     </div>
                 </div>
             </div>
@@ -456,7 +434,7 @@
 
                 <div>
                     <textarea name="notes" rows="4"
-                              class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500/20"
+                              class="textarea textarea-bordered w-full"
                               placeholder="Any important notes about this tax return...">{{ old('notes', $taxReturn?->notes) }}</textarea>
                 </div>
             </div>
@@ -474,37 +452,95 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // File upload preview
-        function setupFilePreview(inputId, previewId, listId) {
-            const input = document.getElementById(inputId);
-            const preview = document.getElementById(previewId);
-            const list = document.getElementById(listId);
+function taxpayerSelect() {
+    return {
+        open: false,
+        justOpened: false,
+        search: '',
+        selected: {!! json_encode($taxpayerIds) !!},
+        members: [
+            @foreach($familyMembers as $member)
+            {
+                id: '{{ $member->id }}',
+                name: '{{ addslashes($member->first_name) }} {{ addslashes($member->last_name ?? '') }}',
+                initial: '{{ strtoupper(substr($member->first_name, 0, 1)) }}'
+            },
+            @endforeach
+        ],
 
-            if (input) {
-                input.addEventListener('change', function() {
-                    list.innerHTML = '';
-                    if (this.files.length > 0) {
-                        preview.classList.remove('hidden');
-                        Array.from(this.files).forEach(file => {
-                            const li = document.createElement('li');
-                            li.className = 'flex items-center gap-2 text-sm text-slate-700';
-                            li.innerHTML = `
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-emerald-600"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                                ${file.name}
-                            `;
-                            list.appendChild(li);
-                        });
-                    } else {
-                        preview.classList.add('hidden');
-                    }
-                });
+        get filteredMembers() {
+            if (!this.search) return this.members;
+            const searchLower = this.search.toLowerCase();
+            return this.members.filter(m => m.name.toLowerCase().includes(searchLower));
+        },
+
+        openDropdown() {
+            this.open = true;
+            this.justOpened = true;
+            setTimeout(() => { this.justOpened = false; }, 150);
+        },
+
+        closeDropdown() {
+            if (!this.justOpened) {
+                this.open = false;
             }
-        }
+        },
 
-        setupFilePreview('federal_input', 'federal_preview', 'federal_list');
-        setupFilePreview('state_input', 'state_preview', 'state_list');
-        setupFilePreview('supporting_input', 'supporting_preview', 'supporting_list');
-    });
+        toggleMember(id) {
+            const strId = String(id);
+            const index = this.selected.findIndex(s => String(s) === strId);
+            if (index > -1) {
+                this.selected.splice(index, 1);
+            } else {
+                this.selected.push(strId);
+            }
+        },
+
+        isSelected(id) {
+            return this.selected.some(s => String(s) === String(id));
+        },
+
+        getMemberName(id) {
+            const member = this.members.find(m => String(m.id) === String(id));
+            return member ? member.name : '';
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // File upload preview
+    function setupFilePreview(inputId, previewId, listId) {
+        const input = document.getElementById(inputId);
+        const preview = document.getElementById(previewId);
+        const list = document.getElementById(listId);
+
+        if (input) {
+            input.addEventListener('change', function() {
+                list.innerHTML = '';
+                if (this.files.length > 0) {
+                    preview.classList.remove('hidden');
+                    Array.from(this.files).forEach(file => {
+                        const li = document.createElement('li');
+                        li.className = 'flex items-center gap-2 text-sm text-slate-700';
+                        li.innerHTML = `
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-emerald-600"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            ${file.name}
+                        `;
+                        list.appendChild(li);
+                    });
+                } else {
+                    preview.classList.add('hidden');
+                }
+            });
+        }
+    }
+
+    setupFilePreview('federal_input', 'federal_preview', 'federal_list');
+    setupFilePreview('state_input', 'state_preview', 'state_list');
+    setupFilePreview('supporting_input', 'supporting_preview', 'supporting_list');
+});
 </script>
+<style>
+    [x-cloak] { display: none !important; }
+</style>
 @endsection

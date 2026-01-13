@@ -35,35 +35,56 @@ class LegalDocumentController extends Controller
     /**
      * Display the legal documents landing page.
      */
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
 
-        $documents = LegalDocument::where('tenant_id', $user->tenant_id)
-            ->with(['files', 'attorney', 'creator'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $query = LegalDocument::where('tenant_id', $user->tenant_id)
+            ->with(['files', 'attorney', 'creator']);
+
+        // Filter by type if specified
+        $filterType = $request->query('type');
+        if ($filterType) {
+            $typeMapping = [
+                'will' => [LegalDocument::TYPE_WILL],
+                'trust' => [LegalDocument::TYPE_TRUST],
+                'power_of_attorney' => [LegalDocument::TYPE_POWER_OF_ATTORNEY, 'financial_poa', 'healthcare_poa'],
+                'medical_directive' => [LegalDocument::TYPE_MEDICAL_DIRECTIVE, 'living_will', 'healthcare_proxy', 'dnr'],
+                'other' => [LegalDocument::TYPE_OTHER],
+            ];
+
+            if (isset($typeMapping[$filterType])) {
+                $query->whereIn('document_type', $typeMapping[$filterType]);
+            }
+        }
+
+        $documents = $query->orderBy('created_at', 'desc')->get();
+
+        // Get all documents for counts (unfiltered)
+        $allDocuments = LegalDocument::where('tenant_id', $user->tenant_id)->get();
 
         // Group documents by type
-        $documentsByType = $documents->groupBy('document_type');
+        $documentsByType = $allDocuments->groupBy('document_type');
 
-        // Get counts
+        // Get counts from all documents
         $counts = [
-            'total' => $documents->count(),
-            'active' => $documents->where('status', LegalDocument::STATUS_ACTIVE)->count(),
-            'wills' => $documents->where('document_type', LegalDocument::TYPE_WILL)->count(),
-            'trusts' => $documents->where('document_type', LegalDocument::TYPE_TRUST)->count(),
-            'poa' => $documents->where('document_type', LegalDocument::TYPE_POWER_OF_ATTORNEY)->count(),
-            'medical' => $documents->where('document_type', LegalDocument::TYPE_MEDICAL_DIRECTIVE)->count(),
-            'other' => $documents->where('document_type', LegalDocument::TYPE_OTHER)->count(),
+            'total' => $allDocuments->count(),
+            'active' => $allDocuments->where('status', LegalDocument::STATUS_ACTIVE)->count(),
+            'wills' => $allDocuments->where('document_type', LegalDocument::TYPE_WILL)->count(),
+            'trusts' => $allDocuments->where('document_type', LegalDocument::TYPE_TRUST)->count(),
+            'poa' => $allDocuments->whereIn('document_type', [LegalDocument::TYPE_POWER_OF_ATTORNEY, 'financial_poa', 'healthcare_poa'])->count(),
+            'medical' => $allDocuments->whereIn('document_type', [LegalDocument::TYPE_MEDICAL_DIRECTIVE, 'living_will', 'healthcare_proxy', 'dnr'])->count(),
+            'other' => $allDocuments->where('document_type', LegalDocument::TYPE_OTHER)->count(),
         ];
 
         return view('pages.legal.index', [
             'documents' => $documents,
+            'allDocuments' => $allDocuments,
             'documentsByType' => $documentsByType,
             'counts' => $counts,
             'documentTypes' => LegalDocument::DOCUMENT_TYPES,
             'statuses' => LegalDocument::STATUSES,
+            'filterType' => $filterType,
         ]);
     }
 

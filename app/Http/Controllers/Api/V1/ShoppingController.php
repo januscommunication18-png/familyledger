@@ -139,4 +139,209 @@ class ShoppingController extends Controller
             'purchased' => $items->where('is_purchased', true)->count(),
         ]);
     }
+
+    /**
+     * Create a new shopping list.
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'store_name' => 'nullable|string|max:100',
+            'color' => 'nullable|string|max:20',
+            'icon' => 'nullable|string|max:10',
+        ]);
+
+        $list = ShoppingList::create([
+            'tenant_id' => $user->tenant_id,
+            'name' => $validated['name'],
+            'store_name' => $validated['store_name'] ?? null,
+            'color' => $validated['color'] ?? 'emerald',
+            'icon' => $validated['icon'] ?? '🛒',
+            'is_default' => false,
+        ]);
+
+        return $this->success([
+            'list' => [
+                'id' => $list->id,
+                'name' => $list->name,
+                'store_name' => $list->store_name,
+                'color' => $list->color,
+                'icon' => $list->icon,
+                'is_default' => $list->is_default,
+                'items_count' => 0,
+                'purchased_count' => 0,
+                'progress_percentage' => 0,
+            ],
+        ], 'Shopping list created successfully', 201);
+    }
+
+    /**
+     * Update a shopping list.
+     */
+    public function update(Request $request, ShoppingList $list): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($list->tenant_id !== $user->tenant_id) {
+            return $this->forbidden();
+        }
+
+        $validated = $request->validate([
+            'name' => 'sometimes|required|string|max:255',
+            'store_name' => 'nullable|string|max:100',
+            'color' => 'nullable|string|max:20',
+            'icon' => 'nullable|string|max:10',
+        ]);
+
+        $list->update($validated);
+
+        return $this->success(['list' => $list], 'Shopping list updated');
+    }
+
+    /**
+     * Delete a shopping list.
+     */
+    public function destroy(Request $request, ShoppingList $list): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($list->tenant_id !== $user->tenant_id) {
+            return $this->forbidden();
+        }
+
+        if ($list->is_default) {
+            return $this->error('Cannot delete the default shopping list', 422);
+        }
+
+        $list->delete();
+
+        return $this->success(null, 'Shopping list deleted');
+    }
+
+    /**
+     * Add item to shopping list.
+     */
+    public function addItem(Request $request, ShoppingList $list): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($list->tenant_id !== $user->tenant_id) {
+            return $this->forbidden();
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'quantity' => 'nullable|numeric|min:0',
+            'category' => 'nullable|string|max:50',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $item = ShoppingItem::create([
+            'tenant_id' => $user->tenant_id,
+            'shopping_list_id' => $list->id,
+            'name' => $validated['name'],
+            'quantity' => $validated['quantity'] ?? 1,
+            'category' => $validated['category'] ?? 'other',
+            'notes' => $validated['notes'] ?? null,
+            'is_checked' => false,
+            'added_by' => $user->id,
+        ]);
+
+        return $this->success([
+            'item' => [
+                'id' => $item->id,
+                'name' => $item->name,
+                'quantity' => $item->quantity,
+                'category' => $item->category,
+                'notes' => $item->notes,
+                'is_checked' => false,
+                'is_purchased' => false,
+            ],
+        ], 'Item added successfully', 201);
+    }
+
+    /**
+     * Update a shopping item.
+     */
+    public function updateItem(Request $request, ShoppingList $list, ShoppingItem $item): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($list->tenant_id !== $user->tenant_id || $item->shopping_list_id !== $list->id) {
+            return $this->forbidden();
+        }
+
+        $validated = $request->validate([
+            'name' => 'sometimes|required|string|max:255',
+            'quantity' => 'nullable|numeric|min:0',
+            'category' => 'nullable|string|max:50',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $item->update($validated);
+
+        return $this->success(['item' => $item], 'Item updated');
+    }
+
+    /**
+     * Delete a shopping item.
+     */
+    public function deleteItem(Request $request, ShoppingList $list, ShoppingItem $item): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($list->tenant_id !== $user->tenant_id || $item->shopping_list_id !== $list->id) {
+            return $this->forbidden();
+        }
+
+        $item->delete();
+
+        return $this->success(null, 'Item deleted');
+    }
+
+    /**
+     * Toggle item checked status.
+     */
+    public function toggleItem(Request $request, ShoppingList $list, ShoppingItem $item): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($list->tenant_id !== $user->tenant_id || $item->shopping_list_id !== $list->id) {
+            return $this->forbidden();
+        }
+
+        $item->is_checked = !$item->is_checked;
+        $item->checked_by = $item->is_checked ? $user->id : null;
+        $item->checked_at = $item->is_checked ? now() : null;
+        $item->save();
+
+        return $this->success([
+            'item' => [
+                'id' => $item->id,
+                'is_checked' => $item->is_checked,
+                'is_purchased' => $item->is_checked,
+            ],
+        ], $item->is_checked ? 'Item checked' : 'Item unchecked');
+    }
+
+    /**
+     * Clear all checked items from a list.
+     */
+    public function clearChecked(Request $request, ShoppingList $list): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($list->tenant_id !== $user->tenant_id) {
+            return $this->forbidden();
+        }
+
+        $count = $list->items()->where('is_checked', true)->delete();
+
+        return $this->success([
+            'deleted_count' => $count,
+        ], 'Checked items cleared');
+    }
 }
