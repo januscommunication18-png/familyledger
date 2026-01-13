@@ -489,7 +489,6 @@ class CoparentingController extends Controller
             'name' => 'nullable|string|max:255',
             'template_type' => 'required|string',
             'begins_at' => 'required|date',
-            'has_end_date' => 'boolean',
             'ends_at' => 'nullable|date|after_or_equal:begins_at',
             'repeat_every' => 'nullable|integer|min:1',
             'repeat_unit' => 'nullable|string|in:days,weeks',
@@ -505,7 +504,7 @@ class CoparentingController extends Controller
             ->where('is_active', true)
             ->update(['is_active' => false]);
 
-        $hasEndDate = $validated['has_end_date'] ?? false;
+        $hasEndDate = $request->boolean('has_end_date');
 
         $schedule = CoparentingSchedule::create([
             'tenant_id' => $user->tenant_id,
@@ -828,6 +827,36 @@ class CoparentingController extends Controller
 
         return redirect()->route('coparenting.activities')
             ->with('success', 'Activity created successfully!');
+    }
+
+    /**
+     * Get a single activity for editing.
+     */
+    public function showActivity(CoparentingActivity $activity): JsonResponse
+    {
+        abort_unless($activity->tenant_id === auth()->user()->tenant_id, 403);
+
+        $activity->load('children');
+
+        return response()->json([
+            'activity' => [
+                'id' => $activity->id,
+                'title' => $activity->title,
+                'description' => $activity->description,
+                'starts_at' => $activity->starts_at->format('Y-m-d H:i'),
+                'ends_at' => $activity->ends_at->format('Y-m-d H:i'),
+                'is_all_day' => $activity->is_all_day,
+                'is_recurring' => $activity->is_recurring,
+                'recurrence_frequency' => $activity->recurrence_frequency,
+                'recurrence_end_type' => $activity->recurrence_end_type,
+                'recurrence_end_after' => $activity->recurrence_end_after,
+                'recurrence_end_on' => $activity->recurrence_end_on?->format('Y-m-d'),
+                'reminder_type' => $activity->reminder_type,
+                'reminder_minutes' => $activity->reminder_minutes,
+                'color' => $activity->color,
+                'children' => $activity->children->pluck('id')->toArray(),
+            ],
+        ]);
     }
 
     /**

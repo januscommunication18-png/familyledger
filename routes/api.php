@@ -120,9 +120,19 @@ Route::prefix('v1')->group(function () {
 
         // Goals & Tasks
         Route::get('/goals', [GoalController::class, 'index']);
+        Route::post('/goals', [GoalController::class, 'store']);
         Route::get('/goals/{goal}', [GoalController::class, 'show']);
+        Route::put('/goals/{goal}', [GoalController::class, 'update']);
+        Route::delete('/goals/{goal}', [GoalController::class, 'destroy']);
+        Route::post('/goals/{goal}/pause', [GoalController::class, 'pause']);
+        Route::post('/goals/{goal}/resume', [GoalController::class, 'resume']);
+        Route::post('/goals/{goal}/complete', [GoalController::class, 'complete']);
         Route::get('/tasks', [GoalController::class, 'tasks']);
+        Route::post('/tasks', [GoalController::class, 'storeTask']);
         Route::get('/tasks/{task}', [GoalController::class, 'showTask']);
+        Route::post('/tasks/{task}/toggle', [GoalController::class, 'toggleTask']);
+        Route::delete('/tasks/{task}', [GoalController::class, 'destroyTask']);
+        Route::post('/tasks/{task}/snooze', [GoalController::class, 'snoozeTask']);
 
         // Journal
         Route::get('/journal', [JournalController::class, 'index']);

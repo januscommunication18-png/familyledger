@@ -56,7 +56,10 @@
                 </div>
 
                 <div class="card-actions justify-between mt-8">
-                    <a href="/dashboard" class="btn btn-ghost">Skip for now</a>
+                    <form action="{{ route('onboarding.skip') }}" method="POST" class="inline">
+                        @csrf
+                        <button type="submit" class="btn btn-ghost">Skip for now</button>
+                    </form>
                     <button class="btn btn-primary">Continue</button>
                 </div>
             </div>

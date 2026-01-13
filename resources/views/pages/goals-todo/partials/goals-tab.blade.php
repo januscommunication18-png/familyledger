@@ -28,7 +28,7 @@
         @php
             $activeGoals = $goals->where('status', 'active');
             $pausedGoals = $goals->where('status', 'paused');
-            $completedGoals = $goals->where('status', 'completed');
+            $completedGoals = $goals->where('status', 'done');
             $archivedGoals = $goals->where('status', 'archived');
         @endphp
 

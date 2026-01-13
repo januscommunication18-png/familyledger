@@ -86,8 +86,9 @@
             </label>
         </div>
 
-        <button type="submit" class="btn btn-primary btn-block">
-            Create Account
+        <button type="submit" id="register-btn" class="btn btn-primary btn-block">
+            <span id="register-text">Create Account</span>
+            <span id="register-loading" class="loading loading-spinner loading-sm hidden"></span>
         </button>
     </form>
 
@@ -112,6 +113,24 @@ document.addEventListener('DOMContentLoaded', function() {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
     const intendedRedirect = @json($redirect ?? null);
 
+    const registerBtn = document.getElementById('register-btn');
+    const registerText = document.getElementById('register-text');
+    const registerLoading = document.getElementById('register-loading');
+
+    function setButtonLoading(loading) {
+        if (loading) {
+            registerBtn.disabled = true;
+            registerBtn.classList.add('btn-disabled');
+            registerText.textContent = 'Creating...';
+            registerLoading.classList.remove('hidden');
+        } else {
+            registerBtn.disabled = false;
+            registerBtn.classList.remove('btn-disabled');
+            registerText.textContent = 'Create Account';
+            registerLoading.classList.add('hidden');
+        }
+    }
+
     document.getElementById('register-form').addEventListener('submit', async function(e) {
         e.preventDefault();
         const formData = new FormData(this);
@@ -121,6 +140,9 @@ document.addEventListener('DOMContentLoaded', function() {
             showError('Passwords do not match');
             return;
         }
+
+        // Disable button and show loading
+        setButtonLoading(true);
 
         try {
             const headers = {
@@ -149,8 +171,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
 
             if (response.ok) {
+                // Keep button disabled during redirect
+                registerText.textContent = 'Redirecting...';
                 window.location.href = data.redirect || '/verify-email';
             } else {
+                setButtonLoading(false);
                 if (data.errors) {
                     showError(Object.values(data.errors).flat().join(', '));
                 } else {
@@ -158,6 +183,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         } catch (err) {
+            setButtonLoading(false);
             console.error('Registration error:', err);
             showError('Network error. Please try again.');
         }

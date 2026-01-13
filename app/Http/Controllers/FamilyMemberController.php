@@ -27,16 +27,16 @@ class FamilyMemberController extends Controller
             abort(403);
         }
 
-        // Get existing family members for autocomplete suggestions
+        // Get existing family members for autocomplete suggestions (including owner)
+        $owner = Auth::user();
         $existingMembers = FamilyMember::where('tenant_id', Auth::user()->tenant_id)
             ->select('first_name', 'last_name')
             ->get()
-            ->map(fn($m) => $m->first_name . ' ' . $m->last_name)
+            ->map(fn($m) => trim($m->first_name . ' ' . $m->last_name))
+            ->prepend($owner->name)
+            ->unique()
+            ->values()
             ->toArray();
-
-        // Also add the account owner's name
-        $owner = Auth::user();
-        array_unshift($existingMembers, $owner->name);
 
         return view('family-circle.member.create', [
             'circle' => $familyCircle,

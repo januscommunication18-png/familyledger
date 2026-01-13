@@ -23,6 +23,7 @@ class Tenant extends Model
         'goals',
         'quick_setup',
         'onboarding_completed',
+        'onboarding_skipped',
         'onboarding_step',
         'data',
         'subscription_tier',
@@ -37,6 +38,7 @@ class Tenant extends Model
         'subscription_expires_at' => 'datetime',
         'is_active' => 'boolean',
         'onboarding_completed' => 'boolean',
+        'onboarding_skipped' => 'boolean',
     ];
 
     protected $attributes = [

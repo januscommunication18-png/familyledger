@@ -129,18 +129,9 @@
                             <label class="block text-sm font-medium text-slate-700 mb-2">
                                 Relationship <span class="text-rose-500">*</span>
                             </label>
-                            <select name="relationship" id="relationship-select" required data-select='{
-                                "placeholder": "Select relationship",
-                                "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
-                                "toggleClasses": "advance-select-toggle",
-                                "hasSearch": true,
-                                "searchPlaceholder": "Search...",
-                                "dropdownClasses": "advance-select-menu",
-                                "optionClasses": "advance-select-option selected:select-active",
-                                "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
-                                "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/90 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                            }' class="hidden">
-                                <option value="">Choose</option>
+                            <select name="relationship" id="relationship-select" required
+                                class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 bg-white @error('relationship') border-rose-500 @enderror">
+                                <option value="">Select relationship</option>
                                 @foreach($relationships as $key => $label)
                                     <option value="{{ $key }}" {{ old('relationship') === $key ? 'selected' : '' }}>{{ $label }}</option>
                                 @endforeach
@@ -216,18 +207,9 @@
                     <div class="space-y-5">
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-2">Immigration Status</label>
-                            <select name="immigration_status" id="immigration-status-select" data-select='{
-                                "placeholder": "Select status",
-                                "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
-                                "toggleClasses": "advance-select-toggle",
-                                "hasSearch": true,
-                                "searchPlaceholder": "Search...",
-                                "dropdownClasses": "advance-select-menu",
-                                "optionClasses": "advance-select-option selected:select-active",
-                                "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
-                                "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/90 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                            }' class="hidden">
-                                <option value="">Choose</option>
+                            <select name="immigration_status" id="immigration-status-select"
+                                class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 bg-white">
+                                <option value="">Select status (optional)</option>
                                 @foreach($immigrationStatuses as $key => $label)
                                     <option value="{{ $key }}" {{ old('immigration_status') === $key ? 'selected' : '' }}>{{ $label }}</option>
                                 @endforeach

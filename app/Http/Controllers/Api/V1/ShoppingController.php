@@ -25,7 +25,7 @@ class ShoppingController extends Controller
         // Transform lists for mobile
         $lists = $rawLists->map(function ($list) {
             $totalItems = $list->items->count();
-            $purchasedItems = $list->items->where('is_purchased', true)->count();
+            $purchasedItems = $list->items->where('is_checked', true)->count();
             $uncheckedItems = $totalItems - $purchasedItems;
 
             return [
@@ -47,7 +47,7 @@ class ShoppingController extends Controller
 
         // Calculate totals
         $totalItems = $rawLists->sum(fn($l) => $l->items->count());
-        $completedItems = $rawLists->sum(fn($l) => $l->items->where('is_purchased', true)->count());
+        $completedItems = $rawLists->sum(fn($l) => $l->items->where('is_checked', true)->count());
 
         return $this->success([
             'lists' => $lists,
@@ -84,18 +84,18 @@ class ShoppingController extends Controller
                 'formatted_price' => $item->price ? '$' . number_format($item->price, 2) : null,
                 'category' => $item->category,
                 'notes' => $item->notes,
-                'is_checked' => $item->is_purchased ?? false,
-                'is_purchased' => $item->is_purchased ?? false,
+                'is_checked' => $item->is_checked ?? false,
+                'is_purchased' => $item->is_checked ?? false,
                 'priority' => $item->priority ?? 'normal',
             ];
         })->sortBy([
-            ['is_purchased', 'asc'],
+            ['is_checked', 'asc'],
             ['priority', 'desc'],
             ['name', 'asc'],
         ])->values();
 
         $totalItems = $items->count();
-        $purchasedItems = $items->where('is_purchased', true)->count();
+        $purchasedItems = $items->where('is_checked', true)->count();
 
         return $this->success([
             'list' => [
@@ -129,14 +129,14 @@ class ShoppingController extends Controller
         }
 
         $items = $list->items()
-            ->orderBy('is_purchased', 'asc')
+            ->orderBy('is_checked', 'asc')
             ->orderBy('created_at', 'desc')
             ->get();
 
         return $this->success([
             'items' => $items,
             'total' => $items->count(),
-            'purchased' => $items->where('is_purchased', true)->count(),
+            'purchased' => $items->where('is_checked', true)->count(),
         ]);
     }
 

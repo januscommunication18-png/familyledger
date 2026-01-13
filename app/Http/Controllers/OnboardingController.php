@@ -475,6 +475,49 @@ class OnboardingController extends Controller
         return redirect()->route('onboarding');
     }
 
+    /**
+     * Skip onboarding and mark as completed.
+     */
+    public function skip(Request $request)
+    {
+        $user = $request->user();
+        $tenant = $user->tenant;
+
+        $tenant->update([
+            'onboarding_completed' => true,
+            'onboarding_skipped' => true,
+        ]);
+
+        Log::info('Onboarding skipped', ['tenant_id' => $tenant->id, 'user_id' => $user->id]);
+
+        return redirect()->route('dashboard')->with('info', 'You can complete your profile setup anytime from Settings.');
+    }
+
+    /**
+     * Restart onboarding (for owners who skipped).
+     */
+    public function restart(Request $request)
+    {
+        $user = $request->user();
+        $tenant = $user->tenant;
+
+        // Only allow owner (first user) to restart onboarding
+        $owner = \App\Models\User::where('tenant_id', $tenant->id)->orderBy('created_at')->first();
+        if (!$owner || $owner->id !== $user->id) {
+            return redirect()->route('settings.index')->with('error', 'Only the account owner can restart onboarding.');
+        }
+
+        $tenant->update([
+            'onboarding_completed' => false,
+            'onboarding_skipped' => false,
+            'onboarding_step' => 1,
+        ]);
+
+        Log::info('Onboarding restarted', ['tenant_id' => $tenant->id, 'user_id' => $user->id]);
+
+        return redirect()->route('onboarding');
+    }
+
     private function getTimezones(): array
     {
         return [

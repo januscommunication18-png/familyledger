@@ -28,6 +28,7 @@ use App\Http\Controllers\PetController;
 use App\Http\Controllers\JournalController;
 use App\Http\Controllers\CollaboratorController;
 use App\Http\Controllers\CoparentingController;
+use App\Http\Controllers\RemindersController;
 use App\Http\Controllers\CoparentMessagesController;
 use App\Http\Controllers\ExpensesController;
 use Illuminate\Support\Facades\Broadcast;
@@ -391,6 +392,7 @@ Route::middleware(['security.code', 'auth'])->group(function () {
         // Activities
         Route::get('/activities', [CoparentingController::class, 'activities'])->name('activities');
         Route::get('/activities/events', [CoparentingController::class, 'activityEvents'])->name('activities.events');
+        Route::get('/activities/{activity}', [CoparentingController::class, 'showActivity'])->name('activities.show');
         Route::post('/activities', [CoparentingController::class, 'storeActivity'])->name('activities.store');
         Route::put('/activities/{activity}', [CoparentingController::class, 'updateActivity'])->name('activities.update');
         Route::delete('/activities/{activity}', [CoparentingController::class, 'deleteActivity'])->name('activities.delete');
@@ -430,9 +432,11 @@ Route::middleware(['security.code', 'auth'])->group(function () {
     });
 
     // Reminders
-    Route::get('/reminders', function () {
-        return view('pages.reminders.index');
-    })->middleware(['verified', 'onboarding'])->name('reminders.index');
+    Route::middleware(['verified', 'onboarding'])->prefix('reminders')->name('reminders.')->group(function () {
+        Route::get('/', [RemindersController::class, 'index'])->name('index');
+        Route::post('/{reminder}/complete', [RemindersController::class, 'complete'])->name('complete');
+        Route::post('/{reminder}/snooze', [RemindersController::class, 'snooze'])->name('snooze');
+    });
 
     // Expenses Tracker / Budgeting
     Route::middleware(['verified', 'onboarding'])->prefix('expenses')->name('expenses.')->group(function () {
@@ -589,6 +593,8 @@ Route::middleware(['security.code', 'auth'])->group(function () {
     Route::post('/onboarding/step4', [OnboardingController::class, 'step4']);
     Route::post('/onboarding/step5', [OnboardingController::class, 'step5']);
     Route::post('/onboarding/back', [OnboardingController::class, 'back']);
+    Route::post('/onboarding/skip', [OnboardingController::class, 'skip'])->name('onboarding.skip');
+    Route::post('/onboarding/restart', [OnboardingController::class, 'restart'])->name('onboarding.restart');
     Route::post('/onboarding/generate-recovery-codes', [OnboardingController::class, 'generateRecoveryCodes']);
     Route::post('/onboarding/send-phone-code', [OnboardingController::class, 'sendPhoneCode']);
     Route::post('/onboarding/verify-phone-code', [OnboardingController::class, 'verifyPhoneCode']);

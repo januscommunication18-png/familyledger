@@ -147,6 +147,20 @@
                 <div class="p-6">
                     <h3 class="font-bold text-xl text-slate-800 mb-6">New Schedule</h3>
 
+                    @if($errors->any())
+                    <div class="alert alert-error mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <div>
+                            <p class="font-semibold">Please fix the following errors:</p>
+                            <ul class="list-disc list-inside text-sm mt-1">
+                                @foreach($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
+                    @endif
+
                     <form id="template-form" action="{{ route('coparenting.schedule.store') }}" method="POST">
                         @csrf
 
@@ -508,6 +522,15 @@
             closeEditModal();
         }
     });
+
+    // Auto-open modal if there are validation errors
+    @if($errors->any())
+    document.addEventListener('DOMContentLoaded', function() {
+        openTemplateModal();
+        // Show step 2 since that's where most fields are
+        goToStep2();
+    });
+    @endif
 
     // Initialize Calendar
     document.addEventListener('DOMContentLoaded', function() {

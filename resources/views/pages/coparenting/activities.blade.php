@@ -410,9 +410,109 @@
         document.body.style.overflow = '';
     }
 
-    function editActivity(activityId) {
-        openActivityModal();
+    async function editActivity(activityId) {
+        // Show modal first with loading state
+        document.getElementById('activity-modal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
         document.getElementById('activity-modal-title').textContent = 'Edit Activity';
+
+        try {
+            const response = await fetch(`/coparenting/activities/${activityId}`);
+            const data = await response.json();
+            const activity = data.activity;
+
+            // Update form action and method
+            document.getElementById('activity-form').action = `/coparenting/activities/${activityId}`;
+            document.getElementById('activity-method').value = 'PUT';
+
+            // Populate form fields
+            document.getElementById('activity-title').value = activity.title || '';
+            document.getElementById('activity-description').value = activity.description || '';
+
+            // Handle all day checkbox and date pickers
+            const isAllDay = activity.is_all_day;
+            document.getElementById('activity-all-day').checked = isAllDay;
+
+            // Reinitialize date pickers with correct format based on is_all_day
+            if (startPicker) startPicker.destroy();
+            if (endPicker) endPicker.destroy();
+
+            if (isAllDay) {
+                startPicker = flatpickr('#activity-starts', {
+                    dateFormat: 'Y-m-d',
+                    altInput: true,
+                    altFormat: 'M j, Y',
+                    monthSelectorType: 'static',
+                    defaultDate: activity.starts_at
+                });
+                endPicker = flatpickr('#activity-ends', {
+                    dateFormat: 'Y-m-d',
+                    altInput: true,
+                    altFormat: 'M j, Y',
+                    monthSelectorType: 'static',
+                    defaultDate: activity.ends_at
+                });
+            } else {
+                startPicker = flatpickr('#activity-starts', {
+                    enableTime: true,
+                    dateFormat: 'Y-m-d H:i',
+                    altInput: true,
+                    altFormat: 'M j, Y h:i K',
+                    monthSelectorType: 'static',
+                    time_24hr: false,
+                    minuteIncrement: 15,
+                    defaultDate: activity.starts_at
+                });
+                endPicker = flatpickr('#activity-ends', {
+                    enableTime: true,
+                    dateFormat: 'Y-m-d H:i',
+                    altInput: true,
+                    altFormat: 'M j, Y h:i K',
+                    monthSelectorType: 'static',
+                    time_24hr: false,
+                    minuteIncrement: 15,
+                    defaultDate: activity.ends_at
+                });
+            }
+
+            // Handle recurring
+            const isRecurring = activity.is_recurring;
+            document.getElementById('activity-recurring').checked = isRecurring;
+            document.getElementById('recurring-options').classList.toggle('hidden', !isRecurring);
+
+            if (isRecurring) {
+                document.getElementById('recurrence-frequency').value = activity.recurrence_frequency || 'week';
+
+                // Set recurrence end type
+                const endType = activity.recurrence_end_type || 'never';
+                document.querySelectorAll('input[name="recurrence_end_type"]').forEach(radio => {
+                    radio.checked = radio.value === endType;
+                });
+
+                document.getElementById('recurrence-end-after').value = activity.recurrence_end_after || 10;
+                document.getElementById('recurrence-end-after').disabled = endType !== 'after';
+
+                if (activity.recurrence_end_on) {
+                    recurrenceEndPicker.setDate(activity.recurrence_end_on, true);
+                }
+                document.getElementById('recurrence-end-on').disabled = endType !== 'on';
+            }
+
+            // Set color
+            document.querySelectorAll('input[name="color"]').forEach(radio => {
+                radio.checked = radio.value === activity.color;
+            });
+
+            // Set children checkboxes
+            document.querySelectorAll('input[name="children[]"]').forEach(checkbox => {
+                checkbox.checked = activity.children.includes(parseInt(checkbox.value));
+            });
+
+        } catch (error) {
+            console.error('Error fetching activity:', error);
+            alert('Failed to load activity data');
+            closeActivityModal();
+        }
     }
 
     function toggleTimeInputs() {

@@ -105,30 +105,61 @@
                     <!-- Needs Signup -->
                     <div class="text-center">
                         <p class="text-slate-600 mb-4">Create an account to accept this invitation and access the shared family information.</p>
-                        <a href="{{ route('register', ['email' => $invite->email, 'first_name' => $invite->first_name, 'last_name' => $invite->last_name, 'redirect' => route('collaborator.accept', $invite->token)]) }}" class="btn btn-primary btn-block">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
-                            Create Account
+                        <a href="{{ route('register', ['email' => $invite->email, 'first_name' => $invite->first_name, 'last_name' => $invite->last_name, 'redirect' => route('collaborator.accept', $invite->token)]) }}"
+                           id="create-account-btn"
+                           class="btn btn-primary btn-block"
+                           onclick="handleCreateAccount(this)">
+                            <svg id="create-account-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
+                            <span id="create-account-text">Create Account</span>
+                            <span id="create-account-loading" class="loading loading-spinner loading-sm hidden"></span>
                         </a>
                     </div>
+                    <script>
+                        function handleCreateAccount(btn) {
+                            btn.classList.add('btn-disabled', 'pointer-events-none');
+                            document.getElementById('create-account-icon').classList.add('hidden');
+                            document.getElementById('create-account-text').textContent = 'Creating...';
+                            document.getElementById('create-account-loading').classList.remove('hidden');
+                        }
+                    </script>
 
                 @else
                     <!-- Ready to Accept -->
                     <div class="space-y-3">
-                        <form action="{{ route('collaborator.accept.process', $invite->token) }}" method="POST">
+                        <form action="{{ route('collaborator.accept.process', $invite->token) }}" method="POST" onsubmit="handleAcceptSubmit(this)">
                             @csrf
-                            <button type="submit" class="btn btn-primary btn-block gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                                Accept Invitation
+                            <button type="submit" id="accept-btn" class="btn btn-primary btn-block gap-2">
+                                <svg id="accept-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                                <span id="accept-text">Accept Invitation</span>
+                                <span id="accept-loading" class="loading loading-spinner loading-sm hidden"></span>
                             </button>
                         </form>
 
-                        <form action="{{ route('collaborator.decline', $invite->token) }}" method="POST">
+                        <form action="{{ route('collaborator.decline', $invite->token) }}" method="POST" onsubmit="handleDeclineSubmit(this)">
                             @csrf
-                            <button type="submit" class="btn btn-ghost btn-block text-slate-500">
-                                Decline
+                            <button type="submit" id="decline-btn" class="btn btn-ghost btn-block text-slate-500">
+                                <span id="decline-text">Decline</span>
+                                <span id="decline-loading" class="loading loading-spinner loading-sm hidden"></span>
                             </button>
                         </form>
                     </div>
+                    <script>
+                        function handleAcceptSubmit(form) {
+                            const btn = document.getElementById('accept-btn');
+                            btn.classList.add('btn-disabled');
+                            btn.disabled = true;
+                            document.getElementById('accept-icon').classList.add('hidden');
+                            document.getElementById('accept-text').textContent = 'Accepting...';
+                            document.getElementById('accept-loading').classList.remove('hidden');
+                        }
+                        function handleDeclineSubmit(form) {
+                            const btn = document.getElementById('decline-btn');
+                            btn.classList.add('btn-disabled');
+                            btn.disabled = true;
+                            document.getElementById('decline-text').textContent = 'Declining...';
+                            document.getElementById('decline-loading').classList.remove('hidden');
+                        }
+                    </script>
                 @endif
 
                 <!-- Expiration Notice -->
