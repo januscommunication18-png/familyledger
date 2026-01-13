@@ -30,16 +30,18 @@ class ShoppingItemHistory extends Model
      */
     public static function recordPurchase(string $tenantId, string $name, string $category, ?string $quantity = null): self
     {
-        return static::updateOrCreate(
+        $item = static::updateOrCreate(
             ['tenant_id' => $tenantId, 'name' => strtolower(trim($name))],
             [
                 'category' => $category,
                 'quantity' => $quantity,
                 'last_purchased_at' => now(),
             ]
-        )->tap(function ($item) {
-            $item->increment('purchase_count');
-        });
+        );
+
+        $item->increment('purchase_count');
+
+        return $item;
     }
 
     /**

@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\V1\ReminderController;
 use App\Http\Controllers\Api\V1\PeopleController;
 use App\Http\Controllers\Api\V1\ResourceController;
 use App\Http\Controllers\Api\V1\BudgetController;
+use App\Http\Controllers\Api\V1\CoparentingController;
 
 /*
 |--------------------------------------------------------------------------
@@ -108,6 +109,8 @@ Route::prefix('v1')->group(function () {
 
         // Expenses
         Route::get('/expenses', [ExpenseController::class, 'index']);
+        Route::post('/expenses', [ExpenseController::class, 'store']);
+        Route::get('/expenses/categories', [ExpenseController::class, 'categories']);
         Route::get('/expenses/category/{category}', [ExpenseController::class, 'byCategory']);
         Route::get('/expenses/{expense}', [ExpenseController::class, 'show']);
 
@@ -135,8 +138,16 @@ Route::prefix('v1')->group(function () {
 
         // Shopping
         Route::get('/shopping', [ShoppingController::class, 'index']);
+        Route::post('/shopping', [ShoppingController::class, 'store']);
         Route::get('/shopping/{list}', [ShoppingController::class, 'show']);
+        Route::put('/shopping/{list}', [ShoppingController::class, 'update']);
+        Route::delete('/shopping/{list}', [ShoppingController::class, 'destroy']);
         Route::get('/shopping/{list}/items', [ShoppingController::class, 'items']);
+        Route::post('/shopping/{list}/items', [ShoppingController::class, 'addItem']);
+        Route::put('/shopping/{list}/items/{item}', [ShoppingController::class, 'updateItem']);
+        Route::delete('/shopping/{list}/items/{item}', [ShoppingController::class, 'deleteItem']);
+        Route::post('/shopping/{list}/items/{item}/toggle', [ShoppingController::class, 'toggleItem']);
+        Route::post('/shopping/{list}/clear-checked', [ShoppingController::class, 'clearChecked']);
 
         // Reminders
         Route::get('/reminders', [ReminderController::class, 'index']);
@@ -154,5 +165,19 @@ Route::prefix('v1')->group(function () {
         Route::get('/resources', [ResourceController::class, 'index']);
         Route::get('/resources/type/{type}', [ResourceController::class, 'byType']);
         Route::get('/resources/{resource}', [ResourceController::class, 'show']);
+
+        // Co-parenting
+        Route::prefix('coparenting')->group(function () {
+            Route::get('/', [CoparentingController::class, 'index']);
+            Route::get('/children', [CoparentingController::class, 'children']);
+            Route::get('/children/{child}', [CoparentingController::class, 'showChild']);
+            Route::get('/schedule', [CoparentingController::class, 'schedule']);
+            Route::get('/activities', [CoparentingController::class, 'activities']);
+            Route::get('/actual-time', [CoparentingController::class, 'actualTime']);
+            Route::get('/conversations', [CoparentingController::class, 'conversations']);
+            Route::post('/conversations', [CoparentingController::class, 'createConversation']);
+            Route::get('/conversations/{conversation}', [CoparentingController::class, 'showConversation']);
+            Route::post('/conversations/{conversation}/messages', [CoparentingController::class, 'sendMessage']);
+        });
     });
 });

@@ -156,8 +156,8 @@
                                         <div class="relative flex-1">
                                             <input type="text"
                                                    x-model="search"
-                                                   @focus="open = true"
-                                                   @click="open = true"
+                                                   @focus="openDropdown()"
+                                                   @click.stop="openDropdown()"
                                                    placeholder="Search family members..."
                                                    class="input input-bordered w-full pl-10">
                                             <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -178,7 +178,7 @@
                                     <!-- Dropdown List -->
                                     <div x-show="open"
                                          x-cloak
-                                         @click.away="open = false"
+                                         @click.outside="closeDropdown()"
                                          x-transition:enter="transition ease-out duration-100"
                                          x-transition:enter-start="opacity-0 scale-95"
                                          x-transition:enter-end="opacity-100 scale-100"
@@ -648,6 +648,7 @@ function taskForm() {
 function assigneeSelect() {
     return {
         open: false,
+        justOpened: false,
         search: '',
         selected: [
             @if($task && $task->assignees)
@@ -803,6 +804,20 @@ function assigneeSelect() {
         getMemberName(id) {
             const member = this.members.find(m => m.id === id);
             return member ? member.name : '';
+        },
+
+        openDropdown() {
+            this.open = true;
+            this.justOpened = true;
+            setTimeout(() => {
+                this.justOpened = false;
+            }, 150);
+        },
+
+        closeDropdown() {
+            if (!this.justOpened) {
+                this.open = false;
+            }
         }
     }
 }

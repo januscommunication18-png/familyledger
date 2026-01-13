@@ -148,10 +148,22 @@
 <script>
 const totalItems = {{ $items->count() }};
 let checkedCount = {{ $items->where('is_checked', true)->count() }};
+const processingItems = new Set();
 
 function toggleStoreItem(itemId) {
+    // Prevent double-clicks while processing
+    if (processingItems.has(itemId)) {
+        return;
+    }
+
     const itemEl = document.getElementById(`store-item-${itemId}`);
     const wasChecked = itemEl.classList.contains('checked-item');
+
+    // Mark as processing
+    processingItems.add(itemId);
+
+    // Immediate visual feedback (optimistic UI update)
+    applyToggleUI(itemEl, wasChecked);
 
     fetch(`/shopping/items/${itemId}/toggle`, {
         method: 'POST',
@@ -164,43 +176,91 @@ function toggleStoreItem(itemId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Update UI
-            if (wasChecked) {
-                itemEl.classList.remove('checked-item', 'bg-emerald-50', 'border-emerald-200');
-                itemEl.classList.add('unchecked-item', 'bg-white', 'border-slate-200');
-                itemEl.querySelector('button').classList.remove('opacity-60');
-                itemEl.querySelector('.item-name').classList.remove('line-through', 'text-slate-500');
-                itemEl.querySelector('.item-name').classList.add('text-slate-800');
-                const checkbox = itemEl.querySelector('.flex-shrink-0');
-                checkbox.classList.remove('bg-emerald-500', 'border-emerald-500');
-                checkbox.classList.add('border-slate-300');
-                checkbox.innerHTML = '';
-                checkedCount--;
-            } else {
-                itemEl.classList.remove('unchecked-item', 'bg-white', 'border-slate-200');
-                itemEl.classList.add('checked-item', 'bg-emerald-50', 'border-emerald-200');
-                itemEl.querySelector('button').classList.add('opacity-60');
-                itemEl.querySelector('.item-name').classList.add('line-through', 'text-slate-500');
-                itemEl.querySelector('.item-name').classList.remove('text-slate-800');
-                const checkbox = itemEl.querySelector('.flex-shrink-0');
-                checkbox.classList.add('bg-emerald-500', 'border-emerald-500');
-                checkbox.classList.remove('border-slate-300');
-                checkbox.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-                checkedCount++;
+            // Check if all items are done and reload
+            if (checkedCount === totalItems && totalItems > 0) {
+                location.reload();
+            }
+        } else {
+            // Revert on failure
+            applyToggleUI(itemEl, !wasChecked);
+        }
+    })
+    .catch(() => {
+        // Revert on error
+        applyToggleUI(itemEl, !wasChecked);
+    })
+    .finally(() => {
+        processingItems.delete(itemId);
+    });
+}
 
-                // Move to bottom
+function applyToggleUI(itemEl, wasChecked) {
+    try {
+        if (!itemEl) {
+            console.error('itemEl is null');
+            return;
+        }
+
+        const button = itemEl.querySelector('button');
+        const itemName = itemEl.querySelector('.item-name');
+        const checkbox = itemEl.querySelector('.flex-shrink-0');
+
+        console.log('applyToggleUI called', { wasChecked, button, itemName, checkbox });
+
+        if (!button || !itemName || !checkbox) {
+            console.error('Missing elements:', { button, itemName, checkbox });
+            return;
+        }
+
+        if (wasChecked) {
+            // Unchecking item
+            itemEl.className = 'store-item unchecked-item bg-white rounded-xl shadow-sm border-2 border-slate-200 hover:border-emerald-300 transition-all';
+            button.className = 'w-full p-4 flex items-center gap-4 text-left';
+
+            // Remove strikethrough
+            itemName.className = 'item-name text-lg font-semibold text-slate-800';
+            itemName.style.textDecoration = 'none';
+
+            // Hide checkbox
+            checkbox.className = 'flex-shrink-0 w-10 h-10 rounded-xl border-3 border-slate-300 flex items-center justify-center transition-colors';
+            checkbox.style.backgroundColor = '';
+            checkbox.style.borderColor = '';
+            checkbox.innerHTML = '';
+            checkedCount--;
+        } else {
+            // Checking item
+            itemEl.className = 'store-item checked-item bg-emerald-50 rounded-xl shadow-sm border-2 border-emerald-200';
+            button.className = 'w-full p-4 flex items-center gap-4 text-left opacity-60';
+
+            // Add strikethrough
+            itemName.className = 'item-name text-lg font-semibold text-slate-500 line-through';
+            itemName.style.textDecoration = 'line-through';
+
+            // Show checkbox with checkmark
+            checkbox.className = 'flex-shrink-0 w-10 h-10 rounded-xl border-3 border-emerald-500 bg-emerald-500 flex items-center justify-center';
+            checkbox.style.backgroundColor = '#10b981';
+            checkbox.style.borderColor = '#10b981';
+            checkbox.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+            checkedCount++;
+
+            // Move to bottom
+            if (itemEl.parentNode) {
                 itemEl.parentNode.appendChild(itemEl);
             }
 
-            // Update counts
-            updateStoreCounts();
-
             // Hide if setting enabled
-            if (document.getElementById('hidePurchased').checked && !wasChecked) {
+            const hidePurchasedCheckbox = document.getElementById('hidePurchased');
+            if (hidePurchasedCheckbox && hidePurchasedCheckbox.checked) {
                 itemEl.classList.add('hidden');
             }
         }
-    });
+
+        // Update counts
+        updateStoreCounts();
+        console.log('applyToggleUI completed successfully');
+    } catch (error) {
+        console.error('Error in applyToggleUI:', error);
+    }
 }
 
 function updateStoreCounts() {
@@ -209,11 +269,6 @@ function updateStoreCounts() {
 
     const progress = totalItems > 0 ? (checkedCount / totalItems) * 100 : 0;
     document.getElementById('progressBar').style.width = `${progress}%`;
-
-    // Show completion message if all done
-    if (remaining === 0 && totalItems > 0) {
-        location.reload();
-    }
 }
 
 function togglePurchasedVisibility() {

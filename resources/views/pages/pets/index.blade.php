@@ -178,15 +178,15 @@
                             <a href="{{ route('pets.show', $pet) }}" class="btn btn-sm btn-primary">
                                 View Profile
                             </a>
-                            <div class="dropdown dropdown-end">
-                                <button tabindex="0" class="btn btn-ghost btn-sm btn-square">
+                            <div class="relative" id="petDropdown{{ $pet->id }}">
+                                <button type="button" class="btn btn-ghost btn-sm btn-square" onclick="toggleDropdown('petDropdown{{ $pet->id }}', event)">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="size-5 text-slate-500" viewBox="0 0 24 24" fill="currentColor">
                                         <circle cx="12" cy="5" r="2"/>
                                         <circle cx="12" cy="12" r="2"/>
                                         <circle cx="12" cy="19" r="2"/>
                                     </svg>
                                 </button>
-                                <ul tabindex="0" class="dropdown-menu dropdown-open:opacity-100 hidden z-50 p-2 shadow-xl bg-base-100 rounded-xl w-48 border border-base-200">
+                                <ul class="dropdown-content hidden absolute right-0 top-full mt-1 z-50 p-2 shadow-xl bg-base-100 rounded-xl w-48 border border-base-200">
                                     <li>
                                         <a href="{{ route('pets.edit', $pet) }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100">
                                             <span class="icon-[tabler--edit] size-4 text-slate-400"></span>
@@ -195,15 +195,10 @@
                                     </li>
                                     <li class="my-1 border-t border-base-200"></li>
                                     <li>
-                                        <form method="POST" action="{{ route('pets.destroy', $pet) }}"
-                                              onsubmit="return confirm('Are you sure you want to remove {{ $pet->name }}?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-error hover:bg-error/10">
-                                                <span class="icon-[tabler--trash] size-4"></span>
-                                                Remove Pet
-                                            </button>
-                                        </form>
+                                        <a href="javascript:void(0)" onclick="confirmDeletePet('{{ route('pets.destroy', $pet) }}', '{{ addslashes($pet->name) }}')" class="flex items-center gap-3 px-3 py-2 rounded-lg text-error hover:bg-error/10">
+                                            <span class="icon-[tabler--trash] size-4"></span>
+                                            Remove Pet
+                                        </a>
                                     </li>
                                 </ul>
                             </div>
@@ -229,4 +224,103 @@
         </div>
     @endif
 </div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteConfirmModal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black/50 transition-opacity" onclick="hideDeleteModal()"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="bg-base-100 rounded-xl shadow-xl max-w-sm w-full p-6 relative z-10">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded-full bg-error/10 flex items-center justify-center">
+                    <span class="icon-[tabler--alert-triangle] size-5 text-error"></span>
+                </div>
+                <h3 class="font-bold text-lg">Remove Pet?</h3>
+            </div>
+            <p id="deleteConfirmMessage" class="text-base-content/70 mb-6">Are you sure you want to remove this pet?</p>
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="hideDeleteModal()" class="btn btn-ghost">Cancel</button>
+                <form id="deleteForm" method="POST">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-error">Remove</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Dropdown functionality
+let activeDropdown = null;
+let dropdownJustOpened = false;
+
+function toggleDropdown(dropdownId, event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+
+    const dropdown = document.getElementById(dropdownId);
+    if (!dropdown) return;
+
+    const menu = dropdown.querySelector('.dropdown-content');
+    if (!menu) return;
+
+    // Close any other open dropdown
+    if (activeDropdown && activeDropdown !== dropdownId) {
+        const prevDropdown = document.getElementById(activeDropdown);
+        if (prevDropdown) {
+            const prevMenu = prevDropdown.querySelector('.dropdown-content');
+            if (prevMenu) prevMenu.classList.add('hidden');
+        }
+    }
+
+    // Toggle current dropdown
+    const isHidden = menu.classList.contains('hidden');
+    if (isHidden) {
+        menu.classList.remove('hidden');
+        activeDropdown = dropdownId;
+        dropdownJustOpened = true;
+        setTimeout(() => { dropdownJustOpened = false; }, 100);
+    } else {
+        menu.classList.add('hidden');
+        activeDropdown = null;
+    }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    if (dropdownJustOpened) return;
+    if (!activeDropdown) return;
+
+    const dropdown = document.getElementById(activeDropdown);
+    if (!dropdown) {
+        activeDropdown = null;
+        return;
+    }
+
+    if (!dropdown.contains(event.target)) {
+        dropdown.querySelector('.dropdown-content')?.classList.add('hidden');
+        activeDropdown = null;
+    }
+});
+
+function confirmDeletePet(url, petName) {
+    document.getElementById('deleteForm').action = url;
+    document.getElementById('deleteConfirmMessage').textContent = 'Are you sure you want to remove ' + petName + '? This action cannot be undone.';
+    document.getElementById('deleteConfirmModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function hideDeleteModal() {
+    document.getElementById('deleteConfirmModal').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        hideDeleteModal();
+    }
+});
+</script>
 @endsection

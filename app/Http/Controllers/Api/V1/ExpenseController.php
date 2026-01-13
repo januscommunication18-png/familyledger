@@ -5,8 +5,12 @@ namespace App\Http\Controllers\Api\V1;
 use App\Models\BudgetTransaction;
 use App\Models\BudgetCategory;
 use App\Models\Budget;
+use App\Models\FamilyMember;
+use App\Models\Collaborator;
+use App\Models\PaymentRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ExpenseController extends Controller
 {
@@ -196,5 +200,251 @@ class ExpenseController extends Controller
         return $this->success([
             'expense' => $expense->load(['category', 'budget']),
         ]);
+    }
+
+    /**
+     * Get categories for expense creation.
+     */
+    public function categories(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $tenant = $user->tenant;
+
+        // Get active budget
+        $budget = Budget::where('tenant_id', $tenant->id)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$budget) {
+            return $this->success([
+                'categories' => [],
+                'budgets' => [],
+                'children' => [],
+            ]);
+        }
+
+        $categories = $budget->categories()->ordered()->get()->map(function ($cat) {
+            return [
+                'id' => $cat->id,
+                'name' => $cat->name,
+                'icon' => $cat->icon,
+                'color' => $cat->color,
+            ];
+        });
+
+        $budgets = Budget::where('tenant_id', $tenant->id)
+            ->where('is_active', true)
+            ->get()
+            ->map(function ($b) {
+                return [
+                    'id' => $b->id,
+                    'name' => $b->name,
+                    'icon' => $b->icon ?? '💰',
+                    'color' => $b->color ?? '#6366f1',
+                ];
+            });
+
+        // Get children for co-parenting expense sharing
+        $ownChildren = FamilyMember::where('tenant_id', $tenant->id)
+            ->with(['coparents.user'])
+            ->where(function ($q) {
+                $q->where('is_minor', true)
+                    ->orWhere('relationship', 'child')
+                    ->orWhere('relationship', 'stepchild');
+            })
+            ->get();
+
+        // Get children accessible via co-parenting relationship
+        $coparentChildren = collect();
+        $collaborator = Collaborator::where('user_id', $user->id)
+            ->where('is_active', true)
+            ->whereHas('coparentChildren')
+            ->first();
+
+        if ($collaborator) {
+            $coparentChildren = $collaborator->coparentChildren()
+                ->with(['familyCircle.creator'])
+                ->get()
+                ->map(function ($child) {
+                    $owner = $child->familyCircle?->creator;
+                    $child->otherParentName = $owner?->name ?? 'Parent';
+                    $child->otherParentId = $owner?->id;
+                    $child->isCoparentChild = true;
+                    return $child;
+                });
+        }
+
+        // Merge and transform children
+        $children = $ownChildren->merge($coparentChildren)->unique('id')->sortBy('first_name')->values()
+            ->map(function ($child) {
+                // Determine co-parent info
+                $hasCoparent = false;
+                $coparentName = null;
+
+                if (!empty($child->isCoparentChild)) {
+                    $hasCoparent = !empty($child->otherParentId);
+                    $coparentName = $child->otherParentName ?? 'Parent';
+                } else {
+                    $coparent = $child->coparents->first();
+                    $hasCoparent = $coparent !== null;
+                    $coparentName = $coparent?->user?->name;
+                }
+
+                return [
+                    'id' => $child->id,
+                    'name' => $child->full_name ?? ($child->first_name . ' ' . $child->last_name),
+                    'first_name' => $child->first_name,
+                    'has_coparent' => $hasCoparent,
+                    'coparent_name' => $coparentName,
+                ];
+            });
+
+        return $this->success([
+            'categories' => $categories,
+            'budgets' => $budgets,
+            'children' => $children,
+        ]);
+    }
+
+    /**
+     * Store a new expense.
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $tenant = $user->tenant;
+
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'description' => 'required|string|max:255',
+            'payee' => 'nullable|string|max:100',
+            'category_id' => 'nullable|exists:budget_categories,id',
+            'budget_id' => 'nullable|exists:budgets,id',
+            'transaction_date' => 'required|date',
+            'receipt' => 'nullable|string', // Base64 encoded image
+            // Co-parenting fields
+            'is_shared' => 'nullable|boolean',
+            'shared_for_child_id' => 'nullable|exists:family_members,id',
+            'request_payment' => 'nullable|boolean',
+            'split_percentage' => 'nullable|numeric|min:1|max:100',
+            'payment_note' => 'nullable|string|max:500',
+        ]);
+
+        // Get active budget if not specified
+        $budgetId = $validated['budget_id'] ?? null;
+        if (!$budgetId) {
+            $budget = Budget::where('tenant_id', $tenant->id)
+                ->where('is_active', true)
+                ->first();
+            $budgetId = $budget?->id;
+        }
+
+        if (!$budgetId) {
+            return $this->error('No active budget found. Please create a budget first.', 422);
+        }
+
+        // Handle base64 receipt upload
+        $receiptPath = null;
+        $receiptOriginalFilename = null;
+        if (!empty($validated['receipt'])) {
+            try {
+                // Decode base64 image
+                $imageData = $validated['receipt'];
+
+                // Extract image type and data
+                if (preg_match('/^data:image\/(\w+);base64,/', $imageData, $matches)) {
+                    $imageType = $matches[1];
+                    $imageData = substr($imageData, strpos($imageData, ',') + 1);
+                } else {
+                    $imageType = 'jpg';
+                }
+
+                $decodedImage = base64_decode($imageData);
+
+                // Generate filename
+                $filename = 'receipt_' . time() . '_' . uniqid() . '.' . $imageType;
+                $receiptPath = 'receipts/' . $tenant->id . '/' . $filename;
+                $receiptOriginalFilename = $filename;
+
+                // Store the file
+                \Illuminate\Support\Facades\Storage::disk('public')->put($receiptPath, $decodedImage);
+            } catch (\Exception $e) {
+                // Log error but don't fail the transaction
+                \Log::error('Failed to save receipt: ' . $e->getMessage());
+            }
+        }
+
+        $isShared = $request->boolean('is_shared');
+        $sharedForChildId = $isShared ? ($validated['shared_for_child_id'] ?? null) : null;
+
+        $transaction = BudgetTransaction::create([
+            'tenant_id' => $tenant->id,
+            'budget_id' => $budgetId,
+            'created_by' => $user->id,
+            'type' => 'expense',
+            'amount' => $validated['amount'],
+            'description' => $validated['description'],
+            'payee' => $validated['payee'] ?? null,
+            'category_id' => $validated['category_id'] ?? null,
+            'transaction_date' => $validated['transaction_date'],
+            'source' => 'manual', // Mobile entries are stored as manual
+            'is_shared' => $isShared,
+            'shared_for_child_id' => $sharedForChildId,
+            'receipt_path' => $receiptPath,
+            'receipt_original_filename' => $receiptOriginalFilename,
+        ]);
+
+        // Create payment request if requested
+        $paymentRequest = null;
+        if ($isShared && $request->boolean('request_payment') && $sharedForChildId) {
+            $child = FamilyMember::find($sharedForChildId);
+            if ($child) {
+                // Find the co-parent to request payment from
+                $coparent = $child->coparents->first();
+                if ($coparent && $coparent->user_id) {
+                    $splitPercentage = $validated['split_percentage'] ?? 50;
+                    $requestAmount = ($validated['amount'] * $splitPercentage) / 100;
+
+                    $paymentRequest = PaymentRequest::create([
+                        'tenant_id' => $tenant->id,
+                        'transaction_id' => $transaction->id,
+                        'requester_id' => $user->id,
+                        'payer_id' => $coparent->user_id,
+                        'child_id' => $sharedForChildId,
+                        'amount' => $requestAmount,
+                        'split_percentage' => $splitPercentage,
+                        'note' => $validated['payment_note'] ?? null,
+                        'status' => 'pending',
+                    ]);
+                }
+            }
+        }
+
+        $transaction->load(['category', 'budget']);
+
+        return $this->success([
+            'expense' => [
+                'id' => $transaction->id,
+                'description' => $transaction->description,
+                'amount' => $transaction->amount,
+                'formatted_amount' => '$' . number_format($transaction->amount, 2),
+                'date' => $transaction->transaction_date?->format('M d, Y'),
+                'transaction_date' => $transaction->transaction_date,
+                'category' => $transaction->category ? [
+                    'id' => $transaction->category->id,
+                    'name' => $transaction->category->name,
+                    'icon' => $transaction->category->icon,
+                    'color' => $transaction->category->color,
+                ] : null,
+                'budget' => $transaction->budget ? [
+                    'id' => $transaction->budget->id,
+                    'name' => $transaction->budget->name,
+                ] : null,
+                'payee' => $transaction->payee,
+                'is_shared' => $transaction->is_shared,
+                'has_receipt' => !empty($receiptPath),
+                'payment_requested' => $paymentRequest !== null,
+            ],
+        ], 'Expense created successfully', 201);
     }
 }

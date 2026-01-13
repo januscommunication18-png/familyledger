@@ -127,8 +127,8 @@
                             <label class="label">
                                 <span class="label-text">Date of Birth</span>
                             </label>
-                            <input type="date" name="date_of_birth" value="{{ old('date_of_birth', $pet?->date_of_birth?->format('Y-m-d')) }}"
-                                   class="input input-bordered" max="{{ date('Y-m-d') }}">
+                            <input type="text" name="date_of_birth" value="{{ old('date_of_birth', $pet?->date_of_birth?->format('Y-m-d')) }}"
+                                   class="input input-bordered" data-datepicker placeholder="Select date">
                             <label class="label">
                                 <span class="label-text-alt text-slate-500">Leave blank if unknown</span>
                             </label>
@@ -173,8 +173,8 @@
                         <label class="label">
                             <span class="label-text">Passed Away Date</span>
                         </label>
-                        <input type="date" name="passed_away_date" value="{{ old('passed_away_date', $pet?->passed_away_date?->format('Y-m-d')) }}"
-                               class="input input-bordered w-auto" max="{{ date('Y-m-d') }}">
+                        <input type="text" name="passed_away_date" value="{{ old('passed_away_date', $pet?->passed_away_date?->format('Y-m-d')) }}"
+                               class="input input-bordered w-auto" data-datepicker placeholder="Select date">
                     </div>
                 </div>
 
@@ -215,26 +215,13 @@
                                 <span class="label-text">Primary Caregiver</span>
                             </label>
 
-                            <!-- Selected Display -->
-                            <div x-show="selectedId" class="flex items-center gap-2 mb-2">
-                                <span class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm">
-                                    <span class="icon-[tabler--star-filled] size-3 text-amber-500"></span>
-                                    <span x-text="getSelectedName()"></span>
-                                    <button type="button" @click="clearSelection()" class="hover:text-error">
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                        </svg>
-                                    </button>
-                                </span>
-                            </div>
-
                             <!-- Dropdown -->
                             <div class="relative">
                                 <div class="relative">
-                                    <input type="text" x-model="search" @focus="open = true" @click="open = true"
+                                    <input type="text" x-model="search" @focus="openDropdown()" @click="openDropdown()"
                                            class="input input-bordered w-full pr-8"
-                                           :placeholder="selectedId ? 'Change caregiver...' : 'Search caregivers...'">
-                                    <button type="button" @click="open = !open" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400">
+                                           placeholder="Select caregiver...">
+                                    <button type="button" @click="open ? closeDropdown() : openDropdown()" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                         </svg>
@@ -242,7 +229,7 @@
                                 </div>
 
                                 <!-- Dropdown Menu -->
-                                <div x-show="open" x-cloak @click.away="open = false"
+                                <div x-show="open" x-cloak @click.outside="closeDropdown()"
                                      class="absolute z-50 mt-1 w-full bg-base-100 border border-base-300 rounded-xl shadow-lg max-h-48 overflow-y-auto">
                                     <template x-for="member in filteredMembers" :key="member.id">
                                         <div @click="selectMember(member.id)"
@@ -263,6 +250,19 @@
                                 </div>
                             </div>
 
+                            <!-- Selected Display Below Input -->
+                            <div x-show="selectedId" class="flex items-center gap-2 mt-2">
+                                <span class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm">
+                                    <span class="icon-[tabler--star-filled] size-3 text-amber-500"></span>
+                                    <span x-text="getSelectedName()"></span>
+                                    <button type="button" @click="clearSelection()" class="hover:text-error">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </span>
+                            </div>
+
                             <!-- Hidden input for form submission -->
                             <input type="hidden" name="primary_caregiver" :value="selectedId || ''">
 
@@ -281,43 +281,21 @@
                                 <span class="label-text">Secondary Caregivers</span>
                             </label>
 
-                            <!-- Selected Tags -->
-                            <div class="flex flex-wrap gap-2 mb-2" x-show="selected.length > 0">
-                                <template x-for="id in selected" :key="id">
-                                    <span class="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-sm">
-                                        <span x-text="getMemberName(id)"></span>
-                                        <button type="button" @click="toggleMember(id)" class="hover:text-error">
-                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                            </svg>
-                                        </button>
-                                    </span>
-                                </template>
-                            </div>
-
-                            <!-- Dropdown -->
+                            <!-- Dropdown Input -->
                             <div class="relative">
-                                <div class="flex gap-2">
-                                    <div class="relative flex-1">
-                                        <input type="text" x-model="search" @focus="open = true" @click="open = true"
-                                               class="input input-bordered w-full pr-8"
-                                               placeholder="Search caregivers...">
-                                        <button type="button" @click="open = !open" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                    <button type="button" @click="selectAll()" class="btn btn-outline btn-sm" title="Select All">All</button>
-                                    <button type="button" @click="clearAll()" class="btn btn-ghost btn-sm" x-show="selected.length > 0" title="Clear All">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                <div class="relative">
+                                    <input type="text" x-model="search" @focus="openDropdown()" @click="openDropdown()"
+                                           class="input input-bordered w-full pr-8"
+                                           placeholder="Select caregivers...">
+                                    <button type="button" @click="open ? closeDropdown() : openDropdown()" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                         </svg>
                                     </button>
                                 </div>
 
                                 <!-- Dropdown Menu -->
-                                <div x-show="open" x-cloak @click.away="open = false"
+                                <div x-show="open" x-cloak @click.outside="closeDropdown()"
                                      class="absolute z-50 mt-1 w-full bg-base-100 border border-base-300 rounded-xl shadow-lg max-h-48 overflow-y-auto">
                                     <template x-for="member in filteredMembers" :key="member.id">
                                         <div @click="toggleMember(member.id)"
@@ -336,6 +314,20 @@
                                         No members found
                                     </div>
                                 </div>
+                            </div>
+
+                            <!-- Selected Tags Below Input -->
+                            <div class="flex flex-wrap gap-2 mt-2" x-show="selected.length > 0">
+                                <template x-for="id in selected" :key="id">
+                                    <span class="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-sm">
+                                        <span x-text="getMemberName(id)"></span>
+                                        <button type="button" @click="toggleMember(id)" class="hover:text-error">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                        </button>
+                                    </span>
+                                </template>
                             </div>
 
                             <!-- Hidden inputs for form submission -->
@@ -372,8 +364,8 @@
                         <label class="label">
                             <span class="label-text">Last Vet Visit</span>
                         </label>
-                        <input type="date" name="last_vet_visit" value="{{ old('last_vet_visit', $pet?->last_vet_visit?->format('Y-m-d')) }}"
-                               class="input input-bordered w-auto" max="{{ date('Y-m-d') }}">
+                        <input type="text" name="last_vet_visit" value="{{ old('last_vet_visit', $pet?->last_vet_visit?->format('Y-m-d')) }}"
+                               class="input input-bordered w-auto" data-datepicker placeholder="Select date">
                     </div>
                 </div>
 
@@ -493,6 +485,7 @@ function previewPhoto(input) {
 function primaryCaregiverSelect() {
     return {
         open: false,
+        justOpened: false,
         search: '',
         selectedId: '{{ $selectedPrimaryId ?? '' }}',
         members: [
@@ -521,6 +514,18 @@ function primaryCaregiverSelect() {
             return this.members.filter(m => m.name.toLowerCase().includes(searchLower));
         },
 
+        openDropdown() {
+            this.open = true;
+            this.justOpened = true;
+            setTimeout(() => { this.justOpened = false; }, 150);
+        },
+
+        closeDropdown() {
+            if (!this.justOpened) {
+                this.open = false;
+            }
+        },
+
         selectMember(id) {
             this.selectedId = id;
             this.search = '';
@@ -541,6 +546,7 @@ function primaryCaregiverSelect() {
 function caregiverSelect() {
     return {
         open: false,
+        justOpened: false,
         search: '',
         selected: {!! json_encode($selectedSecondaryIds) !!},
         members: [
@@ -567,6 +573,18 @@ function caregiverSelect() {
             if (!this.search) return this.members;
             const searchLower = this.search.toLowerCase();
             return this.members.filter(m => m.name.toLowerCase().includes(searchLower));
+        },
+
+        openDropdown() {
+            this.open = true;
+            this.justOpened = true;
+            setTimeout(() => { this.justOpened = false; }, 150);
+        },
+
+        closeDropdown() {
+            if (!this.justOpened) {
+                this.open = false;
+            }
         },
 
         toggleMember(id) {

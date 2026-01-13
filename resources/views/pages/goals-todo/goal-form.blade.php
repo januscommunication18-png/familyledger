@@ -131,7 +131,7 @@
                         Back
                     </button>
                     <span x-show="selectedTemplate" class="ml-2 text-sm text-slate-500">
-                        Creating from template: <span class="font-medium text-slate-700" x-text="title"></span>
+                        Creating from template: <span class="font-medium text-slate-700" x-text="selectedTemplate?.title || ''"></span>
                     </span>
                 </div>
                 @endif
@@ -164,14 +164,14 @@
                             <label class="label">
                                 <span class="label-text font-medium">Goal Title <span class="text-error">*</span></span>
                             </label>
-                            <input type="text" name="title" x-model="title" class="input input-bordered" placeholder="What do you want to achieve?" required>
+                            <input type="text" name="title" id="goalTitle" value="{{ old('title', $goal?->title ?? '') }}" class="input input-bordered" placeholder="What do you want to achieve?" required>
                         </div>
 
                         <div class="form-control">
                             <label class="label">
                                 <span class="label-text font-medium">Description</span>
                             </label>
-                            <textarea name="description" rows="2" x-model="description" class="textarea textarea-bordered" placeholder="Why is this goal important?"></textarea>
+                            <textarea name="description" id="goalDescription" rows="2" class="textarea textarea-bordered" placeholder="Why is this goal important?">{{ old('description', $goal?->description ?? '') }}</textarea>
                         </div>
 
                         <!-- Category -->
@@ -519,8 +519,6 @@ function goalForm() {
         templateId: '{{ $fromTemplate?->id ?? "" }}',
 
         // Basic Info
-        title: '',
-        description: '',
         category: '{{ old('category', $fromTemplate?->category ?? $goal?->category ?? 'personal_growth') }}',
 
         // Assignment
@@ -538,18 +536,13 @@ function goalForm() {
         checkInFrequency: '{{ old('check_in_frequency', $fromTemplate?->suggested_check_in_frequency ?? $goal?->check_in_frequency ?? '') }}',
         rewardsEnabled: {{ old('rewards_enabled', $fromTemplate?->suggested_rewards ?? $goal?->rewards_enabled ?? false) ? 'true' : 'false' }},
         rewardType: '{{ old('reward_type', $fromTemplate?->suggested_reward_type ?? $goal?->reward_type ?? '') }}',
-        rewardCustom: '',
+        rewardCustom: @json(old('reward_custom', $goal?->reward_custom ?? '')),
 
         // Kid Settings
         visibleToKids: {{ old('visible_to_kids', $goal?->visible_to_kids ?? true) ? 'true' : 'false' }},
         kidsCanUpdate: {{ old('kids_can_update', $goal?->kids_can_update ?? false) ? 'true' : 'false' }},
 
         init() {
-            // Set initial values from old input or model
-            this.title = @json(old('title', $fromTemplate?->title ?? $goal?->title ?? ''));
-            this.description = @json(old('description', $fromTemplate?->description ?? $goal?->description ?? ''));
-            this.rewardCustom = @json(old('reward_custom', $goal?->reward_custom ?? ''));
-
             // If coming from a template via URL, go directly to form
             @if($fromTemplate)
                 this.step = 'form';
@@ -560,8 +553,6 @@ function goalForm() {
         selectTemplate(template) {
             this.selectedTemplate = template;
             this.templateId = template.id || '';
-            this.title = template.title || '';
-            this.description = template.description || '';
             this.category = template.category || 'personal_growth';
             this.goalType = template.goalType || 'one_time';
             this.habitFrequency = template.habitFrequency || '';
@@ -575,11 +566,18 @@ function goalForm() {
             // Go to form step
             this.step = 'form';
 
-            // Focus title after transition
+            // Set title and description via DOM
             this.$nextTick(() => {
                 setTimeout(() => {
-                    const titleInput = document.querySelector('input[name="title"]');
-                    if (titleInput) titleInput.focus();
+                    const titleInput = document.getElementById('goalTitle');
+                    const descInput = document.getElementById('goalDescription');
+                    if (titleInput) {
+                        titleInput.value = template.title || '';
+                        titleInput.focus();
+                    }
+                    if (descInput) {
+                        descInput.value = template.description || '';
+                    }
                 }, 100);
             });
         },

@@ -47,7 +47,7 @@
             </label>
             <label class="inline-flex items-center gap-1.5 cursor-pointer">
                 <input type="checkbox" class="checkbox checkbox-sm checkbox-error" onchange="applyFilter('missed_recurring', this.checked ? '1' : '')" {{ request('missed_recurring') ? 'checked' : '' }}>
-                <span class="text-sm text-error">Missed</span>
+                <span class="text-sm text-error">Missed/Overdue</span>
             </label>
             <label class="inline-flex items-center gap-1.5 cursor-pointer">
                 <input type="checkbox" class="checkbox checkbox-sm checkbox-info" onchange="applyFilter('upcoming_this_week', this.checked ? '1' : '')" {{ request('upcoming_this_week') ? 'checked' : '' }}>
