@@ -177,6 +177,7 @@ class CoparentingController extends Controller
             'email' => 'nullable|email|required_if:coparent_source,new_invite',
             'first_name' => 'nullable|string|max:100',
             'last_name' => 'nullable|string|max:100',
+            'my_role' => 'required|in:mother,father',
             'parent_role' => 'required|in:mother,father,parent',
             'message' => 'nullable|string|max:500',
             'children' => 'required|array|min:1',
@@ -211,6 +212,17 @@ class CoparentingController extends Controller
             return back()->withErrors(['email' => 'Email address is required.'])->withInput();
         }
 
+        // Check if there's already a pending invite for this email
+        $existingInvite = CollaboratorInvite::forCurrentTenant()
+            ->coparentInvites()
+            ->pending()
+            ->where('email', strtolower($email))
+            ->first();
+
+        if ($existingInvite) {
+            return back()->withErrors(['email' => 'An invitation has already been sent to this email address.'])->withInput();
+        }
+
         // Create the co-parent invite
         $invite = CollaboratorInvite::create([
             'tenant_id' => $user->tenant_id,
@@ -229,15 +241,20 @@ class CoparentingController extends Controller
         $defaultPermissions = CoparentChild::getDefaultPermissions();
         foreach ($validated['children'] as $childId) {
             // Use provided permissions or default to view-only for common categories
+            // Permission keys must match CollaboratorInvite::PERMISSION_CATEGORIES
             $permissions = $validated['permissions'][$childId] ?? [
-                'basic_info' => 'view',
-                'medical_records' => 'view',
+                'date_of_birth' => 'view',
+                'immigration_status' => 'view',
+                'drivers_license' => 'view',
+                'passport' => 'view',
+                'ssn' => 'none',
+                'birth_certificate' => 'view',
+                'medical' => 'view',
                 'emergency_contacts' => 'view',
-                'school_info' => 'view',
-                'documents' => 'none',
+                'school' => 'view',
                 'insurance' => 'none',
-                'vaccinations' => 'view',
-                'healthcare_providers' => 'view',
+                'tax_returns' => 'none',
+                'assets' => 'none',
             ];
 
             $invite->familyMembers()->attach($childId, [

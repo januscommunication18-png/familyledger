@@ -93,6 +93,14 @@ class InsurancePolicy extends Model
     ];
 
     /**
+     * Get the family member this policy belongs to.
+     */
+    public function familyMember(): BelongsTo
+    {
+        return $this->belongsTo(FamilyMember::class);
+    }
+
+    /**
      * Get all policyholders.
      */
     public function policyholders(): BelongsToMany

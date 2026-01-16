@@ -1,5 +1,9 @@
 @extends('layouts.dashboard')
 
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+@endpush
+
 @section('title', 'Add Family Member')
 @section('page-name', 'Add Family Member')
 
@@ -167,7 +171,7 @@
                                     <option value="+91" {{ old('phone_country_code') === '+91' ? 'selected' : '' }}>+91</option>
                                     <option value="+61" {{ old('phone_country_code') === '+61' ? 'selected' : '' }}>+61</option>
                                 </select>
-                                <input type="tel" name="phone" value="{{ old('phone') }}" placeholder="555-123-4567"
+                                <input type="tel" name="phone" id="phone" value="{{ old('phone') }}" placeholder="5551234567" inputmode="numeric" pattern="[0-9]*"
                                     class="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 @error('phone') border-rose-500 @enderror">
                             </div>
                             @error('phone')
@@ -255,6 +259,8 @@
 @endsection
 
 @push('scripts')
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 // Profile image preview
 function previewImage(input) {
@@ -401,6 +407,95 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize autocomplete for both fields
     setupAutocomplete('father_name', 'father_name_suggestions');
     setupAutocomplete('mother_name', 'mother_name_suggestions');
+
+    // Phone number - only allow digits
+    const phoneInput = document.getElementById('phone');
+    if (phoneInput) {
+        phoneInput.addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+        phoneInput.addEventListener('keypress', function(e) {
+            if (!/[0-9]/.test(e.key)) {
+                e.preventDefault();
+            }
+        });
+    }
+});
+
+// Initialize Select2 for Relationship and Immigration Status
+$(document).ready(function() {
+    $('#relationship-select').select2({
+        placeholder: 'Select relationship',
+        allowClear: true,
+        width: '100%'
+    });
+
+    $('#immigration-status-select').select2({
+        placeholder: 'Select status (optional)',
+        allowClear: true,
+        width: '100%'
+    });
 });
 </script>
+
+<style>
+/* Select2 Custom Styles */
+.select2-container--default .select2-selection--single {
+    height: 42px;
+    padding: 6px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    background-color: white;
+}
+
+.select2-container--default .select2-selection--single:focus,
+.select2-container--default.select2-container--open .select2-selection--single {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+    outline: none;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 28px;
+    padding-left: 0;
+    color: #0f172a;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 40px;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__placeholder {
+    color: #94a3b8;
+}
+
+.select2-dropdown {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #f5f3ff;
+    color: #5b21b6;
+}
+
+.select2-container--default .select2-results__option[aria-selected=true] {
+    background-color: #ede9fe;
+}
+
+.select2-results__option {
+    padding: 8px 12px;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__clear {
+    margin-right: 10px;
+    font-size: 18px;
+    color: #94a3b8;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__clear:hover {
+    color: #64748b;
+}
+</style>
 @endpush

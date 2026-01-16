@@ -67,7 +67,15 @@
                         </div>
                         <div>
                             <p class="text-xs text-slate-500 uppercase tracking-wide mb-1">Source</p>
-                            <p class="font-medium text-slate-800">{{ $transaction->source_label }}</p>
+                            <p class="font-medium text-slate-800 flex items-center gap-2">
+                                {{ $transaction->source_label }}
+                                @if($transaction->isFromMobile())
+                                <span class="badge badge-info badge-sm gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
+                                    Mobile
+                                </span>
+                                @endif
+                            </p>
                         </div>
                         <div>
                             <p class="text-xs text-slate-500 uppercase tracking-wide mb-1">Created</p>

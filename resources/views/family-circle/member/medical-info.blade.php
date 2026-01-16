@@ -884,7 +884,7 @@
                                 "optionClasses": "advance-select-option selected:select-active",
                                 "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
                                 "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/90 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                            }' class="hidden">
+                            }'>
                                 <option value="">Select type</option>
                                 @foreach($providerTypes as $key => $label)
                                     <option value="{{ $key }}">{{ $label }}</option>
@@ -907,7 +907,7 @@
                                 "optionClasses": "advance-select-option selected:select-active",
                                 "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
                                 "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/90 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                            }' class="hidden">
+                            }'>
                                 <option value="">Select specialty</option>
                                 @foreach($specialties as $key => $label)
                                     <option value="{{ $key }}">{{ $label }}</option>

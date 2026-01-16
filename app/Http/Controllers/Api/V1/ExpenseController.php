@@ -366,8 +366,8 @@ class ExpenseController extends Controller
                 $receiptPath = 'receipts/' . $tenant->id . '/' . $filename;
                 $receiptOriginalFilename = $filename;
 
-                // Store the file
-                \Illuminate\Support\Facades\Storage::disk('public')->put($receiptPath, $decodedImage);
+                // Store the file to Digital Ocean Spaces
+                \Illuminate\Support\Facades\Storage::disk('do_spaces')->put($receiptPath, $decodedImage);
             } catch (\Exception $e) {
                 // Log error but don't fail the transaction
                 \Log::error('Failed to save receipt: ' . $e->getMessage());
@@ -387,7 +387,7 @@ class ExpenseController extends Controller
             'payee' => $validated['payee'] ?? null,
             'category_id' => $validated['category_id'] ?? null,
             'transaction_date' => $validated['transaction_date'],
-            'source' => 'manual', // Mobile entries are stored as manual
+            'source' => 'mobile', // Transactions from mobile app
             'is_shared' => $isShared,
             'shared_for_child_id' => $sharedForChildId,
             'receipt_path' => $receiptPath,
@@ -443,6 +443,7 @@ class ExpenseController extends Controller
                 'payee' => $transaction->payee,
                 'is_shared' => $transaction->is_shared,
                 'has_receipt' => !empty($receiptPath),
+                'receipt_url' => $receiptPath ? \Illuminate\Support\Facades\Storage::disk('do_spaces')->url($receiptPath) : null,
                 'payment_requested' => $paymentRequest !== null,
             ],
         ], 'Expense created successfully', 201);

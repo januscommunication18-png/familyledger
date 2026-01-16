@@ -352,6 +352,9 @@ Route::middleware(['security.code', 'auth'])->group(function () {
         Route::put('/{collaborator}', [CollaboratorController::class, 'update'])->name('update');
         Route::patch('/{collaborator}/deactivate', [CollaboratorController::class, 'deactivate'])->name('deactivate');
         Route::patch('/{collaborator}/activate', [CollaboratorController::class, 'activate'])->name('activate');
+        Route::patch('/{collaborator}/role', [CollaboratorController::class, 'updateRole'])->name('updateRole');
+        Route::post('/{collaborator}/resend-welcome', [CollaboratorController::class, 'resendWelcome'])->name('resendWelcome');
+        Route::post('/{collaborator}/send-reminder', [CollaboratorController::class, 'sendReminder'])->name('sendReminder');
         Route::delete('/{collaborator}', [CollaboratorController::class, 'destroy'])->name('destroy');
 
         // Invite management
@@ -577,8 +580,18 @@ Route::middleware(['security.code', 'auth'])->group(function () {
     });
 
     // Settings
-    Route::get('/settings', [SettingsController::class, 'index'])->middleware(['verified', 'onboarding'])->name('settings.index');
-    Route::post('/settings/profile', [SettingsController::class, 'updateProfile'])->middleware(['verified', 'onboarding'])->name('settings.profile.update');
+    Route::middleware(['verified', 'onboarding'])->prefix('settings')->name('settings.')->group(function () {
+        Route::get('/', [SettingsController::class, 'index'])->name('index');
+        Route::post('/profile', [SettingsController::class, 'updateProfile'])->name('profile.update');
+        Route::post('/password', [SettingsController::class, 'updatePassword'])->name('password.update');
+        Route::delete('/sessions/{session}', [SettingsController::class, 'revokeSession'])->name('sessions.revoke');
+        Route::post('/sessions/revoke-all', [SettingsController::class, 'revokeAllSessions'])->name('sessions.revoke-all');
+        Route::post('/notifications', [SettingsController::class, 'updateNotifications'])->name('notifications.update');
+        Route::post('/appearance', [SettingsController::class, 'updateAppearance'])->name('appearance.update');
+        Route::post('/privacy', [SettingsController::class, 'updatePrivacy'])->name('privacy.update');
+        Route::get('/export-data', [SettingsController::class, 'exportData'])->name('export-data');
+        Route::post('/delete-account', [SettingsController::class, 'requestAccountDeletion'])->name('delete-account');
+    });
 
     // Image Verification (for viewing sensitive documents/images)
     Route::get('/image-verify/status', [ImageVerificationController::class, 'status'])->name('image-verify.status');

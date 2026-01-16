@@ -100,6 +100,7 @@
                     @endif
 
                     <!-- Blood Group - Inline Editable -->
+                    @if($access->canView('medical'))
                     <div class="p-3 rounded-lg bg-slate-50 group relative">
                         <p class="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Blood Group</p>
                         <div id="bloodGroupDisplay" class="flex items-center gap-2">
@@ -108,10 +109,13 @@
                             @else
                                 <p class="text-sm text-slate-400 italic">Not specified</p>
                             @endif
+                            @if($access->canEdit('medical'))
                             <button onclick="toggleBloodGroupEdit()" class="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-slate-200 rounded">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                             </button>
+                            @endif
                         </div>
+                        @if($access->canEdit('medical'))
                         <form id="bloodGroupEdit" class="hidden" action="{{ route('member.medical.update-field', $member) }}" method="POST">
                             @csrf
                             <input type="hidden" name="field" value="blood_type">
@@ -130,7 +134,14 @@
                                 </button>
                             </div>
                         </form>
+                        @endif
                     </div>
+                    @else
+                    <div class="p-3 rounded-lg bg-slate-50 opacity-50">
+                        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Blood Group</p>
+                        <p class="text-sm text-slate-400 italic">No access</p>
+                    </div>
+                    @endif
 
                     <!-- Immigration Status - Inline Editable -->
                     @if($access->canView('immigration_status'))
@@ -549,7 +560,8 @@
         </a>
         @endif
 
-        <!-- Activity -->
+        <!-- Activity - Only show to owners -->
+        @if(!$access->isCollaborator)
         <div class="card bg-base-100 shadow-sm">
             <div class="card-body p-4">
                 <div class="flex items-center justify-between mb-3">
@@ -578,6 +590,7 @@
                 @endif
             </div>
         </div>
+        @endif
     </div>
 
     <!-- Insurance, Tax Returns & Assets Section -->

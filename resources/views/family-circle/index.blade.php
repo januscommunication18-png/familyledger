@@ -49,7 +49,7 @@
     @endif
 
     @if($circles->isEmpty() && $collaborations->count() == 0 && (!isset($pendingInvites) || $pendingInvites->count() == 0))
-        <!-- Empty State -->
+        <!-- Empty State - No circles and no collaborations -->
         <div class="card bg-base-100 shadow-sm">
             <div class="card-body py-16">
                 <div class="text-center max-w-lg mx-auto">
@@ -67,126 +67,126 @@
                 </div>
             </div>
         </div>
-    @endif
-
-    @if($circles->count() > 0)
-        <!-- Family Circles Grid -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-            <div>
-                <p class="text-slate-500">You have {{ $circles->count() }} family circle{{ $circles->count() > 1 ? 's' : '' }}</p>
-            </div>
-            <button type="button" onclick="openCreateModal()" class="btn btn-primary gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
-                Create Family Circle
-            </button>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            @foreach($circles as $circle)
-                <a href="{{ route('family-circle.show', $circle) }}" class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
-                    <div class="card-body">
-                        <div class="flex items-start gap-4">
-                            <div class="w-14 h-14 shrink-0 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center overflow-hidden">
-                                @if($circle->cover_image)
-                                    <img src="{{ Storage::disk('do_spaces')->url($circle->cover_image) }}" alt="{{ $circle->name }}" class="w-full h-full object-cover">
-                                @else
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                                @endif
+    @else
+        <!-- Card Layout -->
+        <div class="grid grid-cols-1 {{ $collaborations->count() > 0 ? 'lg:grid-cols-2' : '' }} gap-6">
+            <!-- Card 1: My Family Circle -->
+            <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
+                <div class="card-body">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                             </div>
-                            <div class="flex-1 min-w-0">
-                                <h3 class="text-lg font-semibold text-slate-900 group-hover:text-violet-600 transition-colors truncate">{{ $circle->name }}</h3>
-                                @if($circle->description)
-                                    <p class="text-sm text-slate-500 line-clamp-2 mt-1">{{ $circle->description }}</p>
-                                @endif
+                            <div>
+                                <h2 class="text-xl font-bold text-slate-900">My Family Circle</h2>
+                                <p class="text-sm text-slate-500">Your own family circles</p>
                             </div>
                         </div>
-                        <div class="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
-                            <div class="flex items-center gap-2 text-sm text-slate-500">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                                <span>{{ $circle->members_count }} member{{ $circle->members_count != 1 ? 's' : '' }}</span>
-                            </div>
-                            <div class="text-sm text-slate-400">
-                                {{ $circle->created_at->diffForHumans() }}
-                            </div>
-                        </div>
+                        <button type="button" onclick="openCreateModal()" class="btn btn-primary btn-sm gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                            Create
+                        </button>
                     </div>
-                </a>
-            @endforeach
-        </div>
-    @endif
 
-    @if($collaborations->count() > 0)
-        <!-- Shared With Me Section -->
-        <div class="mt-12">
-            <div class="flex items-center gap-3 mb-6">
-                <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-600"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg>
-                </div>
-                <div>
-                    <h2 class="text-xl font-bold text-slate-900">Shared With Me</h2>
-                    <p class="text-sm text-slate-500">Family members others have shared with you</p>
-                </div>
-            </div>
-
-            <div class="space-y-6">
-                @foreach($collaborations as $collab)
-                    <div class="card bg-base-100 shadow-sm">
-                        <div class="card-body">
-                            <div class="flex items-center justify-between mb-4">
-                                <div class="flex items-center gap-3">
-                                    <div class="avatar placeholder">
-                                        <div class="bg-emerald-100 text-emerald-700 rounded-full w-10">
-                                            <span class="text-sm font-semibold">{{ strtoupper(substr($collab['owner_name'], 0, 1)) }}</span>
+                    @if($circles->count() > 0)
+                        <div class="space-y-3">
+                            @foreach($circles as $circle)
+                                <a href="{{ route('family-circle.show', $circle) }}" class="flex items-center gap-4 p-4 rounded-xl border border-slate-200 hover:border-violet-300 hover:bg-violet-50/50 transition-all group">
+                                    <div class="w-12 h-12 shrink-0 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center overflow-hidden">
+                                        @if($circle->cover_image)
+                                            <img src="{{ Storage::disk('do_spaces')->url($circle->cover_image) }}" alt="{{ $circle->name }}" class="w-full h-full object-cover">
+                                        @else
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                        @endif
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <h3 class="font-semibold text-slate-900 group-hover:text-violet-600 transition-colors truncate">{{ $circle->name }}</h3>
+                                        <div class="flex items-center gap-3 text-sm text-slate-500 mt-1">
+                                            <span class="flex items-center gap-1">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                                {{ $circle->members_count }} member{{ $circle->members_count != 1 ? 's' : '' }}
+                                            </span>
+                                            <span class="text-slate-300">•</span>
+                                            <span>{{ $circle->created_at->diffForHumans() }}</span>
                                         </div>
                                     </div>
-                                    <div>
-                                        <h3 class="font-semibold text-slate-800">{{ $collab['owner_name'] }}'s Family</h3>
-                                        <p class="text-xs text-slate-500">You're their {{ $collab['relationship'] }}</p>
-                                    </div>
-                                </div>
-                                @php
-                                    $roleColor = $collab['role_info']['color'] ?? 'ghost';
-                                    $badgeClass = match($roleColor) {
-                                        'error' => 'badge-error',
-                                        'warning' => 'badge-warning',
-                                        'info' => 'badge-info',
-                                        'success' => 'badge-success',
-                                        'secondary' => 'badge-secondary',
-                                        default => 'badge-ghost',
-                                    };
-                                @endphp
-                                <span class="badge {{ $badgeClass }}">{{ $collab['role_info']['label'] ?? 'Viewer' }}</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-300 group-hover:text-violet-500 transition-colors shrink-0"><path d="m9 18 6-6-6-6"/></svg>
+                                </a>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="text-center py-8 px-4 rounded-xl bg-slate-50 border-2 border-dashed border-slate-200">
+                            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-violet-100 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-violet-500"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                             </div>
+                            <h3 class="font-semibold text-slate-700 mb-2">No family circles yet</h3>
+                            <p class="text-sm text-slate-500 mb-4">Create your first family circle to start organizing your family members.</p>
+                            <button type="button" onclick="openCreateModal()" class="btn btn-primary btn-sm gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                                Create Family Circle
+                            </button>
+                        </div>
+                    @endif
+                </div>
+            </div>
 
-                            @if($collab['family_members']->count() > 0)
-                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                    @foreach($collab['family_members'] as $member)
-                                        <a href="{{ route('family-circle.member.show', ['familyCircle' => $member->family_circle_id, 'member' => $member->id]) }}"
-                                           class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/50 transition-all group">
-                                            <div class="avatar placeholder">
-                                                <div class="bg-slate-100 text-slate-600 rounded-full w-10 group-hover:bg-emerald-100 group-hover:text-emerald-700 transition-colors">
-                                                    <span>{{ strtoupper(substr($member->first_name, 0, 1)) }}</span>
-                                                </div>
-                                            </div>
-                                            <div class="flex-1 min-w-0">
-                                                <div class="font-medium text-slate-800 truncate group-hover:text-emerald-700 transition-colors">{{ $member->first_name }} {{ $member->last_name }}</div>
-                                                <div class="text-xs text-slate-500">{{ $member->relationship ?? 'Family Member' }}</div>
-                                            </div>
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-300 group-hover:text-emerald-500 transition-colors"><path d="m9 18 6-6-6-6"/></svg>
-                                        </a>
-                                    @endforeach
-                                </div>
-                            @else
-                                <p class="text-sm text-slate-500 text-center py-4">No family members shared yet</p>
-                            @endif
-
-                            <div class="text-xs text-slate-400 mt-3 pt-3 border-t">
-                                Joined {{ $collab['joined_at']->diffForHumans() }}
+            <!-- Card 2: Shared With Me (only shown if there are collaborations) -->
+            @if($collaborations->count() > 0)
+            <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
+                <div class="card-body">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-bold text-slate-900">Shared With Me</h2>
+                                <p class="text-sm text-slate-500">Family circles others have shared</p>
                             </div>
                         </div>
+                        <span class="badge badge-success">{{ $collaborations->count() }} circle{{ $collaborations->count() != 1 ? 's' : '' }}</span>
                     </div>
-                @endforeach
+
+                    <div class="space-y-3">
+                        @foreach($collaborations as $collab)
+                            <a href="{{ route('family-circle.show', $collab['circle_id']) }}" class="flex items-center gap-4 p-4 rounded-xl border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/50 transition-all group">
+                                <div class="w-12 h-12 shrink-0 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center overflow-hidden">
+                                    @if(isset($collab['cover_image']) && $collab['cover_image'])
+                                        <img src="{{ Storage::disk('do_spaces')->url($collab['cover_image']) }}" alt="{{ $collab['owner_name'] }}'s Family" class="w-full h-full object-cover">
+                                    @else
+                                        <span class="text-xl font-bold text-white">{{ strtoupper(substr($collab['owner_name'], 0, 1)) }}</span>
+                                    @endif
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="font-semibold text-slate-900 group-hover:text-emerald-600 transition-colors truncate">{{ $collab['owner_name'] }}'s Family</h3>
+                                    <div class="flex items-center gap-3 text-sm text-slate-500 mt-1">
+                                        <span class="flex items-center gap-1">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                            {{ $collab['family_members']->count() }} member{{ $collab['family_members']->count() != 1 ? 's' : '' }}
+                                        </span>
+                                        <span class="text-slate-300">•</span>
+                                        @php
+                                            $roleColor = $collab['role_info']['color'] ?? 'ghost';
+                                            $badgeClass = match($roleColor) {
+                                                'error' => 'badge-error',
+                                                'warning' => 'badge-warning',
+                                                'info' => 'badge-info',
+                                                'success' => 'badge-success',
+                                                'secondary' => 'badge-secondary',
+                                                default => 'badge-ghost',
+                                            };
+                                        @endphp
+                                        <span class="badge badge-xs {{ $badgeClass }}">{{ $collab['role_info']['label'] ?? 'Viewer' }}</span>
+                                    </div>
+                                </div>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-300 group-hover:text-emerald-500 transition-colors shrink-0"><path d="m9 18 6-6-6-6"/></svg>
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
             </div>
+            @endif
         </div>
     @endif
 </div>

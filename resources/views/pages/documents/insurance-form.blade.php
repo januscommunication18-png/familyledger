@@ -85,7 +85,7 @@
                             "optionClasses": "advance-select-option selected:select-active",
                             "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
                             "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/50 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                        }' class="hidden">
+                        }'>
                             <option value="">Choose type</option>
                             @foreach($insuranceTypes as $key => $label)
                                 <option value="{{ $key }}" {{ old('insurance_type', $insurance?->insurance_type) === $key ? 'selected' : '' }}>{{ $label }}</option>
@@ -103,7 +103,7 @@
                             "optionClasses": "advance-select-option selected:select-active",
                             "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
                             "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/50 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                        }' class="hidden">
+                        }'>
                             @foreach($statuses as $key => $label)
                                 <option value="{{ $key }}" {{ old('status', $insurance?->status ?? 'active') === $key ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
@@ -130,7 +130,7 @@
                             "optionClasses": "advance-select-option selected:select-active",
                             "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
                             "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/50 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                        }' class="hidden">
+                        }'>
                             @foreach($familyMembers as $member)
                                 <option value="{{ $member->id }}" {{ in_array($member->id, old('policyholders', $policyholderIds)) ? 'selected' : '' }}>
                                     {{ $member->first_name }} {{ $member->last_name ?? '' }}{{ !empty($member->is_owner) ? ' (You)' : '' }}
@@ -152,7 +152,7 @@
                             "optionClasses": "advance-select-option selected:select-active",
                             "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
                             "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/50 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                        }' class="hidden">
+                        }'>
                             @foreach($familyMembers as $member)
                                 <option value="{{ $member->id }}" {{ in_array($member->id, old('covered_members', $coveredIds)) ? 'selected' : '' }}>
                                     {{ $member->first_name }} {{ $member->last_name ?? '' }}{{ !empty($member->is_owner) ? ' (You)' : '' }}
@@ -231,7 +231,7 @@
                             "optionClasses": "advance-select-option selected:select-active",
                             "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
                             "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/50 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                        }' class="hidden">
+                        }'>
                             <option value="">Select</option>
                             @foreach($paymentFrequencies as $key => $label)
                                 <option value="{{ $key }}" {{ old('payment_frequency', $insurance?->payment_frequency) === $key ? 'selected' : '' }}>{{ $label }}</option>

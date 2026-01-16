@@ -163,18 +163,18 @@
                             @php
                                 $isSelected = $collaborator->familyMembers->contains($member->id);
                                 $memberPerms = $currentPermissions[$member->id] ?? [];
+                                $memberId = (string) $member->id;
                             @endphp
                             <div class="border-2 rounded-xl transition-all"
-                                 :class="selectedMembers.includes('{{ $member->id }}') ? 'border-primary bg-primary/5' : 'border-base-300'">
+                                 :class="selectedMembers.includes('{{ $memberId }}') ? 'border-primary bg-primary/5' : 'border-base-300'">
                                 <!-- Member Header (Clickable) -->
                                 <label class="cursor-pointer block">
-                                    <input type="checkbox" name="family_members[]" value="{{ $member->id }}"
-                                           class="hidden" x-model="selectedMembers"
-                                           {{ $isSelected ? 'checked' : '' }}>
+                                    <input type="checkbox" name="family_members[]" value="{{ $memberId }}"
+                                           class="hidden" x-model="selectedMembers">
                                     <div class="flex items-center gap-3 p-4">
                                         <div class="avatar placeholder">
                                             <div class="rounded-full w-10 transition-colors"
-                                                 :class="selectedMembers.includes('{{ $member->id }}') ? 'bg-primary/20 text-primary' : 'bg-slate-100 text-slate-600'">
+                                                 :class="selectedMembers.includes('{{ $memberId }}') ? 'bg-primary/20 text-primary' : 'bg-slate-100 text-slate-600'">
                                                 <span>{{ strtoupper(substr($member->first_name, 0, 1)) }}</span>
                                             </div>
                                         </div>
@@ -183,15 +183,15 @@
                                             <div class="text-xs text-slate-500">{{ $member->relationship ?? 'Family Member' }}</div>
                                         </div>
                                         <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all"
-                                             :class="selectedMembers.includes('{{ $member->id }}') ? 'border-primary bg-primary' : 'border-base-300'">
+                                             :class="selectedMembers.includes('{{ $memberId }}') ? 'border-primary bg-primary' : 'border-base-300'">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
-                                                 x-show="selectedMembers.includes('{{ $member->id }}')" x-cloak><path d="M20 6 9 17l-5-5"/></svg>
+                                                 x-show="selectedMembers.includes('{{ $memberId }}')" x-cloak><path d="M20 6 9 17l-5-5"/></svg>
                                         </div>
                                     </div>
                                 </label>
 
                                 <!-- Permission Controls (Shown when selected) -->
-                                <div x-show="selectedMembers.includes('{{ $member->id }}')" x-cloak
+                                <div x-show="selectedMembers.includes('{{ $memberId }}')" x-cloak
                                      class="px-4 pb-4 pt-2 border-t border-base-200">
 
                                     <!-- Access Level Selector (Top) -->
@@ -203,8 +203,8 @@
                                             <!-- Hidden -->
                                             <button type="button"
                                                     class="flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all"
-                                                    :class="getMemberAccessLevel('{{ $member->id }}') === 'none' ? 'border-slate-400 bg-slate-100' : 'border-base-200 hover:border-slate-300 hover:bg-slate-50'"
-                                                    @click="setAllPermissions('{{ $member->id }}', 'none')">
+                                                    :class="getMemberAccessLevel('{{ $memberId }}') === 'none' ? 'border-slate-400 bg-slate-100' : 'border-base-200 hover:border-slate-300 hover:bg-slate-50'"
+                                                    @click="setAllPermissions('{{ $memberId }}', 'none')">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" x2="23" y1="1" y2="23"/></svg>
                                                 <span class="text-xs font-medium text-slate-600">Hidden</span>
                                             </button>
@@ -212,8 +212,8 @@
                                             <!-- View Only -->
                                             <button type="button"
                                                     class="flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all"
-                                                    :class="getMemberAccessLevel('{{ $member->id }}') === 'view' ? 'border-info bg-info/10' : 'border-base-200 hover:border-info/50 hover:bg-info/5'"
-                                                    @click="setAllPermissions('{{ $member->id }}', 'view')">
+                                                    :class="getMemberAccessLevel('{{ $memberId }}') === 'view' ? 'border-info bg-info/10' : 'border-base-200 hover:border-info/50 hover:bg-info/5'"
+                                                    @click="setAllPermissions('{{ $memberId }}', 'view')">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-info"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                                                 <span class="text-xs font-medium text-slate-600">View Only</span>
                                             </button>
@@ -221,8 +221,8 @@
                                             <!-- Can Edit -->
                                             <button type="button"
                                                     class="flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all"
-                                                    :class="getMemberAccessLevel('{{ $member->id }}') === 'edit' ? 'border-success bg-success/10' : 'border-base-200 hover:border-success/50 hover:bg-success/5'"
-                                                    @click="setAllPermissions('{{ $member->id }}', 'edit')">
+                                                    :class="getMemberAccessLevel('{{ $memberId }}') === 'edit' ? 'border-success bg-success/10' : 'border-base-200 hover:border-success/50 hover:bg-success/5'"
+                                                    @click="setAllPermissions('{{ $memberId }}', 'edit')">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-success"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                                                 <span class="text-xs font-medium text-slate-600">Can Edit</span>
                                             </button>
@@ -230,8 +230,8 @@
                                             <!-- Full Access -->
                                             <button type="button"
                                                     class="flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all"
-                                                    :class="getMemberAccessLevel('{{ $member->id }}') === 'full' ? 'border-warning bg-warning/10' : 'border-base-200 hover:border-warning/50 hover:bg-warning/5'"
-                                                    @click="setAllPermissions('{{ $member->id }}', 'full')">
+                                                    :class="getMemberAccessLevel('{{ $memberId }}') === 'full' ? 'border-warning bg-warning/10' : 'border-base-200 hover:border-warning/50 hover:bg-warning/5'"
+                                                    @click="setAllPermissions('{{ $memberId }}', 'full')">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-warning"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
                                                 <span class="text-xs font-medium text-slate-600">Full Access</span>
                                             </button>
@@ -281,21 +281,21 @@
                                                             @foreach($permissions as $catKey => $category)
                                                                 <div class="flex items-center justify-between p-2 rounded-lg border border-base-200 hover:bg-base-50"
                                                                      :class="{
-                                                                         'bg-slate-50 border-slate-200': memberPermissions['{{ $member->id }}']?.['{{ $catKey }}'] === 'none',
-                                                                         'bg-info/5 border-info/30': memberPermissions['{{ $member->id }}']?.['{{ $catKey }}'] === 'view',
-                                                                         'bg-success/5 border-success/30': memberPermissions['{{ $member->id }}']?.['{{ $catKey }}'] === 'edit',
-                                                                         'bg-warning/5 border-warning/30': memberPermissions['{{ $member->id }}']?.['{{ $catKey }}'] === 'full'
+                                                                         'bg-slate-50 border-slate-200': memberPermissions['{{ $memberId }}']?.['{{ $catKey }}'] === 'none',
+                                                                         'bg-info/5 border-info/30': memberPermissions['{{ $memberId }}']?.['{{ $catKey }}'] === 'view',
+                                                                         'bg-success/5 border-success/30': memberPermissions['{{ $memberId }}']?.['{{ $catKey }}'] === 'edit',
+                                                                         'bg-warning/5 border-warning/30': memberPermissions['{{ $memberId }}']?.['{{ $catKey }}'] === 'full'
                                                                      }">
                                                                     <span class="text-sm text-slate-700">{{ $category['label'] }}</span>
                                                                     <div class="flex items-center gap-1">
-                                                                        <input type="hidden" name="permissions[{{ $member->id }}][{{ $catKey }}]"
-                                                                               :value="memberPermissions['{{ $member->id }}']?.['{{ $catKey }}'] || 'view'">
+                                                                        <input type="hidden" name="permissions[{{ $memberId }}][{{ $catKey }}]"
+                                                                               :value="memberPermissions['{{ $memberId }}']?.['{{ $catKey }}'] || 'view'">
 
                                                                         <!-- Hidden button -->
                                                                         <button type="button"
                                                                                 class="btn btn-xs transition-all"
-                                                                                :class="memberPermissions['{{ $member->id }}']?.['{{ $catKey }}'] === 'none' ? 'btn-neutral' : 'btn-ghost text-slate-400'"
-                                                                                @click="setPermission('{{ $member->id }}', '{{ $catKey }}', 'none')"
+                                                                                :class="memberPermissions['{{ $memberId }}']?.['{{ $catKey }}'] === 'none' ? 'btn-neutral' : 'btn-ghost text-slate-400'"
+                                                                                @click="setPermission('{{ $memberId }}', '{{ $catKey }}', 'none')"
                                                                                 title="Hidden">
                                                                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" x2="23" y1="1" y2="23"/></svg>
                                                                         </button>
@@ -303,8 +303,8 @@
                                                                         <!-- View button -->
                                                                         <button type="button"
                                                                                 class="btn btn-xs transition-all"
-                                                                                :class="memberPermissions['{{ $member->id }}']?.['{{ $catKey }}'] === 'view' ? 'btn-info' : 'btn-ghost text-slate-400'"
-                                                                                @click="setPermission('{{ $member->id }}', '{{ $catKey }}', 'view')"
+                                                                                :class="memberPermissions['{{ $memberId }}']?.['{{ $catKey }}'] === 'view' ? 'btn-info' : 'btn-ghost text-slate-400'"
+                                                                                @click="setPermission('{{ $memberId }}', '{{ $catKey }}', 'view')"
                                                                                 title="View Only">
                                                                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                                                                         </button>
@@ -312,8 +312,8 @@
                                                                         <!-- Edit button -->
                                                                         <button type="button"
                                                                                 class="btn btn-xs transition-all"
-                                                                                :class="memberPermissions['{{ $member->id }}']?.['{{ $catKey }}'] === 'edit' ? 'btn-success' : 'btn-ghost text-slate-400'"
-                                                                                @click="setPermission('{{ $member->id }}', '{{ $catKey }}', 'edit')"
+                                                                                :class="memberPermissions['{{ $memberId }}']?.['{{ $catKey }}'] === 'edit' ? 'btn-success' : 'btn-ghost text-slate-400'"
+                                                                                @click="setPermission('{{ $memberId }}', '{{ $catKey }}', 'edit')"
                                                                                 title="Can Edit">
                                                                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                                                                         </button>
@@ -321,8 +321,8 @@
                                                                         <!-- Full Access button -->
                                                                         <button type="button"
                                                                                 class="btn btn-xs transition-all"
-                                                                                :class="memberPermissions['{{ $member->id }}']?.['{{ $catKey }}'] === 'full' ? 'btn-warning' : 'btn-ghost text-slate-400'"
-                                                                                @click="setPermission('{{ $member->id }}', '{{ $catKey }}', 'full')"
+                                                                                :class="memberPermissions['{{ $memberId }}']?.['{{ $catKey }}'] === 'full' ? 'btn-warning' : 'btn-ghost text-slate-400'"
+                                                                                @click="setPermission('{{ $memberId }}', '{{ $catKey }}', 'full')"
                                                                                 title="Full Access (Edit & Delete)">
                                                                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
                                                                         </button>
@@ -390,13 +390,14 @@ function editCollaboratorForm() {
         memberPermissions: {},
 
         init() {
-            // Initialize permissions for all members
+            // Initialize permissions for all members (using string IDs for consistency)
             @foreach($familyMembers as $member)
-                this.memberPermissions['{{ $member->id }}'] = {};
+                @php $jsMemberId = (string) $member->id; @endphp
+                this.memberPermissions['{{ $jsMemberId }}'] = {};
                 permissionCategories.forEach(cat => {
                     // Use existing permissions if available, otherwise default to 'view'
                     const existingPerm = currentPermissions['{{ $member->id }}']?.[cat];
-                    this.memberPermissions['{{ $member->id }}'][cat] = existingPerm || 'view';
+                    this.memberPermissions['{{ $jsMemberId }}'][cat] = existingPerm || 'view';
                 });
             @endforeach
         },

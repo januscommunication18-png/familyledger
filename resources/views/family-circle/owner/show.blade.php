@@ -188,6 +188,167 @@
         </a>
     </div>
 
+    <!-- Document Cards - 4 in a row -->
+    @if($selfMember)
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Driver's License Card -->
+        <a href="{{ route('family-circle.member.drivers-license', [$circle, $selfMember]) }}" class="card bg-base-100 shadow-sm hover:shadow-md transition-all group cursor-pointer">
+            <div class="card-body p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M6 9h4"/><path d="M14 9h4"/></svg>
+                    </div>
+                    <span class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                    </span>
+                </div>
+                <h3 class="font-bold text-slate-800 text-sm">Driver's License</h3>
+
+                @if($selfMember->drivers_license)
+                    <div class="mt-2 space-y-1.5 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Number</span>
+                            <span class="font-mono font-medium text-slate-700">{{ $selfMember->drivers_license->document_number ?: '---' }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Expires</span>
+                            @if($selfMember->drivers_license->expiry_date)
+                                @if($selfMember->drivers_license->isExpired())
+                                    <span class="text-rose-500 font-medium">Expired</span>
+                                @else
+                                    <span class="font-medium text-slate-700">{{ $selfMember->drivers_license->expiry_date->format('m/d/Y') }}</span>
+                                @endif
+                            @else
+                                <span class="text-slate-400">---</span>
+                            @endif
+                        </div>
+                    </div>
+                @else
+                    <div class="mt-3">
+                        <span class="btn btn-xs btn-primary w-full gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                            Add
+                        </span>
+                    </div>
+                @endif
+            </div>
+        </a>
+
+        <!-- Passport Card -->
+        <a href="{{ route('family-circle.member.passport', [$circle, $selfMember]) }}" class="card bg-base-100 shadow-sm hover:shadow-md transition-all group cursor-pointer">
+            <div class="card-body p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M7 21v-2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/></svg>
+                    </div>
+                    <span class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                    </span>
+                </div>
+                <h3 class="font-bold text-slate-800 text-sm">Passport</h3>
+
+                @if($selfMember->passport)
+                    <div class="mt-2 space-y-1.5 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Number</span>
+                            <span class="font-mono font-medium text-slate-700">{{ $selfMember->passport->document_number ?: '---' }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Expires</span>
+                            @if($selfMember->passport->expiry_date)
+                                @if($selfMember->passport->isExpired())
+                                    <span class="text-rose-500 font-medium">Expired</span>
+                                @else
+                                    <span class="font-medium text-slate-700">{{ $selfMember->passport->expiry_date->format('m/d/Y') }}</span>
+                                @endif
+                            @else
+                                <span class="text-slate-400">---</span>
+                            @endif
+                        </div>
+                    </div>
+                @else
+                    <div class="mt-3">
+                        <span class="btn btn-xs btn-primary w-full gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                            Add
+                        </span>
+                    </div>
+                @endif
+            </div>
+        </a>
+
+        <!-- Social Security Card -->
+        <a href="{{ route('family-circle.member.social-security', [$circle, $selfMember]) }}" class="card bg-base-100 shadow-sm hover:shadow-md transition-all group cursor-pointer">
+            <div class="card-body p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M12 12h.01"/></svg>
+                    </div>
+                    <span class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                    </span>
+                </div>
+                <h3 class="font-bold text-slate-800 text-sm">Social Security</h3>
+
+                @if($selfMember->social_security)
+                    <div class="mt-2 space-y-1.5 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">SSN</span>
+                            <span class="font-mono font-medium text-slate-700">{{ $selfMember->social_security->masked_number ?: 'XXX-XX-' . substr($selfMember->social_security->document_number ?? '0000', -4) }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Status</span>
+                            <span class="text-emerald-600 font-medium">On File</span>
+                        </div>
+                    </div>
+                @else
+                    <div class="mt-3">
+                        <span class="btn btn-xs btn-primary w-full gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                            Add
+                        </span>
+                    </div>
+                @endif
+            </div>
+        </a>
+
+        <!-- Birth Certificate Card -->
+        <a href="{{ route('family-circle.member.birth-certificate', [$circle, $selfMember]) }}" class="card bg-base-100 shadow-sm hover:shadow-md transition-all group cursor-pointer">
+            <div class="card-body p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+                    </div>
+                    <span class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                    </span>
+                </div>
+                <h3 class="font-bold text-slate-800 text-sm">Birth Certificate</h3>
+
+                @if($selfMember->birth_certificate)
+                    <div class="mt-2 space-y-1.5 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Number</span>
+                            <span class="font-mono font-medium text-slate-700">{{ $selfMember->birth_certificate->document_number ?: '---' }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Status</span>
+                            <span class="text-emerald-600 font-medium">On File</span>
+                        </div>
+                    </div>
+                @else
+                    <div class="mt-3">
+                        <span class="btn btn-xs btn-primary w-full gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                            Add
+                        </span>
+                    </div>
+                @endif
+            </div>
+        </a>
+    </div>
+    @endif
+
     <!-- Insurance, Tax Returns & Assets Section -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <!-- Insurance Policies Card -->

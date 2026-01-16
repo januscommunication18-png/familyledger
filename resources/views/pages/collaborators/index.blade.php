@@ -181,19 +181,43 @@
                                         </div>
                                     </div>
                                     <div class="dropdown dropdown-end">
-                                        <button tabindex="0" class="btn btn-ghost btn-xs btn-square">
+                                        <label tabindex="0" class="btn btn-ghost btn-xs btn-square cursor-pointer">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
-                                        </button>
-                                        <ul tabindex="0" class="dropdown-menu dropdown-open:opacity-100 hidden w-40">
-                                            <li><a href="{{ route('collaborators.show', $collaborator) }}" class="dropdown-item">View Details</a></li>
-                                            <li><a href="{{ route('collaborators.edit', $collaborator) }}" class="dropdown-item">Edit Permissions</a></li>
-                                            <li class="dropdown-divider"></li>
+                                        </label>
+                                        <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-[100] w-48 p-2 shadow-lg border border-slate-200">
+                                            <li>
+                                                <a href="{{ route('collaborators.show', $collaborator) }}" class="flex items-center gap-2">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                                    View Details
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="{{ route('collaborators.edit', $collaborator) }}" class="flex items-center gap-2">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                                                    Edit Permissions
+                                                </a>
+                                            </li>
+                                            <div class="divider my-1"></div>
                                             <li>
                                                 <form method="POST" action="{{ route('collaborators.deactivate', $collaborator) }}"
-                                                      onsubmit="return confirm('Deactivate this collaborator?')">
+                                                      onsubmit="return confirm('Are you sure you want to deactivate this collaborator? They will lose access but can be reactivated later.')">
                                                     @csrf
                                                     @method('PATCH')
-                                                    <button type="submit" class="dropdown-item text-error w-full text-left">Deactivate</button>
+                                                    <button type="submit" class="flex items-center gap-2 w-full text-left text-warning">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>
+                                                        Deactivate
+                                                    </button>
+                                                </form>
+                                            </li>
+                                            <li>
+                                                <form method="POST" action="{{ route('collaborators.destroy', $collaborator) }}"
+                                                      onsubmit="return confirm('Are you sure you want to permanently remove this collaborator? This action cannot be undone.')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="flex items-center gap-2 w-full text-left text-error">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                                                        Remove Permanently
+                                                    </button>
                                                 </form>
                                             </li>
                                         </ul>
@@ -300,4 +324,36 @@
         </div>
     @endif
 </div>
+
 @endsection
+
+@push('scripts')
+<style>
+/* Ensure dropdown is hidden by default and only shows on focus */
+.dropdown .dropdown-content {
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.15s ease-in-out, visibility 0.15s ease-in-out;
+    z-index: 9999 !important;
+    position: absolute !important;
+}
+.dropdown:focus-within .dropdown-content,
+.dropdown:focus .dropdown-content,
+.dropdown label:focus + .dropdown-content,
+.dropdown [tabindex="0"]:focus ~ .dropdown-content {
+    visibility: visible;
+    opacity: 1;
+}
+/* Ensure dropdown container has proper positioning */
+.dropdown {
+    position: relative;
+}
+/* Override any card overflow that might clip the dropdown */
+.card {
+    overflow: visible !important;
+}
+.card-body {
+    overflow: visible !important;
+}
+</style>
+@endpush

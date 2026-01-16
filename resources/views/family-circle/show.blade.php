@@ -16,10 +16,21 @@
 
 @section('content')
 
-    
+@php
+    $isCollaborator = $isCollaborator ?? false;
+@endphp
+
 <div id="family-circle-space">
+    @if($isCollaborator)
+        <!-- Collaborator Notice -->
+        <div class="alert bg-emerald-50 border border-emerald-200 mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span class="text-sm text-emerald-700">You're viewing this circle as a collaborator. You can only see members that have been shared with you.</span>
+        </div>
+    @endif
+
     <!-- Circle Header -->
-    <div class="card bg-gradient-to-r from-violet-600 to-purple-600 text-white mb-6">
+    <div class="card bg-gradient-to-r {{ $isCollaborator ? 'from-emerald-600 to-teal-600' : 'from-violet-600 to-purple-600' }} text-white mb-6">
         <div class="card-body">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div class="flex items-center gap-4">
@@ -38,6 +49,7 @@
                         <p class="text-white/60 text-sm mt-2">{{ $circle->members->count() }} member{{ $circle->members->count() != 1 ? 's' : '' }}</p>
                     </div>
                 </div>
+                @if(!$isCollaborator)
                 <div class="flex items-center gap-2">
                     <button type="button" onclick="openEditCircleModal()" class="btn btn-ghost btn-sm text-white/80 hover:text-white hover:bg-white/20">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
@@ -48,6 +60,7 @@
                         Add Member
                     </a>
                 </div>
+                @endif
             </div>
         </div>
     </div>
@@ -55,8 +68,8 @@
     <!-- Family Members Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         @php
-            // Check if the owner included themselves in this circle
-            $selfMember = $circle->members->where('relationship', 'self')->where('linked_user_id', auth()->id())->first();
+            // Check if the owner included themselves in this circle (only for non-collaborators)
+            $selfMember = !$isCollaborator ? $circle->members->where('relationship', 'self')->where('linked_user_id', auth()->id())->first() : null;
             $owner = auth()->user();
             $ownerNameParts = explode(' ', $owner->name, 2);
             $ownerFirstName = $ownerNameParts[0];
@@ -64,8 +77,8 @@
             $ownerAge = $owner->date_of_birth ? \Carbon\Carbon::parse($owner->date_of_birth)->age : null;
         @endphp
 
-        <!-- Owner Self Card (only shown if owner included themselves) -->
-        @if($selfMember)
+        <!-- Owner Self Card (only shown if owner included themselves and not a collaborator) -->
+        @if($selfMember && !$isCollaborator)
         <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow border-2 border-violet-200">
             <div class="card-body">
                 <!-- Owner Header -->
@@ -129,8 +142,16 @@
         </div>
         @endif
 
-        <!-- Other Family Members (excluding self to avoid duplicate) -->
-        @foreach($circle->members->where('relationship', '!=', 'self') as $member)
+        <!-- Other Family Members (excluding self to avoid duplicate for owners, show all for collaborators) -->
+        @foreach($isCollaborator ? $circle->members : $circle->members->where('relationship', '!=', 'self') as $member)
+                @php
+                    // Get permissions for this specific member if collaborator
+                    $memberAccess = $isCollaborator && $collaboration
+                        ? \App\Services\CollaboratorPermissionService::forMember($member)->forView()
+                        : null;
+                    $canViewDob = !$isCollaborator || ($memberAccess && $memberAccess->canView('date_of_birth'));
+                    $canViewContact = !$isCollaborator || ($memberAccess && $memberAccess->canView('emergency_contacts'));
+                @endphp
                 <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
                     <div class="card-body">
                         <!-- Member Header -->
@@ -154,8 +175,11 @@
                                     @endif
                                 </h3>
                                 <p class="text-sm text-slate-500">{{ $member->relationship_name }}</p>
-                                <p class="text-sm text-slate-400">{{ $member->age }} years old</p>
+                                @if($canViewDob)
+                                    <p class="text-sm text-slate-400">{{ $member->age }} years old</p>
+                                @endif
                             </div>
+                            @if(!$isCollaborator)
                             <div class="dropdown dropdown-end">
                                 <button tabindex="0" class="btn btn-ghost btn-sm btn-circle">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
@@ -199,29 +223,33 @@
                                     </li>
                                 </ul>
                             </div>
+                            @endif
                         </div>
 
-                        <!-- Member Info -->
+                        <!-- Member Info - respect permissions for collaborators -->
                         <div class="mt-4 pt-4 border-t border-slate-100 space-y-2">
-                            @if($member->email)
+                            @if($canViewContact && $member->email)
                                 <div class="flex items-center gap-2 text-sm text-slate-500">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
                                     <span class="truncate">{{ $member->email }}</span>
                                 </div>
                             @endif
-                            @if($member->phone)
+                            @if($canViewContact && $member->phone)
                                 <div class="flex items-center gap-2 text-sm text-slate-500">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                                     <span>{{ $member->phone_country_code ?? '' }}{{ $member->phone }}</span>
                                 </div>
                             @endif
-                            <div class="flex items-center gap-2 text-sm text-slate-500">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
-                                <span>{{ $member->date_of_birth->format('M d, Y') }}</span>
-                            </div>
+                            @if($canViewDob)
+                                <div class="flex items-center gap-2 text-sm text-slate-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+                                    <span>{{ $member->date_of_birth->format('M d, Y') }}</span>
+                                </div>
+                            @endif
                         </div>
 
                         <!-- Quick Stats -->
+                        @if(!$isCollaborator)
                         <div class="mt-4 flex gap-2 flex-wrap">
                             @if($member->is_minor)
                                 <span class="badge badge-info badge-sm">Minor</span>
@@ -233,11 +261,14 @@
                                 <span class="badge badge-ghost badge-sm">{{ $member->documents->count() }} docs</span>
                             @endif
                         </div>
+                        @endif
 
                         <!-- Quick Actions -->
                         <div class="mt-4 pt-4 border-t border-slate-100 flex gap-2">
                             <a href="{{ route('family-circle.member.show', [$circle, $member]) }}" class="btn btn-sm btn-ghost flex-1">View</a>
-                            <a href="{{ route('member.documents.index', $member) }}" class="btn btn-sm btn-outline btn-primary flex-1">Documents</a>
+                            @if(!$isCollaborator)
+                                <a href="{{ route('member.documents.index', $member) }}" class="btn btn-sm btn-outline btn-primary flex-1">Documents</a>
+                            @endif
                         </div>
                     </div>
                 </div>

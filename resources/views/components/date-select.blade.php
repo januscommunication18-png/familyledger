@@ -47,17 +47,8 @@
     <div class="flex gap-2">
         <!-- Month -->
         <div class="flex-1">
-            <select name="{{ $monthName }}" id="{{ $monthName }}" {{ $required ? 'required' : '' }} data-select='{
-                "placeholder": "Month",
-                "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
-                "toggleClasses": "advance-select-toggle w-full",
-                "hasSearch": true,
-                "searchPlaceholder": "Search...",
-                "dropdownClasses": "advance-select-menu",
-                "optionClasses": "advance-select-option selected:select-active",
-                "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
-                "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/90 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-            }' class="hidden">
+            <select name="{{ $monthName }}" id="{{ $monthName }}" {{ $required ? 'required' : '' }}
+                class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-slate-900 bg-white focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20">
                 <option value="">Month</option>
                 <option value="01" {{ old($monthName, $monthValue) == '01' ? 'selected' : '' }}>January</option>
                 <option value="02" {{ old($monthName, $monthValue) == '02' ? 'selected' : '' }}>February</option>
@@ -74,42 +65,14 @@
             </select>
         </div>
         <!-- Day -->
-        <div class="flex-1">
-            <select name="{{ $dayName }}" id="{{ $dayName }}" {{ $required ? 'required' : '' }} data-select='{
-                "placeholder": "Day",
-                "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
-                "toggleClasses": "advance-select-toggle w-full",
-                "hasSearch": true,
-                "searchPlaceholder": "Search...",
-                "dropdownClasses": "advance-select-menu",
-                "optionClasses": "advance-select-option selected:select-active",
-                "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
-                "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/90 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-            }' class="hidden">
-                <option value="">Day</option>
-                @for($i = 1; $i <= 31; $i++)
-                    <option value="{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}" {{ old($dayName, $dayValue) == str_pad($i, 2, '0', STR_PAD_LEFT) ? 'selected' : '' }}>{{ $i }}</option>
-                @endfor
-            </select>
+        <div class="w-20">
+            <input type="number" name="{{ $dayName }}" id="{{ $dayName }}" value="{{ old($dayName, $dayValue) }}" placeholder="Day" min="1" max="31" {{ $required ? 'required' : '' }}
+                class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20">
         </div>
         <!-- Year -->
-        <div class="flex-1">
-            <select name="{{ $yearName }}" id="{{ $yearName }}" {{ $required ? 'required' : '' }} data-select='{
-                "placeholder": "Year",
-                "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
-                "toggleClasses": "advance-select-toggle w-full",
-                "hasSearch": true,
-                "searchPlaceholder": "Search...",
-                "dropdownClasses": "advance-select-menu",
-                "optionClasses": "advance-select-option selected:select-active",
-                "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
-                "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/90 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-            }' class="hidden">
-                <option value="">Year</option>
-                @for($year = date('Y') + 20; $year >= 1900; $year--)
-                    <option value="{{ $year }}" {{ old($yearName, $yearValue) == $year ? 'selected' : '' }}>{{ $year }}</option>
-                @endfor
-            </select>
+        <div class="w-24">
+            <input type="number" name="{{ $yearName }}" id="{{ $yearName }}" value="{{ old($yearName, $yearValue) }}" placeholder="Year" min="1900" max="{{ date('Y') + 20 }}" {{ $required ? 'required' : '' }}
+                class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20">
         </div>
     </div>
     <input type="hidden" name="{{ $name }}" id="{{ $name }}" {{ $required ? 'required' : '' }}>
@@ -132,7 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function updateHiddenDate() {
             const month = monthSelect.value;
-            const day = daySelect.value;
+            const day = daySelect.value ? String(daySelect.value).padStart(2, '0') : '';
             const year = yearSelect.value;
 
             if (month && day && year) {
@@ -143,8 +106,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         monthSelect.addEventListener('change', updateHiddenDate);
-        daySelect.addEventListener('change', updateHiddenDate);
-        yearSelect.addEventListener('change', updateHiddenDate);
+        daySelect.addEventListener('input', updateHiddenDate);
+        yearSelect.addEventListener('input', updateHiddenDate);
 
         // Initial update
         updateHiddenDate();

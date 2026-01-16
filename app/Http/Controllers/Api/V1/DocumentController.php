@@ -73,7 +73,7 @@ class DocumentController extends Controller
         }
 
         return $this->success([
-            'policy' => $policy->load('familyMember'),
+            'insurance_policy' => $policy->load('familyMember'),
         ]);
     }
 

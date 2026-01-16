@@ -292,6 +292,60 @@ class CollaboratorController extends Controller
     }
 
     /**
+     * Update collaborator role quickly.
+     */
+    public function updateRole(Request $request, Collaborator $collaborator)
+    {
+        $this->authorizeAccess($collaborator);
+
+        $request->validate([
+            'role' => 'required|string|in:viewer,editor,admin',
+        ]);
+
+        $collaborator->update([
+            'role' => $request->role,
+        ]);
+
+        return back()->with('success', "Role updated to {$collaborator->role_info['label']}.");
+    }
+
+    /**
+     * Resend welcome email to collaborator.
+     */
+    public function resendWelcome(Collaborator $collaborator)
+    {
+        $this->authorizeAccess($collaborator);
+
+        // Load relationships for email
+        $collaborator->load(['user', 'familyMembers', 'inviter']);
+
+        // Send welcome email
+        if ($collaborator->user && $collaborator->user->email) {
+            Mail::to($collaborator->user->email)->send(new \App\Mail\CollaboratorWelcomeMail($collaborator));
+        }
+
+        return back()->with('success', 'Welcome email has been resent.');
+    }
+
+    /**
+     * Send reminder notification to collaborator.
+     */
+    public function sendReminder(Collaborator $collaborator)
+    {
+        $this->authorizeAccess($collaborator);
+
+        // Load relationships
+        $collaborator->load(['user', 'familyMembers']);
+
+        // Send reminder email
+        if ($collaborator->user && $collaborator->user->email) {
+            Mail::to($collaborator->user->email)->send(new \App\Mail\CollaboratorReminderMail($collaborator));
+        }
+
+        return back()->with('success', 'Reminder has been sent.');
+    }
+
+    /**
      * Remove collaborator permanently.
      */
     public function destroy(Collaborator $collaborator)

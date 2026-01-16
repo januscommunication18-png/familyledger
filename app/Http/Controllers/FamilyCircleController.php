@@ -27,12 +27,19 @@ class FamilyCircleController extends Controller
         // Get collaborations where this user is a collaborator (shared with them)
         $collaborations = Collaborator::where('user_id', $user->id)
             ->where('is_active', true)
-            ->with(['familyMembers', 'inviter'])
+            ->with(['familyMembers.familyCircle', 'inviter'])
             ->get()
             ->map(function ($collaboration) {
+                // Get the first family member's circle (all members should be in the same circle typically)
+                $firstMember = $collaboration->familyMembers->first();
+                $circle = $firstMember?->familyCircle;
+
                 return [
                     'id' => $collaboration->id,
                     'tenant_id' => $collaboration->tenant_id,
+                    'circle_id' => $circle?->id,
+                    'circle_name' => $circle?->name,
+                    'cover_image' => $circle?->cover_image,
                     'owner_name' => $collaboration->inviter->name ?? 'Unknown',
                     'role' => $collaboration->role,
                     'role_info' => $collaboration->role_info,
@@ -131,17 +138,56 @@ class FamilyCircleController extends Controller
      */
     public function show(FamilyCircle $familyCircle)
     {
-        // Ensure the user can access this circle
-        if ($familyCircle->tenant_id !== Auth::user()->tenant_id) {
+        $user = Auth::user();
+
+        // Check if user owns this circle (same tenant)
+        $isOwner = $familyCircle->tenant_id === $user->tenant_id;
+
+        // Check if user is a collaborator with access to this circle
+        $isCollaborator = false;
+        $collaboration = null;
+
+        if (!$isOwner) {
+            $collaboration = Collaborator::where('user_id', $user->id)
+                ->where('tenant_id', $familyCircle->tenant_id)
+                ->where('is_active', true)
+                ->with('familyMembers')
+                ->first();
+
+            if ($collaboration) {
+                // Check if any of the collaborator's family members belong to this circle
+                $isCollaborator = $collaboration->familyMembers
+                    ->where('family_circle_id', $familyCircle->id)
+                    ->isNotEmpty();
+            }
+        }
+
+        // If neither owner nor collaborator, deny access
+        if (!$isOwner && !$isCollaborator) {
             abort(403);
         }
 
-        $familyCircle->load(['members' => function ($query) {
-            $query->orderBy('relationship')->orderBy('first_name');
-        }]);
+        // For collaborators, only load the members they have access to
+        if ($isCollaborator && $collaboration) {
+            $accessibleMemberIds = $collaboration->familyMembers
+                ->where('family_circle_id', $familyCircle->id)
+                ->pluck('id');
+
+            $familyCircle->load(['members' => function ($query) use ($accessibleMemberIds) {
+                $query->whereIn('id', $accessibleMemberIds)
+                    ->orderBy('relationship')
+                    ->orderBy('first_name');
+            }]);
+        } else {
+            $familyCircle->load(['members' => function ($query) {
+                $query->orderBy('relationship')->orderBy('first_name');
+            }]);
+        }
 
         return view('family-circle.show', [
             'circle' => $familyCircle,
+            'isCollaborator' => $isCollaborator,
+            'collaboration' => $collaboration,
         ]);
     }
 

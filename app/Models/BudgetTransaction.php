@@ -54,11 +54,13 @@ class BudgetTransaction extends Model
 
     // Transaction sources
     public const SOURCE_MANUAL = 'manual';
+    public const SOURCE_MOBILE = 'mobile';
     public const SOURCE_CSV_IMPORT = 'csv_import';
     public const SOURCE_BANK_SYNC = 'bank_sync';
 
     public const SOURCES = [
         self::SOURCE_MANUAL => 'Manual Entry',
+        self::SOURCE_MOBILE => 'Mobile App',
         self::SOURCE_CSV_IMPORT => 'CSV Import',
         self::SOURCE_BANK_SYNC => 'Bank Sync',
     ];
@@ -228,6 +230,14 @@ class BudgetTransaction extends Model
     public function isImported(): bool
     {
         return $this->source === self::SOURCE_CSV_IMPORT || $this->source === self::SOURCE_BANK_SYNC;
+    }
+
+    /**
+     * Check if transaction is from mobile app.
+     */
+    public function isFromMobile(): bool
+    {
+        return $this->source === self::SOURCE_MOBILE;
     }
 
     /**
