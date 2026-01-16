@@ -283,7 +283,7 @@
                         <div class="flex flex-row md:flex-col items-center md:items-end gap-3 md:gap-2">
                             <div class="flex items-center gap-2 text-sm text-slate-500">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
-                                <span>{{ $resource->files->count() }} file{{ $resource->files->count() != 1 ? 's' : '' }}</span>
+                                <span>{{ $resource->files_count ?? 0 }} file{{ ($resource->files_count ?? 0) != 1 ? 's' : '' }}</span>
                             </div>
                             <a href="{{ route('family-resources.show', $resource) }}" class="btn btn-sm btn-success gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -370,7 +370,7 @@
                         <div class="flex flex-row md:flex-col items-center md:items-end gap-3 md:gap-2">
                             <div class="flex items-center gap-2 text-sm text-slate-500">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
-                                <span>{{ $document->files->count() }} file{{ $document->files->count() != 1 ? 's' : '' }}</span>
+                                <span>{{ $document->files_count ?? 0 }} file{{ ($document->files_count ?? 0) != 1 ? 's' : '' }}</span>
                             </div>
                             <a href="{{ route('legal.show', $document) }}" class="btn btn-sm btn-primary gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>

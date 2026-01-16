@@ -187,24 +187,34 @@ class FamilyCircleController extends Controller
         }
 
         // Load Family Resources for this circle (including those shared with all circles)
-        $familyResources = FamilyResource::where('tenant_id', $familyCircle->tenant_id)
-            ->where(function ($query) use ($familyCircle) {
-                $query->where('family_circle_id', $familyCircle->id)
-                      ->orWhereNull('family_circle_id');
-            })
-            ->with('files')
-            ->orderBy('created_at', 'desc')
-            ->get();
+        // Only load if user is the owner (not collaborator) to avoid memory issues
+        $familyResources = collect();
+        $legalDocuments = collect();
 
-        // Load Legal Documents for this circle (including those shared with all circles)
-        $legalDocuments = LegalDocument::where('tenant_id', $familyCircle->tenant_id)
-            ->where(function ($query) use ($familyCircle) {
-                $query->where('family_circle_id', $familyCircle->id)
-                      ->orWhereNull('family_circle_id');
-            })
-            ->with('files')
-            ->orderBy('created_at', 'desc')
-            ->get();
+        if ($isOwner) {
+            $familyResources = FamilyResource::where('tenant_id', $familyCircle->tenant_id)
+                ->where(function ($query) use ($familyCircle) {
+                    $query->where('family_circle_id', $familyCircle->id)
+                          ->orWhereNull('family_circle_id');
+                })
+                ->select(['id', 'tenant_id', 'family_circle_id', 'document_type', 'custom_document_type', 'name', 'notes', 'status', 'created_at'])
+                ->withCount('files')
+                ->orderBy('created_at', 'desc')
+                ->limit(50)
+                ->get();
+
+            // Load Legal Documents for this circle (including those shared with all circles)
+            $legalDocuments = LegalDocument::where('tenant_id', $familyCircle->tenant_id)
+                ->where(function ($query) use ($familyCircle) {
+                    $query->where('family_circle_id', $familyCircle->id)
+                          ->orWhereNull('family_circle_id');
+                })
+                ->select(['id', 'tenant_id', 'family_circle_id', 'document_type', 'custom_document_type', 'name', 'status', 'attorney_person_id', 'attorney_name', 'execution_date', 'created_at'])
+                ->withCount('files')
+                ->orderBy('created_at', 'desc')
+                ->limit(50)
+                ->get();
+        }
 
         return view('family-circle.show', [
             'circle' => $familyCircle,
