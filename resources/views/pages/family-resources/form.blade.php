@@ -105,6 +105,17 @@
                     </div>
 
                     <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Family Circle</label>
+                        <select name="family_circle_id" class="select select-bordered w-full">
+                            <option value="">All Circles (Visible to everyone)</option>
+                            @foreach($familyCircles as $circle)
+                                <option value="{{ $circle->id }}" {{ old('family_circle_id', $resource?->family_circle_id ?? ($selectedFamilyCircleId ?? null)) == $circle->id ? 'selected' : '' }}>{{ $circle->name }}</option>
+                            @endforeach
+                        </select>
+                        <p class="text-xs text-slate-500 mt-1">Select a circle to restrict visibility, or leave empty for all circles</p>
+                    </div>
+
+                    <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Location of Original Document</label>
                         <input type="text" name="original_location" value="{{ old('original_location', $resource?->original_location) }}"
                                class="input input-bordered w-full"
@@ -127,35 +138,11 @@
                     </div>
                 </div>
 
-                @php
-                    $currentYear = date('Y');
-                    $months = [
-                        '01' => 'January', '02' => 'February', '03' => 'March', '04' => 'April',
-                        '05' => 'May', '06' => 'June', '07' => 'July', '08' => 'August',
-                        '09' => 'September', '10' => 'October', '11' => 'November', '12' => 'December'
-                    ];
-                @endphp
-
-                <div class="grid grid-cols-3 gap-2">
-                    <select name="digital_copy_date_month" class="select select-bordered w-full">
-                        <option value="">Month</option>
-                        @foreach($months as $val => $name)
-                            <option value="{{ $val }}" {{ old('digital_copy_date_month', $resource?->digital_copy_date?->format('m')) == $val ? 'selected' : '' }}>{{ $name }}</option>
-                        @endforeach
-                    </select>
-                    <select name="digital_copy_date_day" class="select select-bordered w-full">
-                        <option value="">Day</option>
-                        @for($i = 1; $i <= 31; $i++)
-                            <option value="{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}" {{ old('digital_copy_date_day', $resource?->digital_copy_date?->format('d')) == str_pad($i, 2, '0', STR_PAD_LEFT) ? 'selected' : '' }}>{{ $i }}</option>
-                        @endfor
-                    </select>
-                    <select name="digital_copy_date_year" class="select select-bordered w-full">
-                        <option value="">Year</option>
-                        @for($year = $currentYear; $year >= 2000; $year--)
-                            <option value="{{ $year }}" {{ old('digital_copy_date_year', $resource?->digital_copy_date?->format('Y')) == $year ? 'selected' : '' }}>{{ $year }}</option>
-                        @endfor
-                    </select>
-                </div>
+                <x-date-select
+                    name="digital_copy_date"
+                    label="Date"
+                    :value="$resource?->digital_copy_date"
+                />
             </div>
         </div>
 

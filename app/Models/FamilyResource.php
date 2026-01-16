@@ -45,6 +45,7 @@ class FamilyResource extends Model
 
     protected $fillable = [
         'tenant_id',
+        'family_circle_id',
         'created_by',
         'document_type',
         'custom_document_type',
@@ -69,6 +70,14 @@ class FamilyResource extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Get the family circle this resource belongs to.
+     */
+    public function familyCircle(): BelongsTo
+    {
+        return $this->belongsTo(FamilyCircle::class);
     }
 
     /**

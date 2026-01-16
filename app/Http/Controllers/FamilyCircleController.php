@@ -6,6 +6,8 @@ use App\Models\Collaborator;
 use App\Models\CollaboratorInvite;
 use App\Models\FamilyCircle;
 use App\Models\FamilyMember;
+use App\Models\FamilyResource;
+use App\Models\LegalDocument;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -184,10 +186,32 @@ class FamilyCircleController extends Controller
             }]);
         }
 
+        // Load Family Resources for this circle (including those shared with all circles)
+        $familyResources = FamilyResource::where('tenant_id', $familyCircle->tenant_id)
+            ->where(function ($query) use ($familyCircle) {
+                $query->where('family_circle_id', $familyCircle->id)
+                      ->orWhereNull('family_circle_id');
+            })
+            ->with('files')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Load Legal Documents for this circle (including those shared with all circles)
+        $legalDocuments = LegalDocument::where('tenant_id', $familyCircle->tenant_id)
+            ->where(function ($query) use ($familyCircle) {
+                $query->where('family_circle_id', $familyCircle->id)
+                      ->orWhereNull('family_circle_id');
+            })
+            ->with('files')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
         return view('family-circle.show', [
             'circle' => $familyCircle,
             'isCollaborator' => $isCollaborator,
             'collaboration' => $collaboration,
+            'familyResources' => $familyResources,
+            'legalDocuments' => $legalDocuments,
         ]);
     }
 

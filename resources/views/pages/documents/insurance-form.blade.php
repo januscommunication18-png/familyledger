@@ -1,5 +1,75 @@
 @extends('layouts.dashboard')
 
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+/* Select2 Custom Styles */
+.select2-container--default .select2-selection--multiple {
+    min-height: 42px;
+    padding: 4px 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    background-color: white;
+}
+
+.select2-container--default.select2-container--focus .select2-selection--multiple,
+.select2-container--default.select2-container--open .select2-selection--multiple {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+    outline: none;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background-color: #ede9fe;
+    border: none;
+    border-radius: 0.375rem;
+    padding: 2px 8px;
+    margin: 2px;
+    color: #5b21b6;
+    font-size: 0.875rem;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+    color: #7c3aed;
+    margin-right: 4px;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+    color: #5b21b6;
+}
+
+.select2-dropdown {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #f5f3ff;
+    color: #5b21b6;
+}
+
+.select2-container--default .select2-results__option[aria-selected=true] {
+    background-color: #ede9fe;
+}
+
+.select2-results__option {
+    padding: 8px 12px;
+}
+
+.select2-search--dropdown .select2-search__field {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.375rem;
+    padding: 6px 10px;
+}
+
+.select2-search--dropdown .select2-search__field:focus {
+    border-color: #8b5cf6;
+    outline: none;
+}
+</style>
+@endpush
+
 @section('title', $insurance ? 'Edit Insurance Policy' : 'Add Insurance Policy')
 @section('page-name', 'Documents')
 
@@ -121,20 +191,21 @@
                         <label class="block text-sm font-medium text-slate-700 mb-1">Policyholder</label>
                         @php
                             $policyholderIds = $insurance ? $insurance->policyholders->pluck('id')->toArray() : [];
+                            $ownerHasNoRecord = $familyMembers->first()?->is_owner && empty($familyMembers->first()?->id);
                         @endphp
-                        <select name="policyholders[]" id="policyholder_select" multiple data-select='{
-                            "placeholder": "Select policyholders...",
-                            "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
-                            "toggleClasses": "advance-select-toggle",
-                            "dropdownClasses": "advance-select-menu max-h-52 overflow-y-auto",
-                            "optionClasses": "advance-select-option selected:select-active",
-                            "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
-                            "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/50 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                        }'>
+                        @if($ownerHasNoRecord)
+                            <div class="text-xs text-amber-600 mb-2 flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                                To add yourself, first add yourself to a Family Circle.
+                            </div>
+                        @endif
+                        <select name="policyholders[]" id="policyholder_select" multiple class="select2-multi w-full">
                             @foreach($familyMembers as $member)
-                                <option value="{{ $member->id }}" {{ in_array($member->id, old('policyholders', $policyholderIds)) ? 'selected' : '' }}>
-                                    {{ $member->first_name }} {{ $member->last_name ?? '' }}{{ !empty($member->is_owner) ? ' (You)' : '' }}
-                                </option>
+                                @if(!empty($member->id))
+                                    <option value="{{ $member->id }}" {{ in_array($member->id, old('policyholders', $policyholderIds)) ? 'selected' : '' }}>
+                                        {{ $member->first_name }} {{ $member->last_name ?? '' }}{{ !empty($member->is_owner) ? ' (You)' : '' }}
+                                    </option>
+                                @endif
                             @endforeach
                         </select>
                     </div>
@@ -144,19 +215,13 @@
                         @php
                             $coveredIds = $insurance ? $insurance->coveredMembers->pluck('id')->toArray() : [];
                         @endphp
-                        <select name="covered_members[]" id="covered_members_select" multiple data-select='{
-                            "placeholder": "Select members...",
-                            "toggleTag": "<button type=\"button\" aria-expanded=\"false\"></button>",
-                            "toggleClasses": "advance-select-toggle",
-                            "dropdownClasses": "advance-select-menu max-h-52 overflow-y-auto",
-                            "optionClasses": "advance-select-option selected:select-active",
-                            "optionTemplate": "<div class=\"flex justify-between items-center w-full\"><span data-title></span><span class=\"icon-[tabler--check] shrink-0 size-4 text-primary hidden selected:block\"></span></div>",
-                            "extraMarkup": "<span class=\"icon-[tabler--caret-up-down] shrink-0 size-4 text-base-content/50 absolute top-1/2 end-3 -translate-y-1/2\"></span>"
-                        }'>
+                        <select name="covered_members[]" id="covered_members_select" multiple class="select2-multi w-full">
                             @foreach($familyMembers as $member)
-                                <option value="{{ $member->id }}" {{ in_array($member->id, old('covered_members', $coveredIds)) ? 'selected' : '' }}>
-                                    {{ $member->first_name }} {{ $member->last_name ?? '' }}{{ !empty($member->is_owner) ? ' (You)' : '' }}
-                                </option>
+                                @if(!empty($member->id))
+                                    <option value="{{ $member->id }}" {{ in_array($member->id, old('covered_members', $coveredIds)) ? 'selected' : '' }}>
+                                        {{ $member->first_name }} {{ $member->last_name ?? '' }}{{ !empty($member->is_owner) ? ' (You)' : '' }}
+                                    </option>
+                                @endif
                             @endforeach
                         </select>
                     </div>
@@ -390,6 +455,8 @@
     </form>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Image preview functionality
@@ -415,6 +482,21 @@
 
         setupImagePreview('card_front_input', 'front-preview', 'front-preview-img');
         setupImagePreview('card_back_input', 'back-preview', 'back-preview-img');
+    });
+
+    // Initialize Select2 for multi-select dropdowns
+    $(document).ready(function() {
+        $('#policyholder_select').select2({
+            placeholder: 'Select policyholders...',
+            allowClear: true,
+            width: '100%'
+        });
+
+        $('#covered_members_select').select2({
+            placeholder: 'Select covered members...',
+            allowClear: true,
+            width: '100%'
+        });
     });
 </script>
 @endsection

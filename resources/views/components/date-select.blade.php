@@ -76,6 +76,7 @@
         </div>
     </div>
     <input type="hidden" name="{{ $name }}" id="{{ $name }}" {{ $required ? 'required' : '' }}>
+    <p class="mt-1 text-sm text-rose-500 date-error hidden" id="{{ $name }}_error"></p>
     @error($name)
         <p class="mt-1 text-sm text-rose-500">{{ $message }}</p>
     @enderror
@@ -84,30 +85,128 @@
 @pushOnce('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Track invalid date fields globally
+    window.invalidDateFields = window.invalidDateFields || new Set();
+
     // Handle all date-select components
     document.querySelectorAll('[id$="_month"]').forEach(function(monthSelect) {
         const baseName = monthSelect.id.replace('_month', '');
-        const daySelect = document.getElementById(baseName + '_day');
-        const yearSelect = document.getElementById(baseName + '_year');
+        const dayInput = document.getElementById(baseName + '_day');
+        const yearInput = document.getElementById(baseName + '_year');
         const hiddenInput = document.getElementById(baseName);
+        const errorEl = document.getElementById(baseName + '_error');
 
-        if (!daySelect || !yearSelect || !hiddenInput) return;
+        if (!dayInput || !yearInput || !hiddenInput) return;
+
+        // Find the form and its submit button
+        const form = monthSelect.closest('form');
+        const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
+
+        // Get max days in a month
+        function getDaysInMonth(month, year) {
+            if (!month) return 31;
+            const m = parseInt(month);
+            const y = parseInt(year) || new Date().getFullYear();
+
+            // Months with 30 days: April, June, September, November
+            if ([4, 6, 9, 11].includes(m)) return 30;
+
+            // February - check for leap year
+            if (m === 2) {
+                const isLeapYear = (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
+                return isLeapYear ? 29 : 28;
+            }
+
+            // All other months have 31 days
+            return 31;
+        }
+
+        // Get month name
+        function getMonthName(month) {
+            const months = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+                           'July', 'August', 'September', 'October', 'November', 'December'];
+            return months[parseInt(month)] || '';
+        }
+
+        // Update submit button state
+        function updateSubmitButton() {
+            if (submitBtn) {
+                if (window.invalidDateFields.size > 0) {
+                    submitBtn.disabled = true;
+                    submitBtn.classList.add('btn-disabled', 'opacity-50', 'cursor-not-allowed');
+                } else {
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove('btn-disabled', 'opacity-50', 'cursor-not-allowed');
+                }
+            }
+        }
+
+        // Validate date and show error if invalid
+        function validateDate() {
+            const month = monthSelect.value;
+            const day = parseInt(dayInput.value);
+            const year = yearInput.value;
+
+            if (!month || !day || !year) {
+                if (errorEl) {
+                    errorEl.classList.add('hidden');
+                    errorEl.textContent = '';
+                }
+                dayInput.classList.remove('border-rose-500');
+                window.invalidDateFields.delete(baseName);
+                updateSubmitButton();
+                return true;
+            }
+
+            const maxDays = getDaysInMonth(month, year);
+
+            if (day > maxDays) {
+                if (errorEl) {
+                    errorEl.textContent = `${getMonthName(month)} only has ${maxDays} days`;
+                    errorEl.classList.remove('hidden');
+                }
+                dayInput.classList.add('border-rose-500');
+                window.invalidDateFields.add(baseName);
+                updateSubmitButton();
+                return false;
+            } else if (day < 1) {
+                if (errorEl) {
+                    errorEl.textContent = 'Day must be at least 1';
+                    errorEl.classList.remove('hidden');
+                }
+                dayInput.classList.add('border-rose-500');
+                window.invalidDateFields.add(baseName);
+                updateSubmitButton();
+                return false;
+            } else {
+                if (errorEl) {
+                    errorEl.classList.add('hidden');
+                    errorEl.textContent = '';
+                }
+                dayInput.classList.remove('border-rose-500');
+                window.invalidDateFields.delete(baseName);
+                updateSubmitButton();
+                return true;
+            }
+        }
 
         function updateHiddenDate() {
             const month = monthSelect.value;
-            const day = daySelect.value ? String(daySelect.value).padStart(2, '0') : '';
-            const year = yearSelect.value;
+            const day = dayInput.value ? String(dayInput.value).padStart(2, '0') : '';
+            const year = yearInput.value;
 
             if (month && day && year) {
                 hiddenInput.value = `${month}/${day}/${year}`;
             } else {
                 hiddenInput.value = '';
             }
+
+            validateDate();
         }
 
         monthSelect.addEventListener('change', updateHiddenDate);
-        daySelect.addEventListener('input', updateHiddenDate);
-        yearSelect.addEventListener('input', updateHiddenDate);
+        dayInput.addEventListener('input', updateHiddenDate);
+        yearInput.addEventListener('input', updateHiddenDate);
 
         // Initial update
         updateHiddenDate();

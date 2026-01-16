@@ -191,6 +191,67 @@
         </div>
     </div>
 
+    <!-- Quick Links - 4 in a row (Only for owners, not collaborators) -->
+    @if(!$access->isCollaborator)
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Documents -->
+        <a href="{{ route('documents.index') }}" class="card bg-base-100 shadow-sm hover:shadow-md transition-all group cursor-pointer">
+            <div class="card-body p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+                    </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 opacity-0 group-hover:opacity-100"><path d="m9 18 6-6-6-6"/></svg>
+                </div>
+                <h3 class="font-bold text-slate-800 text-sm">Documents</h3>
+                <p class="text-xs text-slate-500 mt-1">View all your identity documents</p>
+            </div>
+        </a>
+
+        <!-- Legal Documents -->
+        <a href="{{ route('legal.index') }}" class="card bg-base-100 shadow-sm hover:shadow-md transition-all group cursor-pointer">
+            <div class="card-body p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+                    </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 opacity-0 group-hover:opacity-100"><path d="m9 18 6-6-6-6"/></svg>
+                </div>
+                <h3 class="font-bold text-slate-800 text-sm">Legal Documents</h3>
+                <p class="text-xs text-slate-500 mt-1">Wills, trusts & legal papers</p>
+            </div>
+        </a>
+
+        <!-- Family Resources -->
+        <a href="{{ route('family-resources.index') }}" class="card bg-base-100 shadow-sm hover:shadow-md transition-all group cursor-pointer">
+            <div class="card-body p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                    </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 opacity-0 group-hover:opacity-100"><path d="m9 18 6-6-6-6"/></svg>
+                </div>
+                <h3 class="font-bold text-slate-800 text-sm">Family Resources</h3>
+                <p class="text-xs text-slate-500 mt-1">Recipes, traditions & more</p>
+            </div>
+        </a>
+
+        <!-- Settings -->
+        <a href="{{ route('settings.index') }}" class="card bg-base-100 shadow-sm hover:shadow-md transition-all group cursor-pointer">
+            <div class="card-body p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 opacity-0 group-hover:opacity-100"><path d="m9 18 6-6-6-6"/></svg>
+                </div>
+                <h3 class="font-bold text-slate-800 text-sm">Settings</h3>
+                <p class="text-xs text-slate-500 mt-1">Edit profile & preferences</p>
+            </div>
+        </a>
+    </div>
+    @endif
+
     <!-- Document Cards - 4 in a row -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- Driver's License Card -->

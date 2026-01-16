@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FamilyCircle;
 use App\Models\FamilyResource;
 use App\Models\FamilyResourceFile;
 use Carbon\Carbon;
@@ -72,13 +73,21 @@ class FamilyResourceController extends Controller
      */
     public function create(Request $request)
     {
+        $user = Auth::user();
         $selectedType = $request->get('type');
+        $selectedFamilyCircleId = $request->get('family_circle_id');
+
+        $familyCircles = FamilyCircle::where('tenant_id', $user->tenant_id)
+            ->orderBy('name')
+            ->get();
 
         return view('pages.family-resources.form', [
             'resource' => null,
             'documentTypes' => FamilyResource::DOCUMENT_TYPES,
             'statuses' => FamilyResource::STATUSES,
             'selectedType' => $selectedType,
+            'familyCircles' => $familyCircles,
+            'selectedFamilyCircleId' => $selectedFamilyCircleId,
         ]);
     }
 
@@ -94,20 +103,22 @@ class FamilyResourceController extends Controller
             'original_location' => 'nullable|string|max:500',
             'notes' => 'nullable|string',
             'status' => 'nullable|string|in:' . implode(',', array_keys(FamilyResource::STATUSES)),
-            // Date component fields
-            'digital_copy_date_month' => 'nullable|string',
-            'digital_copy_date_day' => 'nullable|string',
-            'digital_copy_date_year' => 'nullable|string',
+            'family_circle_id' => 'nullable|exists:family_circles,id',
+            'digital_copy_date' => 'nullable|date',
         ]);
 
         $user = Auth::user();
 
-        $data = collect($validated)->except([
-            'digital_copy_date_month', 'digital_copy_date_day', 'digital_copy_date_year',
-        ])->toArray();
+        $data = $validated;
 
-        // Parse dates from separate fields
-        $data['digital_copy_date'] = $this->parseDate($request, 'digital_copy_date');
+        // Parse date from MM/DD/YYYY format
+        if (!empty($data['digital_copy_date'])) {
+            try {
+                $data['digital_copy_date'] = Carbon::createFromFormat('m/d/Y', $data['digital_copy_date'])->format('Y-m-d');
+            } catch (\Exception $e) {
+                $data['digital_copy_date'] = null;
+            }
+        }
 
         $data['tenant_id'] = $user->tenant_id;
         $data['created_by'] = $user->id;
@@ -190,17 +201,24 @@ class FamilyResourceController extends Controller
      */
     public function edit(FamilyResource $familyResource)
     {
-        if ($familyResource->tenant_id !== Auth::user()->tenant_id) {
+        $user = Auth::user();
+
+        if ($familyResource->tenant_id !== $user->tenant_id) {
             abort(403);
         }
 
         $familyResource->load('files');
+
+        $familyCircles = FamilyCircle::where('tenant_id', $user->tenant_id)
+            ->orderBy('name')
+            ->get();
 
         return view('pages.family-resources.form', [
             'resource' => $familyResource,
             'documentTypes' => FamilyResource::DOCUMENT_TYPES,
             'statuses' => FamilyResource::STATUSES,
             'selectedType' => null,
+            'familyCircles' => $familyCircles,
         ]);
     }
 
@@ -220,18 +238,20 @@ class FamilyResourceController extends Controller
             'original_location' => 'nullable|string|max:500',
             'notes' => 'nullable|string',
             'status' => 'nullable|string|in:' . implode(',', array_keys(FamilyResource::STATUSES)),
-            // Date component fields
-            'digital_copy_date_month' => 'nullable|string',
-            'digital_copy_date_day' => 'nullable|string',
-            'digital_copy_date_year' => 'nullable|string',
+            'family_circle_id' => 'nullable|exists:family_circles,id',
+            'digital_copy_date' => 'nullable|date',
         ]);
 
-        $data = collect($validated)->except([
-            'digital_copy_date_month', 'digital_copy_date_day', 'digital_copy_date_year',
-        ])->toArray();
+        $data = $validated;
 
-        // Parse dates from separate fields
-        $data['digital_copy_date'] = $this->parseDate($request, 'digital_copy_date');
+        // Parse date from MM/DD/YYYY format
+        if (!empty($data['digital_copy_date'])) {
+            try {
+                $data['digital_copy_date'] = Carbon::createFromFormat('m/d/Y', $data['digital_copy_date'])->format('Y-m-d');
+            } catch (\Exception $e) {
+                $data['digital_copy_date'] = null;
+            }
+        }
 
         $familyResource->update($data);
 

@@ -65,7 +65,7 @@ class DocumentController extends Controller
 
     /**
      * Get unique family members (deduplicate linked members across circles).
-     * Includes the owner from users table and excludes any family_member records linked to the owner.
+     * Includes the owner's family_member record (if exists) with is_owner flag.
      */
     private function getUniqueFamilyMembers($tenantId)
     {
@@ -76,14 +76,22 @@ class DocumentController extends Controller
             ->orderBy('first_name')
             ->get();
 
+        // Find owner's family_member record (first one linked to current user)
+        $ownerFamilyMember = $members->first(function ($member) use ($currentUserId) {
+            return $member->linked_user_id == $currentUserId && $member->linked_user_id !== null;
+        });
+
         // Deduplicate: keep first occurrence of each linked_user_id
-        // Exclude members linked to the current user (owner) - owner comes from users table
         $seen = [];
-        $filteredMembers = $members->filter(function ($member) use (&$seen, $currentUserId) {
-            // Exclude owner's family_member records (owner is added separately from users table)
-            // Use == for loose comparison to handle string/int type differences
+        $filteredMembers = $members->filter(function ($member) use (&$seen, $currentUserId, $ownerFamilyMember) {
+            // Skip owner's duplicate family_member records (keep only the first one)
             if ($member->linked_user_id == $currentUserId && $member->linked_user_id !== null) {
-                return false;
+                if ($ownerFamilyMember && $member->id == $ownerFamilyMember->id) {
+                    // Mark this as owner and include it
+                    $member->is_owner = true;
+                    return true;
+                }
+                return false; // Skip duplicate owner records
             }
 
             // Deduplicate other linked members
@@ -96,18 +104,27 @@ class DocumentController extends Controller
             return true;
         })->values();
 
-        // Create a pseudo-member object for the owner from users table
-        // Using 'owner' as ID - controller will convert this to null for database storage
+        // If owner has a family_member record, it's already in the list with is_owner flag
+        // If not, create a pseudo-member that can't be saved (with is_owner flag for display)
+        if ($ownerFamilyMember) {
+            // Move owner to the beginning of the list
+            $ownerRecord = $filteredMembers->first(fn($m) => $m->id == $ownerFamilyMember->id);
+            $filteredMembers = $filteredMembers->filter(fn($m) => $m->id != $ownerFamilyMember->id);
+            return collect([$ownerRecord])->concat($filteredMembers);
+        }
+
+        // No family_member record for owner - they need to add themselves to a family circle first
+        // We can still show them in the dropdown but warn in the UI
         $nameParts = explode(' ', $currentUser->name ?? '', 2);
         $ownerAsMember = (object) [
-            'id' => 'owner', // Special value - will be stored as null, displayed from users table
+            'id' => null, // Cannot be saved - owner needs to add themselves to a family circle
             'first_name' => $nameParts[0] ?? $currentUser->email,
             'last_name' => $nameParts[1] ?? '',
             'full_name' => $currentUser->name ?? $currentUser->email,
             'is_owner' => true,
+            'no_family_member_record' => true, // Flag to show warning in UI
         ];
 
-        // Prepend owner to the members list
         return collect([$ownerAsMember])->concat($filteredMembers);
     }
 
@@ -162,20 +179,20 @@ class DocumentController extends Controller
 
         $insurance = InsurancePolicy::create($data);
 
-        // Attach policyholders (filter out 'owner' placeholder)
+        // Attach policyholders (filter out empty/null values)
         if (!empty($validated['policyholders'])) {
             $policyholderIds = collect($validated['policyholders'])
-                ->filter(fn($id) => $id !== 'owner' && is_numeric($id))
+                ->filter(fn($id) => !empty($id) && is_numeric($id))
                 ->toArray();
             if (!empty($policyholderIds)) {
                 $insurance->policyholders()->attach($policyholderIds, ['member_type' => 'policyholder']);
             }
         }
 
-        // Attach covered members (filter out 'owner' placeholder)
+        // Attach covered members (filter out empty/null values)
         if (!empty($validated['covered_members'])) {
             $coveredIds = collect($validated['covered_members'])
-                ->filter(fn($id) => $id !== 'owner' && is_numeric($id))
+                ->filter(fn($id) => !empty($id) && is_numeric($id))
                 ->toArray();
             if (!empty($coveredIds)) {
                 $insurance->coveredMembers()->attach($coveredIds, ['member_type' => 'covered']);
@@ -284,18 +301,18 @@ class DocumentController extends Controller
 
         $insurance->update($data);
 
-        // Sync policyholders (filter out 'owner' placeholder)
+        // Sync policyholders (filter out empty/null values)
         $policyholderIds = isset($validated['policyholders'])
-            ? collect($validated['policyholders'])->filter(fn($id) => $id !== 'owner' && is_numeric($id))->toArray()
+            ? collect($validated['policyholders'])->filter(fn($id) => !empty($id) && is_numeric($id))->toArray()
             : [];
         $insurance->policyholders()->detach();
         if (!empty($policyholderIds)) {
             $insurance->policyholders()->attach($policyholderIds, ['member_type' => 'policyholder']);
         }
 
-        // Sync covered members (filter out 'owner' placeholder)
+        // Sync covered members (filter out empty/null values)
         $coveredIds = isset($validated['covered_members'])
-            ? collect($validated['covered_members'])->filter(fn($id) => $id !== 'owner' && is_numeric($id))->toArray()
+            ? collect($validated['covered_members'])->filter(fn($id) => !empty($id) && is_numeric($id))->toArray()
             : [];
         $insurance->coveredMembers()->detach();
         if (!empty($coveredIds)) {
@@ -409,10 +426,10 @@ class DocumentController extends Controller
 
         $taxReturn = TaxReturn::create($data);
 
-        // Attach taxpayers (filter out 'owner' placeholder)
+        // Attach taxpayers (filter out empty/null values)
         if (!empty($validated['taxpayers'])) {
             $taxpayerIds = collect($validated['taxpayers'])
-                ->filter(fn($id) => $id !== 'owner' && is_numeric($id))
+                ->filter(fn($id) => !empty($id) && is_numeric($id))
                 ->toArray();
             if (!empty($taxpayerIds)) {
                 $taxReturn->taxpayers()->attach($taxpayerIds);
@@ -527,9 +544,9 @@ class DocumentController extends Controller
 
         $taxReturn->update($data);
 
-        // Sync taxpayers (filter out 'owner' placeholder)
+        // Sync taxpayers (filter out empty/null values)
         $taxpayerIds = isset($validated['taxpayers'])
-            ? collect($validated['taxpayers'])->filter(fn($id) => $id !== 'owner' && is_numeric($id))->toArray()
+            ? collect($validated['taxpayers'])->filter(fn($id) => !empty($id) && is_numeric($id))->toArray()
             : [];
         $taxReturn->taxpayers()->sync($taxpayerIds);
 

@@ -105,6 +105,17 @@
                     </div>
 
                     <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Family Circle</label>
+                        <select name="family_circle_id" class="select select-bordered w-full">
+                            <option value="">All Circles (Visible to everyone)</option>
+                            @foreach($familyCircles as $circle)
+                                <option value="{{ $circle->id }}" {{ old('family_circle_id', $document?->family_circle_id ?? ($selectedFamilyCircleId ?? null)) == $circle->id ? 'selected' : '' }}>{{ $circle->name }}</option>
+                            @endforeach
+                        </select>
+                        <p class="text-xs text-slate-500 mt-1">Select a circle to restrict visibility, or leave empty for all circles</p>
+                    </div>
+
+                    <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Location of Original Document</label>
                         <input type="text" name="original_location" value="{{ old('original_location', $document?->original_location) }}"
                                class="input w-full"
@@ -127,93 +138,30 @@
                     </div>
                 </div>
 
-                @php
-                    $currentYear = date('Y');
-                    $months = [
-                        '01' => 'January', '02' => 'February', '03' => 'March', '04' => 'April',
-                        '05' => 'May', '06' => 'June', '07' => 'July', '08' => 'August',
-                        '09' => 'September', '10' => 'October', '11' => 'November', '12' => 'December'
-                    ];
-                @endphp
-
                 <div class="space-y-4">
                     <!-- Execution Date -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-2">Execution Date</label>
-                        <div class="grid grid-cols-3 gap-2">
-                            <select name="execution_date_month" class="select select-bordered w-full">
-                                <option value="">Month</option>
-                                @foreach($months as $val => $name)
-                                    <option value="{{ $val }}" {{ old('execution_date_month', $document?->execution_date?->format('m')) == $val ? 'selected' : '' }}>{{ $name }}</option>
-                                @endforeach
-                            </select>
-                            <select name="execution_date_day" class="select select-bordered w-full">
-                                <option value="">Day</option>
-                                @for($i = 1; $i <= 31; $i++)
-                                    <option value="{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}" {{ old('execution_date_day', $document?->execution_date?->format('d')) == str_pad($i, 2, '0', STR_PAD_LEFT) ? 'selected' : '' }}>{{ $i }}</option>
-                                @endfor
-                            </select>
-                            <select name="execution_date_year" class="select select-bordered w-full">
-                                <option value="">Year</option>
-                                @for($year = $currentYear; $year >= 1970; $year--)
-                                    <option value="{{ $year }}" {{ old('execution_date_year', $document?->execution_date?->format('Y')) == $year ? 'selected' : '' }}>{{ $year }}</option>
-                                @endfor
-                            </select>
-                        </div>
-                        <p class="text-xs text-slate-400 mt-1">Date the document was signed</p>
-                    </div>
+                    <x-date-select
+                        name="execution_date"
+                        label="Execution Date"
+                        :value="$document?->execution_date"
+                    />
+                    <p class="text-xs text-slate-400 -mt-2">Date the document was signed</p>
 
                     <!-- Expiration Date -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-2">Expiration Date</label>
-                        <div class="grid grid-cols-3 gap-2">
-                            <select name="expiration_date_month" class="select select-bordered w-full">
-                                <option value="">Month</option>
-                                @foreach($months as $val => $name)
-                                    <option value="{{ $val }}" {{ old('expiration_date_month', $document?->expiration_date?->format('m')) == $val ? 'selected' : '' }}>{{ $name }}</option>
-                                @endforeach
-                            </select>
-                            <select name="expiration_date_day" class="select select-bordered w-full">
-                                <option value="">Day</option>
-                                @for($i = 1; $i <= 31; $i++)
-                                    <option value="{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}" {{ old('expiration_date_day', $document?->expiration_date?->format('d')) == str_pad($i, 2, '0', STR_PAD_LEFT) ? 'selected' : '' }}>{{ $i }}</option>
-                                @endfor
-                            </select>
-                            <select name="expiration_date_year" class="select select-bordered w-full">
-                                <option value="">Year</option>
-                                @for($year = $currentYear + 30; $year >= $currentYear - 10; $year--)
-                                    <option value="{{ $year }}" {{ old('expiration_date_year', $document?->expiration_date?->format('Y')) == $year ? 'selected' : '' }}>{{ $year }}</option>
-                                @endfor
-                            </select>
-                        </div>
-                        <p class="text-xs text-slate-400 mt-1">If applicable</p>
-                    </div>
+                    <x-date-select
+                        name="expiration_date"
+                        label="Expiration Date"
+                        :value="$document?->expiration_date"
+                    />
+                    <p class="text-xs text-slate-400 -mt-2">If applicable</p>
 
                     <!-- Digital Copy Date -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-2">Digital Copy Date</label>
-                        <div class="grid grid-cols-3 gap-2">
-                            <select name="digital_copy_date_month" class="select select-bordered w-full">
-                                <option value="">Month</option>
-                                @foreach($months as $val => $name)
-                                    <option value="{{ $val }}" {{ old('digital_copy_date_month', $document?->digital_copy_date?->format('m')) == $val ? 'selected' : '' }}>{{ $name }}</option>
-                                @endforeach
-                            </select>
-                            <select name="digital_copy_date_day" class="select select-bordered w-full">
-                                <option value="">Day</option>
-                                @for($i = 1; $i <= 31; $i++)
-                                    <option value="{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}" {{ old('digital_copy_date_day', $document?->digital_copy_date?->format('d')) == str_pad($i, 2, '0', STR_PAD_LEFT) ? 'selected' : '' }}>{{ $i }}</option>
-                                @endfor
-                            </select>
-                            <select name="digital_copy_date_year" class="select select-bordered w-full">
-                                <option value="">Year</option>
-                                @for($year = $currentYear; $year >= 2000; $year--)
-                                    <option value="{{ $year }}" {{ old('digital_copy_date_year', $document?->digital_copy_date?->format('Y')) == $year ? 'selected' : '' }}>{{ $year }}</option>
-                                @endfor
-                            </select>
-                        </div>
-                        <p class="text-xs text-slate-400 mt-1">When the digital copy was created</p>
-                    </div>
+                    <x-date-select
+                        name="digital_copy_date"
+                        label="Digital Copy Date"
+                        :value="$document?->digital_copy_date"
+                    />
+                    <p class="text-xs text-slate-400 -mt-2">When the digital copy was created</p>
                 </div>
             </div>
         </div>

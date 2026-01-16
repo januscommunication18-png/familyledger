@@ -46,6 +46,7 @@ class LegalDocument extends Model
 
     protected $fillable = [
         'tenant_id',
+        'family_circle_id',
         'created_by',
         'document_type',
         'custom_document_type',
@@ -83,6 +84,14 @@ class LegalDocument extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Get the family circle this document belongs to.
+     */
+    public function familyCircle(): BelongsTo
+    {
+        return $this->belongsTo(FamilyCircle::class);
     }
 
     /**

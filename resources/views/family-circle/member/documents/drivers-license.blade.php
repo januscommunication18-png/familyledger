@@ -1,5 +1,10 @@
 @extends('layouts.dashboard')
 
+@php
+    $isOwnerSelf = $member->relationship === 'self' && $member->linked_user_id == auth()->id();
+    $backUrl = $isOwnerSelf ? route('family-circle.owner.show', $circle) : route('family-circle.member.show', [$circle, $member]);
+@endphp
+
 @section('title', ($document ? 'Edit' : 'Add') . " Driver's License")
 @section('page-name', ($document ? 'Edit' : 'Add') . " Driver's License")
 
@@ -11,7 +16,7 @@
     <li class="breadcrumbs-separator rtl:rotate-180">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
     </li>
-    <li><a href="{{ route('family-circle.member.show', [$circle, $member]) }}" class="hover:text-violet-600">{{ $member->full_name }}</a></li>
+    <li><a href="{{ $backUrl }}" class="hover:text-violet-600">{{ $member->full_name }}</a></li>
     <li class="breadcrumbs-separator rtl:rotate-180">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
     </li>
@@ -23,7 +28,7 @@
     <!-- Page Header -->
     <div class="mb-6">
         <div class="flex items-center gap-4 mb-2">
-            <a href="{{ route('family-circle.member.show', [$circle, $member]) }}" class="btn btn-ghost btn-sm gap-2">
+            <a href="{{ $backUrl }}" class="btn btn-ghost btn-sm gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                 Back
             </a>
@@ -164,7 +169,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                         {{ $document ? 'Update' : 'Save' }} License
                     </button>
-                    <a href="{{ route('family-circle.member.show', [$circle, $member]) }}" class="btn btn-ghost">Cancel</a>
+                    <a href="{{ $backUrl }}" class="btn btn-ghost">Cancel</a>
                 </div>
             </div>
         </form>

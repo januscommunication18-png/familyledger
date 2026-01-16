@@ -65,214 +65,338 @@
         </div>
     </div>
 
-    <!-- Family Members Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        @php
-            // Check if the owner included themselves in this circle (only for non-collaborators)
-            $selfMember = !$isCollaborator ? $circle->members->where('relationship', 'self')->where('linked_user_id', auth()->id())->first() : null;
-            $owner = auth()->user();
-            $ownerNameParts = explode(' ', $owner->name, 2);
-            $ownerFirstName = $ownerNameParts[0];
-            $ownerLastName = $ownerNameParts[1] ?? '';
-            $ownerAge = $owner->date_of_birth ? \Carbon\Carbon::parse($owner->date_of_birth)->age : null;
-        @endphp
+    <!-- Tabs Navigation -->
+    <div class="tabs tabs-bordered mb-6" role="tablist">
+        <button type="button" class="tab tab-active text-base gap-2" data-tab="members" role="tab" aria-selected="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Members
+            <span class="badge badge-sm">{{ $circle->members->count() }}</span>
+        </button>
+        <button type="button" class="tab text-base gap-2" data-tab="resources" role="tab" aria-selected="false">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+            Family Resources
+            @if(isset($familyResources) && $familyResources->count() > 0)
+            <span class="badge badge-sm badge-success">{{ $familyResources->count() }}</span>
+            @endif
+        </button>
+        <button type="button" class="tab text-base gap-2" data-tab="legal" role="tab" aria-selected="false">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 14 6 6"/><path d="M4 6h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"/><path d="M2 10h20"/></svg>
+            Legal Documents
+            @if(isset($legalDocuments) && $legalDocuments->count() > 0)
+            <span class="badge badge-sm badge-primary">{{ $legalDocuments->count() }}</span>
+            @endif
+        </button>
+    </div>
 
-        <!-- Owner Self Card (only shown if owner included themselves and not a collaborator) -->
-        @if($selfMember && !$isCollaborator)
-        <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow border-2 border-violet-200">
-            <div class="card-body">
-                <!-- Owner Header -->
-                <div class="flex items-start gap-4">
-                    <div class="avatar">
-                        <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600">
+    <!-- Tab: Members -->
+    <div id="tab-members" class="tab-content">
+        <div class="space-y-4">
+            @php
+                // Check if the owner included themselves in this circle (only for non-collaborators)
+                $selfMember = !$isCollaborator ? $circle->members->where('relationship', 'self')->where('linked_user_id', auth()->id())->first() : null;
+                $owner = auth()->user();
+                $ownerNameParts = explode(' ', $owner->name, 2);
+                $ownerFirstName = $ownerNameParts[0];
+                $ownerLastName = $ownerNameParts[1] ?? '';
+                $ownerAge = $owner->date_of_birth ? \Carbon\Carbon::parse($owner->date_of_birth)->age : null;
+            @endphp
+
+            <!-- Owner Self Card (only shown if owner included themselves and not a collaborator) -->
+            @if($selfMember && !$isCollaborator)
+            <div class="card bg-base-100 shadow-sm hover:shadow-lg transition-all duration-200 border-2 border-violet-200 hover:border-violet-400">
+                <div class="card-body p-5">
+                    <div class="flex flex-col md:flex-row md:items-center gap-4">
+                        <!-- Avatar -->
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden">
                             @if($owner->profile_image)
-                                <img src="{{ Storage::disk('do_spaces')->url($owner->profile_image) }}" alt="{{ $owner->name }}" class="object-cover">
+                                <img src="{{ Storage::disk('do_spaces')->url($owner->profile_image) }}" alt="{{ $owner->name }}" class="w-full h-full object-cover">
                             @else
-                                <div class="w-full h-full flex items-center justify-center">
-                                    <span class="text-xl font-bold text-white">{{ strtoupper(substr($ownerFirstName, 0, 1)) }}</span>
-                                </div>
+                                <span class="text-2xl font-bold text-white">{{ strtoupper(substr($ownerFirstName, 0, 1)) }}</span>
                             @endif
                         </div>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <h3 class="text-lg font-semibold text-slate-900 truncate flex items-center gap-2">
-                            {{ $owner->name }}
-                            <span class="badge badge-sm bg-violet-100 text-violet-700 border-0">You</span>
-                        </h3>
-                        <p class="text-sm text-slate-500">Self</p>
-                        @if($ownerAge)
-                            <p class="text-sm text-slate-400">{{ $ownerAge }} years old</p>
-                        @endif
-                    </div>
-                </div>
 
-                <!-- Owner Info -->
-                <div class="mt-4 pt-4 border-t border-slate-100 space-y-2">
-                    @if($owner->email)
-                        <div class="flex items-center gap-2 text-sm text-slate-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                            <span class="truncate">{{ $owner->email }}</span>
-                        </div>
-                    @endif
-                    @if($owner->phone)
-                        <div class="flex items-center gap-2 text-sm text-slate-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                            <span>{{ $owner->phone }}</span>
-                        </div>
-                    @endif
-                    @if($owner->date_of_birth)
-                        <div class="flex items-center gap-2 text-sm text-slate-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
-                            <span>{{ \Carbon\Carbon::parse($owner->date_of_birth)->format('M d, Y') }}</span>
-                        </div>
-                    @endif
-                </div>
-
-                <!-- Owner Badge -->
-                <div class="mt-4 flex gap-2 flex-wrap">
-                    <span class="badge badge-primary badge-sm">Account Owner</span>
-                </div>
-
-                <!-- Quick Actions -->
-                <div class="mt-4 pt-4 border-t border-slate-100 flex gap-2">
-                    <a href="{{ route('family-circle.owner.show', $circle) }}" class="btn btn-sm btn-ghost flex-1">View</a>
-                    <a href="{{ route('documents.index') }}" class="btn btn-sm btn-outline btn-primary flex-1">Documents</a>
-                </div>
-            </div>
-        </div>
-        @endif
-
-        <!-- Other Family Members (excluding self to avoid duplicate for owners, show all for collaborators) -->
-        @foreach($isCollaborator ? $circle->members : $circle->members->where('relationship', '!=', 'self') as $member)
-                @php
-                    // Get permissions for this specific member if collaborator
-                    $memberAccess = $isCollaborator && $collaboration
-                        ? \App\Services\CollaboratorPermissionService::forMember($member)->forView()
-                        : null;
-                    $canViewDob = !$isCollaborator || ($memberAccess && $memberAccess->canView('date_of_birth'));
-                    $canViewContact = !$isCollaborator || ($memberAccess && $memberAccess->canView('emergency_contacts'));
-                @endphp
-                <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
-                    <div class="card-body">
-                        <!-- Member Header -->
-                        <div class="flex items-start gap-4">
-                            <div class="avatar">
-                                <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500">
-                                    @if($member->profile_image_url)
-                                        <img src="{{ $member->profile_image_url }}" alt="{{ $member->full_name }}" class="object-cover">
-                                    @else
-                                        <div class="w-full h-full flex items-center justify-center">
-                                            <span class="text-xl font-bold text-white">{{ strtoupper(substr($member->first_name, 0, 1)) }}</span>
-                                        </div>
-                                    @endif
-                                </div>
+                        <!-- Content -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex flex-wrap items-center gap-2 mb-1">
+                                <h3 class="text-lg font-semibold text-slate-900">{{ $owner->name }}</h3>
+                                <span class="badge badge-sm bg-violet-100 text-violet-700 border-0">You</span>
+                                <span class="badge badge-primary badge-sm">Account Owner</span>
                             </div>
-                            <div class="flex-1 min-w-0">
-                                <h3 class="text-lg font-semibold text-slate-900 truncate flex items-center gap-2">
-                                    {{ $member->full_name }}
-                                    @if($member->linked_user_id === auth()->id())
-                                        <span class="badge badge-sm bg-violet-100 text-violet-700 border-0">You</span>
-                                    @endif
-                                </h3>
-                                <p class="text-sm text-slate-500">{{ $member->relationship_name }}</p>
-                                @if($canViewDob)
-                                    <p class="text-sm text-slate-400">{{ $member->age }} years old</p>
+                            <p class="text-sm text-slate-500 mb-2">Self @if($ownerAge)• {{ $ownerAge }} years old @endif</p>
+                            <div class="flex flex-wrap gap-4 text-sm text-slate-500">
+                                @if($owner->email)
+                                <div class="flex items-center gap-1.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                                    <span class="truncate">{{ $owner->email }}</span>
+                                </div>
+                                @endif
+                                @if($owner->phone)
+                                <div class="flex items-center gap-1.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                    <span>{{ $owner->phone }}</span>
+                                </div>
                                 @endif
                             </div>
-                            @if(!$isCollaborator)
-                            <div class="dropdown dropdown-end">
-                                <button tabindex="0" class="btn btn-ghost btn-sm btn-circle">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
-                                </button>
-                                <ul tabindex="0" class="dropdown-menu dropdown-open:opacity-100 hidden w-48 p-2 bg-white shadow-xl border border-slate-200 rounded-xl">
-                                    <li>
-                                        <a href="{{ route('family-circle.member.show', [$circle, $member]) }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                                            View Details
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ route('family-circle.member.edit', [$circle, $member]) }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                                            Edit Member
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ route('member.documents.index', $member) }}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
-                                            Document Vault
-                                        </a>
-                                    </li>
-                                    @if($member->is_minor && $member->co_parenting_enabled)
-                                        <li>
-                                            <a href="#" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-100">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg>
-                                                Co-Parenting
-                                            </a>
-                                        </li>
-                                    @endif
-                                    <li class="border-t border-slate-100 mt-1 pt-1">
-                                        <form action="{{ route('family-circle.member.destroy', [$circle, $member]) }}" method="POST" onsubmit="return confirm('Are you sure you want to remove this family member?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-rose-600 hover:bg-rose-50">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                                                Remove
-                                            </button>
-                                        </form>
-                                    </li>
-                                </ul>
-                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="flex flex-row md:flex-col gap-2">
+                            <a href="{{ route('family-circle.owner.show', $circle) }}" class="btn btn-sm btn-primary gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                View
+                            </a>
+                            <a href="{{ route('documents.index') }}" class="btn btn-sm btn-outline btn-primary gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+                                Documents
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            <!-- Other Family Members (excluding self to avoid duplicate for owners, show all for collaborators) -->
+            @foreach($isCollaborator ? $circle->members : $circle->members->where('relationship', '!=', 'self') as $member)
+            @php
+                // Get permissions for this specific member if collaborator
+                $memberAccess = $isCollaborator && $collaboration
+                    ? \App\Services\CollaboratorPermissionService::forMember($member)->forView()
+                    : null;
+                $canViewDob = !$isCollaborator || ($memberAccess && $memberAccess->canView('date_of_birth'));
+                $canViewContact = !$isCollaborator || ($memberAccess && $memberAccess->canView('emergency_contacts'));
+            @endphp
+            <div class="card bg-base-100 shadow-sm hover:shadow-lg transition-all duration-200 border border-slate-200 hover:border-cyan-300">
+                <div class="card-body p-5">
+                    <div class="flex flex-col md:flex-row md:items-center gap-4">
+                        <!-- Avatar -->
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden">
+                            @if($member->profile_image_url)
+                                <img src="{{ $member->profile_image_url }}" alt="{{ $member->full_name }}" class="w-full h-full object-cover">
+                            @else
+                                <span class="text-2xl font-bold text-white">{{ strtoupper(substr($member->first_name, 0, 1)) }}</span>
                             @endif
                         </div>
 
-                        <!-- Member Info - respect permissions for collaborators -->
-                        <div class="mt-4 pt-4 border-t border-slate-100 space-y-2">
-                            @if($canViewContact && $member->email)
-                                <div class="flex items-center gap-2 text-sm text-slate-500">
+                        <!-- Content -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex flex-wrap items-center gap-2 mb-1">
+                                <h3 class="text-lg font-semibold text-slate-900">{{ $member->full_name }}</h3>
+                                @if($member->linked_user_id === auth()->id())
+                                    <span class="badge badge-sm bg-violet-100 text-violet-700 border-0">You</span>
+                                @endif
+                                @if(!$isCollaborator)
+                                    @if($member->is_minor)
+                                        <span class="badge badge-info badge-sm">Minor</span>
+                                    @endif
+                                    @if($member->co_parenting_enabled)
+                                        <span class="badge badge-warning badge-sm">Co-Parenting</span>
+                                    @endif
+                                @endif
+                            </div>
+                            <p class="text-sm text-slate-500 mb-2">{{ $member->relationship_name }} @if($canViewDob)• {{ $member->age }} years old @endif</p>
+                            <div class="flex flex-wrap gap-4 text-sm text-slate-500">
+                                @if($canViewContact && $member->email)
+                                <div class="flex items-center gap-1.5">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
                                     <span class="truncate">{{ $member->email }}</span>
                                 </div>
-                            @endif
-                            @if($canViewContact && $member->phone)
-                                <div class="flex items-center gap-2 text-sm text-slate-500">
+                                @endif
+                                @if($canViewContact && $member->phone)
+                                <div class="flex items-center gap-1.5">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                                     <span>{{ $member->phone_country_code ?? '' }}{{ $member->phone }}</span>
                                 </div>
-                            @endif
-                            @if($canViewDob)
-                                <div class="flex items-center gap-2 text-sm text-slate-500">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
-                                    <span>{{ $member->date_of_birth->format('M d, Y') }}</span>
+                                @endif
+                                @if(!$isCollaborator && $member->documents->count() > 0)
+                                <div class="flex items-center gap-1.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+                                    <span>{{ $member->documents->count() }} docs</span>
                                 </div>
-                            @endif
+                                @endif
+                            </div>
                         </div>
 
-                        <!-- Quick Stats -->
-                        @if(!$isCollaborator)
-                        <div class="mt-4 flex gap-2 flex-wrap">
-                            @if($member->is_minor)
-                                <span class="badge badge-info badge-sm">Minor</span>
-                            @endif
-                            @if($member->co_parenting_enabled)
-                                <span class="badge badge-warning badge-sm">Co-Parenting</span>
-                            @endif
-                            @if($member->documents->count() > 0)
-                                <span class="badge badge-ghost badge-sm">{{ $member->documents->count() }} docs</span>
-                            @endif
-                        </div>
-                        @endif
-
-                        <!-- Quick Actions -->
-                        <div class="mt-4 pt-4 border-t border-slate-100 flex gap-2">
-                            <a href="{{ route('family-circle.member.show', [$circle, $member]) }}" class="btn btn-sm btn-ghost flex-1">View</a>
+                        <!-- Actions -->
+                        <div class="flex flex-row md:flex-col gap-2">
+                            <a href="{{ route('family-circle.member.show', [$circle, $member]) }}" class="btn btn-sm btn-info gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                View
+                            </a>
                             @if(!$isCollaborator)
-                                <a href="{{ route('member.documents.index', $member) }}" class="btn btn-sm btn-outline btn-primary flex-1">Documents</a>
+                            <a href="{{ route('member.documents.index', $member) }}" class="btn btn-sm btn-outline btn-info gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+                                Documents
+                            </a>
                             @endif
                         </div>
                     </div>
                 </div>
-        @endforeach
+            </div>
+            @endforeach
+        </div>
+    </div>
+
+    <!-- Tab: Family Resources -->
+    <div id="tab-resources" class="tab-content hidden">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-600"><path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m5 12-3 3 3 3"/><path d="m9 18 3-3-3-3"/></svg>
+                Family Resources
+            </h2>
+            @if(!$isCollaborator)
+            <a href="{{ route('family-resources.create') }}?family_circle_id={{ $circle->id }}" class="btn btn-sm btn-outline btn-success gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                Add Resource
+            </a>
+            @endif
+        </div>
+
+        @if(isset($familyResources) && $familyResources->count() > 0)
+        <div class="space-y-4">
+            @foreach($familyResources as $resource)
+            <div class="card bg-base-100 shadow-sm hover:shadow-lg transition-all duration-200 border border-emerald-100 hover:border-emerald-300">
+                <div class="card-body p-5">
+                    <div class="flex flex-col md:flex-row md:items-center gap-4">
+                        <!-- Icon -->
+                        <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-md">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+                        </div>
+
+                        <!-- Content -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex flex-wrap items-center gap-2 mb-1">
+                                <h3 class="text-lg font-semibold text-slate-900">{{ $resource->name }}</h3>
+                                <span class="badge badge-sm {{ $resource->status === 'active' ? 'badge-success' : 'badge-neutral' }}">
+                                    {{ ucfirst($resource->status) }}
+                                </span>
+                                @if(!$resource->family_circle_id)
+                                <span class="badge badge-xs badge-ghost" title="Shared with all circles">All Circles</span>
+                                @endif
+                            </div>
+                            <p class="text-sm text-slate-500 mb-2">{{ $resource->document_type_name }}</p>
+                            @if($resource->notes)
+                            <p class="text-sm text-slate-600 line-clamp-1">{{ $resource->notes }}</p>
+                            @endif
+                        </div>
+
+                        <!-- Meta & Actions -->
+                        <div class="flex flex-row md:flex-col items-center md:items-end gap-3 md:gap-2">
+                            <div class="flex items-center gap-2 text-sm text-slate-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+                                <span>{{ $resource->files->count() }} file{{ $resource->files->count() != 1 ? 's' : '' }}</span>
+                            </div>
+                            <a href="{{ route('family-resources.show', $resource) }}" class="btn btn-sm btn-success gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                View
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endforeach
+        </div>
+        @else
+        <div class="text-center py-12">
+            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-100 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-600"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+            </div>
+            <h3 class="text-lg font-semibold text-slate-900 mb-2">No Family Resources Yet</h3>
+            <p class="text-slate-500 mb-4">Add resources like emergency plans, warranties, and more.</p>
+            @if(!$isCollaborator)
+            <a href="{{ route('family-resources.create') }}?family_circle_id={{ $circle->id }}" class="btn btn-success gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                Add First Resource
+            </a>
+            @endif
+        </div>
+        @endif
+    </div>
+
+    <!-- Tab: Legal Documents -->
+    <div id="tab-legal" class="tab-content hidden">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-violet-600"><path d="m14 14 6 6"/><path d="M4 6h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"/><path d="M2 10h20"/></svg>
+                Legal Documents
+            </h2>
+            @if(!$isCollaborator)
+            <a href="{{ route('legal.create') }}?family_circle_id={{ $circle->id }}" class="btn btn-sm btn-outline btn-primary gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                Add Document
+            </a>
+            @endif
+        </div>
+
+        @if(isset($legalDocuments) && $legalDocuments->count() > 0)
+        <div class="space-y-4">
+            @foreach($legalDocuments as $document)
+            <div class="card bg-base-100 shadow-sm hover:shadow-lg transition-all duration-200 border border-violet-100 hover:border-violet-300">
+                <div class="card-body p-5">
+                    <div class="flex flex-col md:flex-row md:items-center gap-4">
+                        <!-- Icon -->
+                        <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center flex-shrink-0 shadow-md">
+                            <span class="{{ $document->document_type_icon }} text-white text-2xl"></span>
+                        </div>
+
+                        <!-- Content -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex flex-wrap items-center gap-2 mb-1">
+                                <h3 class="text-lg font-semibold text-slate-900">{{ $document->name }}</h3>
+                                <span class="badge badge-sm badge-{{ $document->status_color }}">
+                                    {{ $document->status_name }}
+                                </span>
+                                @if(!$document->family_circle_id)
+                                <span class="badge badge-xs badge-ghost" title="Shared with all circles">All Circles</span>
+                                @endif
+                            </div>
+                            <p class="text-sm text-slate-500 mb-2">{{ $document->document_type_name }}</p>
+                            <div class="flex flex-wrap gap-4 text-sm text-slate-500">
+                                @if($document->attorney_display_name)
+                                <div class="flex items-center gap-1.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                    <span>{{ $document->attorney_display_name }}</span>
+                                </div>
+                                @endif
+                                @if($document->execution_date)
+                                <div class="flex items-center gap-1.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+                                    <span>{{ $document->execution_date->format('M d, Y') }}</span>
+                                </div>
+                                @endif
+                            </div>
+                        </div>
+
+                        <!-- Meta & Actions -->
+                        <div class="flex flex-row md:flex-col items-center md:items-end gap-3 md:gap-2">
+                            <div class="flex items-center gap-2 text-sm text-slate-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+                                <span>{{ $document->files->count() }} file{{ $document->files->count() != 1 ? 's' : '' }}</span>
+                            </div>
+                            <a href="{{ route('legal.show', $document) }}" class="btn btn-sm btn-primary gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                View
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endforeach
+        </div>
+        @else
+        <div class="text-center py-12">
+            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-violet-100 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-violet-600"><path d="m14 14 6 6"/><path d="M4 6h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"/><path d="M2 10h20"/></svg>
+            </div>
+            <h3 class="text-lg font-semibold text-slate-900 mb-2">No Legal Documents Yet</h3>
+            <p class="text-slate-500 mb-4">Add wills, trusts, power of attorney, and other legal documents.</p>
+            @if(!$isCollaborator)
+            <a href="{{ route('legal.create') }}?family_circle_id={{ $circle->id }}" class="btn btn-primary gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                Add First Document
+            </a>
+            @endif
+        </div>
+        @endif
     </div>
 </div>
 
@@ -407,6 +531,45 @@ document.addEventListener('DOMContentLoaded', function() {
             closeEditCircleModal();
         }
     });
+
+    // Tab switching functionality
+    const tabs = document.querySelectorAll('[data-tab]');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            const targetTab = this.getAttribute('data-tab');
+
+            // Update tab button states
+            tabs.forEach(t => {
+                t.classList.remove('tab-active');
+                t.setAttribute('aria-selected', 'false');
+            });
+            this.classList.add('tab-active');
+            this.setAttribute('aria-selected', 'true');
+
+            // Update tab content visibility
+            tabContents.forEach(content => {
+                content.classList.add('hidden');
+            });
+            const targetContent = document.getElementById('tab-' + targetTab);
+            if (targetContent) {
+                targetContent.classList.remove('hidden');
+            }
+
+            // Update URL hash without scrolling
+            history.replaceState(null, null, '#' + targetTab);
+        });
+    });
+
+    // Handle initial hash in URL
+    const hash = window.location.hash.replace('#', '');
+    if (hash && ['members', 'resources', 'legal'].includes(hash)) {
+        const targetTab = document.querySelector('[data-tab="' + hash + '"]');
+        if (targetTab) {
+            targetTab.click();
+        }
+    }
 });
 </script>
 @endpush

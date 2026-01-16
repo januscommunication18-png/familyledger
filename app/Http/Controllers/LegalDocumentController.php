@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FamilyCircle;
 use App\Models\LegalDocument;
 use App\Models\LegalDocumentFile;
 use App\Models\Person;
@@ -100,15 +101,23 @@ class LegalDocumentController extends Controller
             ->orderBy('full_name')
             ->get();
 
+        // Get all family circles
+        $familyCircles = FamilyCircle::where('tenant_id', $user->tenant_id)
+            ->orderBy('name')
+            ->get();
+
         // Pre-select document type if provided
         $selectedType = $request->get('type');
+        $selectedFamilyCircleId = $request->get('family_circle_id');
 
         return view('pages.legal.form', [
             'document' => null,
             'attorneys' => $attorneys,
+            'familyCircles' => $familyCircles,
             'documentTypes' => LegalDocument::DOCUMENT_TYPES,
             'statuses' => LegalDocument::STATUSES,
             'selectedType' => $selectedType,
+            'selectedFamilyCircleId' => $selectedFamilyCircleId,
         ]);
     }
 
@@ -129,30 +138,26 @@ class LegalDocumentController extends Controller
             'attorney_firm' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
             'status' => 'nullable|string|in:' . implode(',', array_keys(LegalDocument::STATUSES)),
-            // Date component fields
-            'execution_date_month' => 'nullable|string',
-            'execution_date_day' => 'nullable|string',
-            'execution_date_year' => 'nullable|string',
-            'expiration_date_month' => 'nullable|string',
-            'expiration_date_day' => 'nullable|string',
-            'expiration_date_year' => 'nullable|string',
-            'digital_copy_date_month' => 'nullable|string',
-            'digital_copy_date_day' => 'nullable|string',
-            'digital_copy_date_year' => 'nullable|string',
+            'family_circle_id' => 'nullable|exists:family_circles,id',
+            'execution_date' => 'nullable|date',
+            'expiration_date' => 'nullable|date',
+            'digital_copy_date' => 'nullable|date',
         ]);
 
         $user = Auth::user();
 
-        $data = collect($validated)->except([
-            'execution_date_month', 'execution_date_day', 'execution_date_year',
-            'expiration_date_month', 'expiration_date_day', 'expiration_date_year',
-            'digital_copy_date_month', 'digital_copy_date_day', 'digital_copy_date_year',
-        ])->toArray();
+        $data = $validated;
 
-        // Parse dates from separate fields
-        $data['execution_date'] = $this->parseDate($request, 'execution_date');
-        $data['expiration_date'] = $this->parseDate($request, 'expiration_date');
-        $data['digital_copy_date'] = $this->parseDate($request, 'digital_copy_date');
+        // Parse dates from MM/DD/YYYY format
+        foreach (['execution_date', 'expiration_date', 'digital_copy_date'] as $dateField) {
+            if (!empty($data[$dateField])) {
+                try {
+                    $data[$dateField] = Carbon::createFromFormat('m/d/Y', $data[$dateField])->format('Y-m-d');
+                } catch (\Exception $e) {
+                    $data[$dateField] = null;
+                }
+            }
+        }
 
         $data['tenant_id'] = $user->tenant_id;
         $data['created_by'] = $user->id;
@@ -231,14 +236,18 @@ class LegalDocumentController extends Controller
      */
     public function edit(LegalDocument $legalDocument)
     {
-        if ($legalDocument->tenant_id !== Auth::user()->tenant_id) {
+        $user = Auth::user();
+
+        if ($legalDocument->tenant_id !== $user->tenant_id) {
             abort(403);
         }
 
-        $user = Auth::user();
-
         $attorneys = Person::where('tenant_id', $user->tenant_id)
             ->orderBy('full_name')
+            ->get();
+
+        $familyCircles = FamilyCircle::where('tenant_id', $user->tenant_id)
+            ->orderBy('name')
             ->get();
 
         $legalDocument->load('files');
@@ -246,6 +255,7 @@ class LegalDocumentController extends Controller
         return view('pages.legal.form', [
             'document' => $legalDocument,
             'attorneys' => $attorneys,
+            'familyCircles' => $familyCircles,
             'documentTypes' => LegalDocument::DOCUMENT_TYPES,
             'statuses' => LegalDocument::STATUSES,
             'selectedType' => null,
@@ -273,28 +283,24 @@ class LegalDocumentController extends Controller
             'attorney_firm' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
             'status' => 'nullable|string|in:' . implode(',', array_keys(LegalDocument::STATUSES)),
-            // Date component fields
-            'execution_date_month' => 'nullable|string',
-            'execution_date_day' => 'nullable|string',
-            'execution_date_year' => 'nullable|string',
-            'expiration_date_month' => 'nullable|string',
-            'expiration_date_day' => 'nullable|string',
-            'expiration_date_year' => 'nullable|string',
-            'digital_copy_date_month' => 'nullable|string',
-            'digital_copy_date_day' => 'nullable|string',
-            'digital_copy_date_year' => 'nullable|string',
+            'family_circle_id' => 'nullable|exists:family_circles,id',
+            'execution_date' => 'nullable|date',
+            'expiration_date' => 'nullable|date',
+            'digital_copy_date' => 'nullable|date',
         ]);
 
-        $data = collect($validated)->except([
-            'execution_date_month', 'execution_date_day', 'execution_date_year',
-            'expiration_date_month', 'expiration_date_day', 'expiration_date_year',
-            'digital_copy_date_month', 'digital_copy_date_day', 'digital_copy_date_year',
-        ])->toArray();
+        $data = $validated;
 
-        // Parse dates from separate fields
-        $data['execution_date'] = $this->parseDate($request, 'execution_date');
-        $data['expiration_date'] = $this->parseDate($request, 'expiration_date');
-        $data['digital_copy_date'] = $this->parseDate($request, 'digital_copy_date');
+        // Parse dates from MM/DD/YYYY format
+        foreach (['execution_date', 'expiration_date', 'digital_copy_date'] as $dateField) {
+            if (!empty($data[$dateField])) {
+                try {
+                    $data[$dateField] = Carbon::createFromFormat('m/d/Y', $data[$dateField])->format('Y-m-d');
+                } catch (\Exception $e) {
+                    $data[$dateField] = null;
+                }
+            }
+        }
 
         // Clear attorney person if manually entered
         if (!empty($data['attorney_name']) && empty($data['attorney_person_id'])) {
