@@ -15,6 +15,7 @@
 
 @section('content')
 <div class="space-y-6">
+    @if($totalPets > 0)
     <!-- Header with Stats -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div class="card bg-base-100 shadow-sm">
@@ -96,6 +97,7 @@
             </form>
         </div>
     </div>
+    @endif
 
     <!-- Pets Grid -->
     @if($pets->count() > 0)

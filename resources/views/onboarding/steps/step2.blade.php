@@ -67,7 +67,7 @@
                 <select name="country_code" class="select select-bordered w-32">
                     <option value="">Code</option>
                     @foreach($countryCodes as $code => $label)
-                        <option value="{{ $code }}" {{ old('country_code', $user['country_code'] ?? '') === $code ? 'selected' : '' }}>{{ $label }}</option>
+                        <option value="{{ $code }}" {{ old('country_code', $user['country_code'] ?? '+1') === $code ? 'selected' : '' }}>{{ $label }}</option>
                     @endforeach
                 </select>
                 <input type="tel" name="phone" value="{{ old('phone', $user['phone'] ?? '') }}"
@@ -104,7 +104,7 @@
             <select name="country" class="select select-bordered w-full @error('country') select-error @enderror" required>
                 <option value="">Select country</option>
                 @foreach($countries as $code => $name)
-                    <option value="{{ $code }}" {{ old('country', $tenant['country'] ?? '') === $code ? 'selected' : '' }}>{{ $name }}</option>
+                    <option value="{{ $code }}" {{ old('country', $tenant['country'] ?? 'US') === $code ? 'selected' : '' }}>{{ $name }}</option>
                 @endforeach
             </select>
             @error('country')

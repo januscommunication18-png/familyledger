@@ -21,6 +21,29 @@ function safeEncrypt($value) {
     return Crypt::encryptString($value);
 }
 
+// Fix users table
+echo "Fixing users table...\n";
+$users = DB::table('users')->get();
+$fixed = 0;
+
+foreach ($users as $user) {
+    $updates = [];
+
+    if (needsEncryption($user->name ?? null)) $updates['name'] = safeEncrypt($user->name);
+    if (needsEncryption($user->first_name ?? null)) $updates['first_name'] = safeEncrypt($user->first_name);
+    if (needsEncryption($user->last_name ?? null)) $updates['last_name'] = safeEncrypt($user->last_name);
+    if (needsEncryption($user->backup_email ?? null)) $updates['backup_email'] = safeEncrypt($user->backup_email);
+    if (needsEncryption($user->phone ?? null)) $updates['phone'] = safeEncrypt($user->phone);
+    if (needsEncryption($user->country_code ?? null)) $updates['country_code'] = safeEncrypt($user->country_code);
+
+    if (!empty($updates)) {
+        DB::table('users')->where('id', $user->id)->update($updates);
+        $fixed++;
+        echo "Fixed user ID: {$user->id}\n";
+    }
+}
+echo "✅ Fixed {$fixed} users records\n\n";
+
 // Fix family_members table
 echo "Fixing family_members table...\n";
 $members = DB::table('family_members')->get();

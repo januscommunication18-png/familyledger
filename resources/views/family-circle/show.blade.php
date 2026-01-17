@@ -108,8 +108,8 @@
                     <div class="flex flex-col md:flex-row md:items-center gap-4">
                         <!-- Avatar -->
                         <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden">
-                            @if($owner->profile_image)
-                                <img src="{{ Storage::disk('do_spaces')->url($owner->profile_image) }}" alt="{{ $owner->name }}" class="w-full h-full object-cover">
+                            @if($owner->avatar)
+                                <img src="{{ Storage::disk('do_spaces')->url($owner->avatar) }}" alt="{{ $owner->name }}" class="w-full h-full object-cover">
                             @else
                                 <span class="text-2xl font-bold text-white">{{ strtoupper(substr($ownerFirstName, 0, 1)) }}</span>
                             @endif
