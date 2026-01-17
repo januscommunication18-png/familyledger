@@ -53,8 +53,8 @@ class SecurityHeaders
         // Content Security Policy - Production only
         $csp = implode('; ', [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.bunny.net",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://code.jquery.com",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.bunny.net https://cdn.jsdelivr.net",
             "font-src 'self' https://fonts.gstatic.com https://fonts.bunny.net",
             "img-src 'self' data: https:",
             "connect-src 'self' wss: ws:",
