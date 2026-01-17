@@ -6,8 +6,9 @@
 <div id="login-app">
     <h2 class="text-2xl font-semibold text-center mb-6">Welcome Back</h2>
 
-    <!-- Social Login Buttons -->
-    <div class="space-y-3 mb-6">
+    <!-- Step 1: Social Login & Email Button -->
+    <div id="step-social" class="space-y-3">
+        <!-- Social Login Buttons -->
         <a href="/auth/google" class="btn btn-outline btn-block gap-2">
             <svg class="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -31,122 +32,173 @@
             </svg>
             Continue with Facebook
         </a>
-    </div>
 
-    <div class="divider text-base-content/50">or sign in with email</div>
+        <div class="divider text-base-content/50">or</div>
 
-    <!-- Tab Navigation -->
-    <div class="flex rounded-lg bg-base-200 p-1 mb-6">
-        <button class="tab-btn flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all bg-base-100 shadow-sm text-base-content" data-tab="password">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-            Login
-        </button>
-        <button class="tab-btn flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all text-base-content/60 hover:text-base-content" data-tab="otp">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <!-- Continue with Email Button -->
+        <button type="button" id="btn-continue-email" class="btn btn-outline btn-block gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
-            Email Code
+            Continue with Email
         </button>
     </div>
 
-    <!-- OTP Login Form -->
-    <div id="otp-form" class="hidden">
-        <form id="otp-request-form" class="space-y-4">
+    <!-- Step 2: Email Input -->
+    <div id="step-email" class="hidden">
+        <div class="flex items-center gap-2 mb-6">
+            <button type="button" id="back-to-social" class="btn btn-ghost btn-sm btn-circle">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
+            <span class="text-sm text-base-content/70">Sign in with email</span>
+        </div>
+
+        <form id="email-form" class="space-y-4">
             <div class="form-control">
                 <label class="label">
                     <span class="label-text">Email Address</span>
                 </label>
-                <input type="email" name="email" placeholder="you@example.com" class="input input-bordered w-full" required>
+                <input type="email" name="email" id="email-input" placeholder="you@example.com" class="input input-bordered w-full" required>
             </div>
 
             <button type="submit" class="btn btn-primary btn-block">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                Continue
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                 </svg>
-                Send Login Code
-            </button>
-        </form>
-
-        <form id="otp-verify-form" class="space-y-4 hidden">
-            <div class="bg-base-200 rounded-lg p-4 text-center mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 mx-auto mb-2 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                <p class="text-sm text-base-content/70">
-                    We sent a 6-digit code to<br>
-                    <span id="otp-email" class="font-medium text-base-content"></span>
-                </p>
-            </div>
-
-            <div class="form-control">
-                <label class="label">
-                    <span class="label-text">Verification Code</span>
-                </label>
-                <input type="text" name="code" placeholder="000000" class="input input-bordered w-full text-center text-2xl tracking-widest" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" required>
-            </div>
-
-            <button type="submit" class="btn btn-primary btn-block">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Verify & Sign In
-            </button>
-
-            <button type="button" id="resend-otp" class="btn btn-ghost btn-sm btn-block">
-                Didn't receive it? Resend Code
-            </button>
-
-            <button type="button" id="change-email" class="btn btn-link btn-sm btn-block text-base-content/60">
-                Use different email
             </button>
         </form>
     </div>
 
-    <!-- Password Login Form -->
-    <div id="password-form">
-        <form class="space-y-4">
-            <div class="form-control">
-                <label class="label">
-                    <span class="label-text">Email Address</span>
-                </label>
-                <input type="email" name="email" placeholder="you@example.com" class="input input-bordered w-full" required>
-            </div>
-
-            <div class="form-control">
-                <label class="label">
-                    <span class="label-text">Password</span>
-                </label>
-                <div class="relative">
-                    <input type="password" name="password" id="password-input" placeholder="Enter your password" class="input input-bordered w-full pr-10" required>
-                    <button type="button" id="toggle-password" class="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 eye-open" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 eye-closed hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
-
-            <div class="flex items-center justify-between">
-                <label class="label cursor-pointer gap-2">
-                    <input type="checkbox" name="remember" class="checkbox checkbox-sm checkbox-primary">
-                    <span class="label-text">Remember me</span>
-                </label>
-                <a href="/forgot-password" class="text-sm text-primary hover:underline">Forgot password?</a>
-            </div>
-
-            <button type="submit" class="btn btn-primary btn-block">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+    <!-- Step 3: Login Method Selection (Password or OTP) -->
+    <div id="step-login-method" class="hidden">
+        <div class="flex items-center gap-2 mb-4">
+            <button type="button" id="back-to-email" class="btn btn-ghost btn-sm btn-circle">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                 </svg>
-                Sign In
             </button>
-        </form>
+            <span class="text-sm text-base-content/70">Signing in as <strong id="display-email" class="text-base-content"></strong></span>
+        </div>
+
+        <!-- Login Method Selection -->
+        <div class="space-y-3 mb-6">
+            <p class="text-sm text-base-content/70 mb-3">Choose how you'd like to sign in:</p>
+
+            <!-- Password Option -->
+            <label class="login-method-option flex items-start gap-3 p-4 border border-base-300 rounded-xl cursor-pointer hover:border-primary hover:bg-base-50 transition-all has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                <input type="radio" name="login_method" value="password" class="radio radio-primary mt-0.5" checked>
+                <div class="flex-1">
+                    <div class="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        <span class="font-medium text-base-content">Use my password</span>
+                    </div>
+                    <p class="text-sm text-base-content/60 mt-1">Sign in with your account password. Best for quick access.</p>
+                </div>
+            </label>
+
+            <!-- Email Code Option -->
+            <label class="login-method-option flex items-start gap-3 p-4 border border-base-300 rounded-xl cursor-pointer hover:border-primary hover:bg-base-50 transition-all has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                <input type="radio" name="login_method" value="otp" class="radio radio-primary mt-0.5">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        <span class="font-medium text-base-content">Email me a code</span>
+                    </div>
+                    <p class="text-sm text-base-content/60 mt-1">We'll send a one-time 6-digit code to your email. No password needed.</p>
+                </div>
+            </label>
+        </div>
+
+        <!-- Password Login Form -->
+        <div id="password-form">
+            <form id="password-login-form" class="space-y-4">
+                <input type="hidden" name="email" id="password-email">
+
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Password</span>
+                    </label>
+                    <div class="relative">
+                        <input type="password" name="password" id="password-input" placeholder="Enter your password" class="input input-bordered w-full pr-10" required>
+                        <button type="button" id="toggle-password" class="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 eye-open" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 eye-closed hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label class="label cursor-pointer gap-2">
+                        <input type="checkbox" name="remember" class="checkbox checkbox-sm checkbox-primary">
+                        <span class="label-text">Remember me</span>
+                    </label>
+                    <a href="/forgot-password" class="text-sm text-primary hover:underline">Forgot password?</a>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                    </svg>
+                    Sign In
+                </button>
+            </form>
+        </div>
+
+        <!-- OTP Login Form -->
+        <div id="otp-form" class="hidden">
+            <form id="otp-request-form" class="space-y-4">
+                <input type="hidden" name="email" id="otp-email-hidden">
+
+                <button type="submit" class="btn btn-primary btn-block">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                    Send Code
+                </button>
+            </form>
+
+            <form id="otp-verify-form" class="space-y-4 hidden">
+                <div class="bg-base-200 rounded-lg p-4 text-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 mx-auto mb-2 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    <p class="text-sm text-base-content/70">
+                        We sent a 6-digit code to<br>
+                        <span id="otp-email-confirm" class="font-medium text-base-content"></span>
+                    </p>
+                </div>
+
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Verification Code</span>
+                    </label>
+                    <input type="text" name="code" placeholder="000000" class="input input-bordered w-full text-center text-2xl tracking-widest" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Verify & Sign In
+                </button>
+
+                <button type="button" id="resend-otp" class="btn btn-ghost btn-sm btn-block">
+                    Didn't receive it? Resend Code
+                </button>
+            </form>
+        </div>
     </div>
 
     <!-- Honeypot (hidden) -->
@@ -180,21 +232,69 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    let userEmail = '';
 
-    // Tab switching
-    document.querySelectorAll('.tab-btn').forEach(tab => {
-        tab.addEventListener('click', function() {
-            // Update tab styles
-            document.querySelectorAll('.tab-btn').forEach(t => {
-                t.classList.remove('bg-base-100', 'shadow-sm', 'text-base-content');
-                t.classList.add('text-base-content/60');
-            });
-            this.classList.add('bg-base-100', 'shadow-sm', 'text-base-content');
-            this.classList.remove('text-base-content/60');
+    // Step navigation
+    const stepSocial = document.getElementById('step-social');
+    const stepEmail = document.getElementById('step-email');
+    const stepLoginMethod = document.getElementById('step-login-method');
 
-            const tabName = this.dataset.tab;
-            document.getElementById('otp-form').classList.toggle('hidden', tabName !== 'otp');
-            document.getElementById('password-form').classList.toggle('hidden', tabName !== 'password');
+    function showStep(step) {
+        stepSocial.classList.add('hidden');
+        stepEmail.classList.add('hidden');
+        stepLoginMethod.classList.add('hidden');
+
+        if (step === 'social') {
+            stepSocial.classList.remove('hidden');
+        } else if (step === 'email') {
+            stepEmail.classList.remove('hidden');
+            document.getElementById('email-input').focus();
+        } else if (step === 'login-method') {
+            stepLoginMethod.classList.remove('hidden');
+            document.getElementById('password-input').focus();
+        }
+    }
+
+    // Continue with Email button
+    document.getElementById('btn-continue-email').addEventListener('click', function() {
+        showStep('email');
+    });
+
+    // Back to social
+    document.getElementById('back-to-social').addEventListener('click', function() {
+        showStep('social');
+    });
+
+    // Back to email
+    document.getElementById('back-to-email').addEventListener('click', function() {
+        showStep('email');
+    });
+
+    // Email form submission
+    document.getElementById('email-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        userEmail = document.getElementById('email-input').value;
+
+        // Update email displays
+        document.getElementById('display-email').textContent = userEmail;
+        document.getElementById('password-email').value = userEmail;
+        document.getElementById('otp-email-hidden').value = userEmail;
+        document.getElementById('otp-email-confirm').textContent = userEmail;
+
+        // Show login method step
+        showStep('login-method');
+    });
+
+    // Login method radio button switching
+    document.querySelectorAll('input[name="login_method"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const method = this.value;
+            document.getElementById('otp-form').classList.toggle('hidden', method !== 'otp');
+            document.getElementById('password-form').classList.toggle('hidden', method !== 'password');
+
+            if (method === 'password') {
+                document.getElementById('password-input').focus();
+            }
         });
     });
 
@@ -210,20 +310,52 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Change email button
-    const changeEmailBtn = document.getElementById('change-email');
-    if (changeEmailBtn) {
-        changeEmailBtn.addEventListener('click', function() {
-            document.getElementById('otp-verify-form').classList.add('hidden');
-            document.getElementById('otp-request-form').classList.remove('hidden');
-            document.getElementById('otp-request-form').querySelector('input[name="email"]').focus();
-        });
-    }
+    // Password Login
+    document.getElementById('password-login-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const submitBtn = this.querySelector('button[type="submit"]');
+
+        submitBtn.disabled = true;
+        const originalHtml = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<span class="loading loading-spinner loading-sm mr-2"></span>Signing in...';
+
+        try {
+            const response = await fetch('/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify({
+                    email: userEmail,
+                    password: formData.get('password'),
+                    remember: formData.has('remember')
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showSuccess('Success! Redirecting...');
+                setTimeout(() => {
+                    window.location.href = data.redirect || '/dashboard';
+                }, 500);
+            } else {
+                showError(data.error || 'Invalid credentials');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalHtml;
+            }
+        } catch (err) {
+            showError('Network error. Please try again.');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalHtml;
+        }
+    });
 
     // OTP Request
     document.getElementById('otp-request-form').addEventListener('submit', async function(e) {
         e.preventDefault();
-        const email = this.querySelector('input[name="email"]').value;
         const submitBtn = this.querySelector('button[type="submit"]');
 
         submitBtn.disabled = true;
@@ -237,7 +369,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': csrfToken
                 },
-                body: JSON.stringify({ email })
+                body: JSON.stringify({ email: userEmail })
             });
 
             const data = await response.json();
@@ -245,7 +377,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (response.ok) {
                 document.getElementById('otp-request-form').classList.add('hidden');
                 document.getElementById('otp-verify-form').classList.remove('hidden');
-                document.getElementById('otp-email').textContent = email;
                 document.getElementById('otp-verify-form').querySelector('input[name="code"]').focus();
                 showSuccess('Code sent! Check your email.');
             } else {
@@ -262,7 +393,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // OTP Verify
     document.getElementById('otp-verify-form').addEventListener('submit', async function(e) {
         e.preventDefault();
-        const email = document.getElementById('otp-email').textContent;
         const code = this.querySelector('input[name="code"]').value;
         const submitBtn = this.querySelector('button[type="submit"]');
 
@@ -277,7 +407,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': csrfToken
                 },
-                body: JSON.stringify({ email, code })
+                body: JSON.stringify({ email: userEmail, code })
             });
 
             const data = await response.json();
@@ -305,7 +435,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Resend OTP
     document.getElementById('resend-otp').addEventListener('click', async function() {
-        const email = document.getElementById('otp-email').textContent;
         this.disabled = true;
         const originalText = this.textContent;
         this.textContent = 'Sending...';
@@ -317,7 +446,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': csrfToken
                 },
-                body: JSON.stringify({ email })
+                body: JSON.stringify({ email: userEmail })
             });
 
             const data = await response.json();
@@ -335,49 +464,6 @@ document.addEventListener('DOMContentLoaded', function() {
             this.disabled = false;
             this.textContent = originalText;
         }, 30000);
-    });
-
-    // Password Login
-    document.getElementById('password-form').querySelector('form').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const formData = new FormData(this);
-        const submitBtn = this.querySelector('button[type="submit"]');
-
-        submitBtn.disabled = true;
-        const originalHtml = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<span class="loading loading-spinner loading-sm mr-2"></span>Signing in...';
-
-        try {
-            const response = await fetch('/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken
-                },
-                body: JSON.stringify({
-                    email: formData.get('email'),
-                    password: formData.get('password'),
-                    remember: formData.has('remember')
-                })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                showSuccess('Success! Redirecting...');
-                setTimeout(() => {
-                    window.location.href = data.redirect || '/dashboard';
-                }, 500);
-            } else {
-                showError(data.error || 'Invalid credentials');
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalHtml;
-            }
-        } catch (err) {
-            showError('Network error. Please try again.');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalHtml;
-        }
     });
 
     // Only allow numeric input for OTP
