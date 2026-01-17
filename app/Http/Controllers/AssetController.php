@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Asset;
 use App\Models\AssetDocument;
 use App\Models\AssetOwner;
+use App\Models\FamilyCircle;
 use App\Models\FamilyMember;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -67,11 +68,13 @@ class AssetController extends Controller
     {
         $user = Auth::user();
         $familyMembers = $this->getUniqueFamilyMembers($user->tenant_id);
+        $familyCircles = FamilyCircle::where('tenant_id', $user->tenant_id)->with('members')->get();
         $category = $request->get('category', 'property');
 
         return view('pages.assets.form', [
             'asset' => null,
             'familyMembers' => $familyMembers,
+            'familyCircles' => $familyCircles,
             'category' => $category,
             'categories' => Asset::CATEGORIES,
             'propertyTypes' => Asset::PROPERTY_TYPES,
@@ -153,6 +156,18 @@ class AssetController extends Controller
             'document_types.*' => 'nullable|string|in:' . implode(',', array_keys(Asset::DOCUMENT_TYPES)),
         ]);
 
+        // Custom validation for joint ownership percentages
+        if (($validated['ownership_type'] ?? 'individual') === 'joint') {
+            $errors = $this->validateOwnerPercentages(
+                $validated['family_owners'] ?? [],
+                $validated['external_owners'] ?? []
+            );
+
+            if (!empty($errors)) {
+                return back()->withErrors($errors)->withInput();
+            }
+        }
+
         $data = collect($validated)->except(['family_owners', 'external_owners', 'documents', 'document_types'])->toArray();
         $data['tenant_id'] = Auth::user()->tenant_id;
         $data['status'] = $data['status'] ?? 'active';
@@ -223,10 +238,12 @@ class AssetController extends Controller
 
         $asset->load(['owners.familyMember', 'documents']);
         $familyMembers = $this->getUniqueFamilyMembers(Auth::user()->tenant_id);
+        $familyCircles = FamilyCircle::where('tenant_id', Auth::user()->tenant_id)->with('members')->get();
 
         return view('pages.assets.form', [
             'asset' => $asset,
             'familyMembers' => $familyMembers,
+            'familyCircles' => $familyCircles,
             'category' => $asset->asset_category,
             'categories' => Asset::CATEGORIES,
             'propertyTypes' => Asset::PROPERTY_TYPES,
@@ -311,6 +328,18 @@ class AssetController extends Controller
             'document_types' => 'nullable|array',
             'document_types.*' => 'nullable|string|in:' . implode(',', array_keys(Asset::DOCUMENT_TYPES)),
         ]);
+
+        // Custom validation for joint ownership percentages
+        if (($validated['ownership_type'] ?? 'individual') === 'joint') {
+            $errors = $this->validateOwnerPercentages(
+                $validated['family_owners'] ?? [],
+                $validated['external_owners'] ?? []
+            );
+
+            if (!empty($errors)) {
+                return back()->withErrors($errors)->withInput();
+            }
+        }
 
         $data = collect($validated)->except(['family_owners', 'external_owners', 'documents', 'document_types'])->toArray();
         $data['is_insured'] = $request->boolean('is_insured');
@@ -482,6 +511,11 @@ class AssetController extends Controller
                 continue;
             }
 
+            // Convert empty string percentage to 0 (column is NOT NULL)
+            $percentage = isset($ownerData['percentage']) && $ownerData['percentage'] !== ''
+                ? (float) $ownerData['percentage']
+                : 0;
+
             // Handle the 'owner' pseudo-member (current logged-in user)
             if ($memberId === 'owner') {
                 AssetOwner::create([
@@ -490,7 +524,7 @@ class AssetController extends Controller
                     'family_member_id' => null,
                     'external_owner_name' => $currentUser->name ?? $currentUser->email,
                     'external_owner_email' => $currentUser->email,
-                    'ownership_percentage' => $ownerData['percentage'] ?? null,
+                    'ownership_percentage' => $percentage,
                     'is_primary_owner' => $isPrimary,
                 ]);
 
@@ -507,7 +541,7 @@ class AssetController extends Controller
                 'tenant_id' => $currentUser->tenant_id,
                 'asset_id' => $asset->id,
                 'family_member_id' => $memberId,
-                'ownership_percentage' => $ownerData['percentage'] ?? null,
+                'ownership_percentage' => $percentage,
                 'is_primary_owner' => $isPrimary,
             ]);
 
@@ -523,19 +557,76 @@ class AssetController extends Controller
 
             $fullName = trim(($ownerData['first_name'] ?? '') . ' ' . ($ownerData['last_name'] ?? ''));
 
+            // Convert empty string percentage to 0 (column is NOT NULL)
+            $percentage = isset($ownerData['percentage']) && $ownerData['percentage'] !== ''
+                ? (float) $ownerData['percentage']
+                : 0;
+
             AssetOwner::create([
                 'tenant_id' => $currentUser->tenant_id,
                 'asset_id' => $asset->id,
                 'family_member_id' => null,
                 'external_owner_name' => $fullName ?: null,
-                'external_owner_email' => $ownerData['email'] ?? null,
-                'external_owner_phone' => $ownerData['phone'] ?? null,
-                'ownership_percentage' => $ownerData['percentage'] ?? null,
+                'external_owner_email' => !empty($ownerData['email']) ? $ownerData['email'] : null,
+                'external_owner_phone' => !empty($ownerData['phone']) ? $ownerData['phone'] : null,
+                'ownership_percentage' => $percentage,
                 'is_primary_owner' => $isPrimary,
             ]);
 
             $isPrimary = false;
         }
+    }
+
+    /**
+     * Validate that all selected owners have percentage values.
+     */
+    private function validateOwnerPercentages(array $familyOwners, array $externalOwners): array
+    {
+        $errors = [];
+
+        // Check family member owners
+        foreach ($familyOwners as $memberId => $ownerData) {
+            if (!empty($ownerData['selected'])) {
+                if (!isset($ownerData['percentage']) || $ownerData['percentage'] === '' || $ownerData['percentage'] === null) {
+                    $errors['family_owners'] = 'Please enter ownership percentage for all selected family members.';
+                    break;
+                }
+            }
+        }
+
+        // Check external owners
+        foreach ($externalOwners as $index => $ownerData) {
+            $hasName = !empty($ownerData['first_name']) || !empty($ownerData['last_name']);
+            if ($hasName) {
+                if (!isset($ownerData['percentage']) || $ownerData['percentage'] === '' || $ownerData['percentage'] === null) {
+                    $errors['external_owners'] = 'Please enter ownership percentage for all external owners.';
+                    break;
+                }
+            }
+        }
+
+        // Check that at least one owner is selected
+        $hasOwner = false;
+        foreach ($familyOwners as $ownerData) {
+            if (!empty($ownerData['selected'])) {
+                $hasOwner = true;
+                break;
+            }
+        }
+        if (!$hasOwner) {
+            foreach ($externalOwners as $ownerData) {
+                if (!empty($ownerData['first_name']) || !empty($ownerData['last_name'])) {
+                    $hasOwner = true;
+                    break;
+                }
+            }
+        }
+
+        if (!$hasOwner) {
+            $errors['ownership_type'] = 'Please select at least one joint owner or add an external owner.';
+        }
+
+        return $errors;
     }
 
     /**

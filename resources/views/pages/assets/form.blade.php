@@ -38,7 +38,7 @@
         </div>
     </div>
 
-    <form action="{{ $asset ? route('assets.update', $asset) : route('assets.store') }}" method="POST" enctype="multipart/form-data">
+    <form action="{{ $asset ? route('assets.update', $asset) : route('assets.store') }}" method="POST" enctype="multipart/form-data" id="asset-form" onsubmit="return validateAssetForm()">
         @csrf
         @if($asset)
             @method('PUT')
@@ -141,32 +141,39 @@
                                 </div>
                             </div>
 
-                            <!-- Existing Family Members Selection -->
+                            <!-- Family Circle Selection -->
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-2">Select from Family Members</label>
-                                <div id="family-member-owners" class="space-y-2">
-                                    @foreach($familyMembers as $member)
-                                        <div class="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200">
-                                            <input type="checkbox" name="family_owners[{{ $member->id }}][selected]" value="1"
-                                                class="checkbox checkbox-sm checkbox-primary family-owner-checkbox"
-                                                data-member-id="{{ $member->id }}"
-                                                {{ ($asset && $asset->owners->pluck('family_member_id')->contains($member->id)) ? 'checked' : '' }}>
-                                            <div class="flex-1">
-                                                <span class="font-medium text-slate-800">{{ $member->first_name }} {{ $member->last_name }}</span>
-                                                @if($member->email)
-                                                    <span class="text-xs text-slate-400 ml-2">{{ $member->email }}</span>
-                                                @endif
-                                            </div>
-                                            <div class="flex items-center gap-2">
-                                                <input type="number" name="family_owners[{{ $member->id }}][percentage]"
-                                                    class="w-20 px-2 py-1.5 text-sm border border-slate-300 rounded-lg text-center focus:border-violet-500 focus:outline-none"
-                                                    placeholder="%" min="0" max="100" step="0.01"
-                                                    value="{{ $asset?->owners->where('family_member_id', $member->id)->first()?->ownership_percentage ?? '' }}">
-                                                <span class="text-xs text-slate-500">%</span>
-                                            </div>
-                                        </div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Select Family Circle</label>
+                                <select id="family-circle-select" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20" onchange="loadCircleMembers(this.value)">
+                                    <option value="">Choose a family circle...</option>
+                                    @foreach($familyCircles as $circle)
+                                        @php
+                                            $membersData = $circle->members->map(function($m) {
+                                                return [
+                                                    'id' => $m->id,
+                                                    'first_name' => $m->first_name,
+                                                    'last_name' => $m->last_name,
+                                                    'email' => $m->email
+                                                ];
+                                            })->values();
+                                        @endphp
+                                        <option value="{{ $circle->id }}" data-members="{{ $membersData->toJson() }}">
+                                            {{ $circle->name }}
+                                        </option>
                                     @endforeach
+                                </select>
+                            </div>
+
+                            <!-- Family Members Selection (shown after circle is selected) -->
+                            <div id="family-members-section" class="hidden">
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Select Family Members</label>
+                                <div id="family-member-owners" class="space-y-2">
+                                    <!-- Members will be populated dynamically -->
                                 </div>
+                                <p id="family-owners-error" class="text-rose-500 text-sm mt-2 hidden"></p>
+                                @error('family_owners')
+                                    <p class="text-rose-500 text-sm mt-2">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             <!-- Divider -->
@@ -229,6 +236,10 @@
                                         @endforeach
                                     @endif
                                 </div>
+                                <p id="external-owners-error" class="text-rose-500 text-sm mt-2 hidden"></p>
+                                @error('external_owners')
+                                    <p class="text-rose-500 text-sm mt-2">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             <!-- Total Percentage Indicator -->
@@ -236,6 +247,12 @@
                                 <span class="text-sm font-medium text-slate-700">Total Ownership</span>
                                 <span id="total-percentage" class="text-sm font-bold text-violet-600">0%</span>
                             </div>
+
+                            <!-- General ownership error -->
+                            <p id="ownership-error" class="text-rose-500 text-sm hidden"></p>
+                            @error('ownership_type')
+                                <p class="text-rose-500 text-sm">{{ $message }}</p>
+                            @enderror
                         </div>
                     </div>
 
@@ -669,6 +686,60 @@ function toggleOwnershipSection(value) {
     }
 }
 
+// Load members based on selected family circle
+function loadCircleMembers(circleId) {
+    const membersSection = document.getElementById('family-members-section');
+    const membersContainer = document.getElementById('family-member-owners');
+
+    if (!circleId) {
+        membersSection.classList.add('hidden');
+        membersContainer.innerHTML = '';
+        return;
+    }
+
+    // Get members from the selected option's data attribute
+    const select = document.getElementById('family-circle-select');
+    const selectedOption = select.options[select.selectedIndex];
+    const members = JSON.parse(selectedOption.dataset.members || '[]');
+
+    // Clear and populate members
+    membersContainer.innerHTML = '';
+
+    if (members.length === 0) {
+        membersContainer.innerHTML = '<p class="text-sm text-slate-500 p-3 bg-white rounded-lg border border-slate-200">No members found in this circle.</p>';
+    } else {
+        members.forEach(member => {
+            const memberHtml = `
+                <div class="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                    <input type="checkbox" name="family_owners[${member.id}][selected]" value="1"
+                        class="checkbox checkbox-sm checkbox-primary family-owner-checkbox"
+                        data-member-id="${member.id}">
+                    <div class="flex-1">
+                        <span class="font-medium text-slate-800">${member.first_name} ${member.last_name || ''}</span>
+                        ${member.email ? `<span class="text-xs text-slate-400 ml-2">${member.email}</span>` : ''}
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="number" name="family_owners[${member.id}][percentage]"
+                            class="w-20 px-2 py-1.5 text-sm border border-slate-300 rounded-lg text-center focus:border-violet-500 focus:outline-none"
+                            placeholder="%" min="0" max="100" step="0.01"
+                            oninput="calculateTotalPercentage()">
+                        <span class="text-xs text-slate-500">%</span>
+                    </div>
+                </div>
+            `;
+            membersContainer.insertAdjacentHTML('beforeend', memberHtml);
+        });
+
+        // Re-attach event listeners for checkboxes
+        document.querySelectorAll('.family-owner-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', calculateTotalPercentage);
+        });
+    }
+
+    membersSection.classList.remove('hidden');
+    calculateTotalPercentage();
+}
+
 // Add external owner row
 function addExternalOwner() {
     const container = document.getElementById('external-owners-container');
@@ -806,5 +877,113 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Clear all validation errors
+function clearValidationErrors() {
+    const errorElements = ['family-owners-error', 'external-owners-error', 'ownership-error'];
+    errorElements.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.textContent = '';
+            el.classList.add('hidden');
+        }
+    });
+
+    // Remove error styling from inputs
+    document.querySelectorAll('.percentage-error').forEach(el => {
+        el.classList.remove('percentage-error', 'border-rose-500');
+    });
+}
+
+// Show inline error
+function showInlineError(elementId, message) {
+    const el = document.getElementById(elementId);
+    if (el) {
+        el.textContent = message;
+        el.classList.remove('hidden');
+    }
+}
+
+// Validate form before submission
+function validateAssetForm() {
+    const ownershipType = document.getElementById('ownership_type').value;
+
+    // Clear previous errors
+    clearValidationErrors();
+
+    // Only validate if joint ownership is selected
+    if (ownershipType !== 'joint') {
+        return true;
+    }
+
+    // Check if at least one owner is selected
+    const checkedFamilyOwners = document.querySelectorAll('.family-owner-checkbox:checked');
+    const externalOwnerRows = document.querySelectorAll('.external-owner-row');
+    let hasExternalOwner = false;
+
+    externalOwnerRows.forEach(row => {
+        const firstName = row.querySelector('input[name$="[first_name]"]')?.value?.trim();
+        const lastName = row.querySelector('input[name$="[last_name]"]')?.value?.trim();
+        if (firstName || lastName) {
+            hasExternalOwner = true;
+        }
+    });
+
+    if (checkedFamilyOwners.length === 0 && !hasExternalOwner) {
+        showInlineError('ownership-error', 'Please select at least one joint owner or add an external owner.');
+        return false;
+    }
+
+    // Validate that selected family members have percentages
+    let hasError = false;
+    let familyErrors = [];
+
+    checkedFamilyOwners.forEach(checkbox => {
+        const row = checkbox.closest('.flex');
+        const percentageInput = row.querySelector('input[type="number"]');
+        const memberName = row.querySelector('.font-medium')?.textContent?.trim() || 'A member';
+
+        if (!percentageInput || !percentageInput.value || percentageInput.value === '') {
+            hasError = true;
+            familyErrors.push(memberName);
+            if (percentageInput) {
+                percentageInput.classList.add('percentage-error', 'border-rose-500');
+            }
+        }
+    });
+
+    if (familyErrors.length > 0) {
+        showInlineError('family-owners-error', `Please enter ownership percentage for: ${familyErrors.join(', ')}`);
+    }
+
+    // Check external owners have percentages
+    let externalErrors = [];
+    externalOwnerRows.forEach((row, index) => {
+        const firstName = row.querySelector('input[name$="[first_name]"]')?.value?.trim();
+        const lastName = row.querySelector('input[name$="[last_name]"]')?.value?.trim();
+        const percentageInput = row.querySelector('input[name$="[percentage]"]');
+        const percentage = percentageInput?.value;
+
+        if ((firstName || lastName) && (!percentage || percentage === '')) {
+            hasError = true;
+            externalErrors.push(`${firstName || ''} ${lastName || ''}`.trim());
+            if (percentageInput) {
+                percentageInput.classList.add('percentage-error', 'border-rose-500');
+            }
+        }
+    });
+
+    if (externalErrors.length > 0) {
+        showInlineError('external-owners-error', `Please enter ownership percentage for: ${externalErrors.join(', ')}`);
+    }
+
+    if (hasError) {
+        // Scroll to the joint ownership section
+        document.getElementById('joint-ownership-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+    }
+
+    return true;
+}
 </script>
 @endpush
