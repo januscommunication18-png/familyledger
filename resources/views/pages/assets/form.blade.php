@@ -38,7 +38,7 @@
         </div>
     </div>
 
-    <form action="{{ $asset ? route('assets.update', $asset) : route('assets.store') }}" method="POST" enctype="multipart/form-data">
+    <form action="{{ $asset ? route('assets.update', $asset) : route('assets.store') }}" method="POST" enctype="multipart/form-data" id="asset-form" onsubmit="return validateAssetForm()">
         @csrf
         @if($asset)
             @method('PUT')
@@ -144,21 +144,36 @@
                             <!-- Family Circle Selection -->
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 mb-2">Select Family Circle</label>
-                                <select id="joint-family-circle" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20" onchange="updateFamilyMembersList(this.value)">
-                                    <option value="">-- Select a Family Circle --</option>
+                                <select id="family-circle-select" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20" onchange="loadCircleMembers(this.value)">
+                                    <option value="">Choose a family circle...</option>
                                     @foreach($familyCircles as $circle)
-                                        <option value="{{ $circle->id }}">{{ $circle->name }}</option>
+                                        @php
+                                            $membersData = $circle->members->map(function($m) {
+                                                return [
+                                                    'id' => $m->id,
+                                                    'first_name' => $m->first_name,
+                                                    'last_name' => $m->last_name,
+                                                    'email' => $m->email
+                                                ];
+                                            })->values();
+                                        @endphp
+                                        <option value="{{ $circle->id }}" data-members="{{ $membersData->toJson() }}">
+                                            {{ $circle->name }}
+                                        </option>
                                     @endforeach
                                 </select>
                             </div>
 
-                            <!-- Family Members Selection (Dynamic based on circle) -->
-                            <div id="family-members-container" class="hidden">
-                                <label class="block text-sm font-medium text-slate-700 mb-2">Select Family Members as Co-Owners</label>
+                            <!-- Family Members Selection (shown after circle is selected) -->
+                            <div id="family-members-section" class="hidden">
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Select Family Members</label>
                                 <div id="family-member-owners" class="space-y-2">
                                     <!-- Members will be populated dynamically -->
                                 </div>
-                                <p id="no-members-message" class="hidden text-sm text-slate-500 italic py-3 text-center">No members found in this circle</p>
+                                <p id="family-owners-error" class="text-rose-500 text-sm mt-2 hidden"></p>
+                                @error('family_owners')
+                                    <p class="text-rose-500 text-sm mt-2">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             <!-- Divider -->
@@ -221,6 +236,10 @@
                                         @endforeach
                                     @endif
                                 </div>
+                                <p id="external-owners-error" class="text-rose-500 text-sm mt-2 hidden"></p>
+                                @error('external_owners')
+                                    <p class="text-rose-500 text-sm mt-2">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             <!-- Total Percentage Indicator -->
@@ -228,6 +247,12 @@
                                 <span class="text-sm font-medium text-slate-700">Total Ownership</span>
                                 <span id="total-percentage" class="text-sm font-bold text-violet-600">0%</span>
                             </div>
+
+                            <!-- General ownership error -->
+                            <p id="ownership-error" class="text-rose-500 text-sm hidden"></p>
+                            @error('ownership_type')
+                                <p class="text-rose-500 text-sm">{{ $message }}</p>
+                            @enderror
                         </div>
                     </div>
 
@@ -287,35 +312,68 @@
                     </div>
                     <div>
                         <h2 class="text-lg font-bold text-slate-800">Location</h2>
-                        <p class="text-xs text-slate-400">Property address</p>
+                        <p class="text-xs text-slate-400">Property address - Start typing to search</p>
                     </div>
                 </div>
 
                 <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-2">Address</label>
-                        <input type="text" name="location_address" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" placeholder="Street address" value="{{ old('location_address', $asset?->location_address ?? '') }}">
+                    <div class="relative">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Street Address</label>
+                        <div class="relative">
+                            <input type="text" name="location_address" id="smarty-address"
+                                class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                placeholder="Start typing address..."
+                                value="{{ old('location_address', $asset?->location_address ?? '') }}"
+                                autocomplete="off">
+                            <div class="absolute right-3 top-1/2 -translate-y-1/2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                            </div>
+                        </div>
+                        <!-- Autocomplete suggestions dropdown -->
+                        <div id="smarty-suggestions" class="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg hidden max-h-60 overflow-y-auto"></div>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-2">City</label>
-                        <input type="text" name="location_city" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" placeholder="City" value="{{ old('location_city', $asset?->location_city ?? '') }}">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">City</label>
+                            <input type="text" name="location_city" id="smarty-city"
+                                class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-slate-50"
+                                placeholder="City"
+                                value="{{ old('location_city', $asset?->location_city ?? '') }}">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">State</label>
+                            <input type="text" name="location_state" id="smarty-state"
+                                class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-slate-50"
+                                placeholder="State"
+                                value="{{ old('location_state', $asset?->location_state ?? '') }}">
+                        </div>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-2">State</label>
-                        <input type="text" name="location_state" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" placeholder="State" value="{{ old('location_state', $asset?->location_state ?? '') }}">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">ZIP Code</label>
+                            <input type="text" name="location_zip" id="smarty-zipcode"
+                                class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-slate-50"
+                                placeholder="ZIP"
+                                value="{{ old('location_zip', $asset?->location_zip ?? '') }}">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Country</label>
+                            <input type="text" name="location_country" id="smarty-country"
+                                class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-slate-50"
+                                placeholder="Country"
+                                value="{{ old('location_country', $asset?->location_country ?? 'USA') }}"
+                                readonly>
+                        </div>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-2">ZIP Code</label>
-                        <input type="text" name="location_zip" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" placeholder="ZIP" value="{{ old('location_zip', $asset?->location_zip ?? '') }}">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-2">Country</label>
-                        <input type="text" name="location_country" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" placeholder="Country" value="{{ old('location_country', $asset?->location_country ?? 'USA') }}">
-                    </div>
+                    <p class="text-xs text-slate-500 flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                        Address fields will auto-fill when you select a suggestion
+                    </p>
                 </div>
             </div>
         </div>
@@ -517,14 +575,6 @@
                         label="Renewal Date"
                         :value="$asset?->insurance_renewal_date"
                     />
-
-                    <div>
-                        <label class="inline-flex items-center cursor-pointer">
-                            <input type="checkbox" name="insurance_reminder" value="1" class="checkbox checkbox-sm checkbox-primary" {{ old('insurance_reminder', $asset?->insurance_reminder ?? false) ? 'checked' : '' }}>
-                            <span class="ml-2 text-sm text-slate-700">Remind me before renewal date</span>
-                        </label>
-                        <p class="text-xs text-slate-400 mt-1 ml-6">You'll receive a reminder notification before the renewal date</p>
-                    </div>
                 </div>
             </div>
         </div>
@@ -580,9 +630,9 @@
                             <div class="flex flex-col items-center justify-center pt-5 pb-6">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-slate-400 mb-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
                                 <p class="text-sm text-slate-500"><span class="font-medium text-orange-600">Click to upload</span> or drag and drop</p>
-                                <p class="text-xs text-slate-400 mt-1">PDF, Word, JPG, PNG (max 10MB each)</p>
+                                <p class="text-xs text-slate-400 mt-1">PDF, JPG, PNG (max 10MB each)</p>
                             </div>
-                            <input id="document-upload" type="file" name="documents[]" class="hidden" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                            <input id="document-upload" type="file" name="documents[]" class="hidden" multiple accept=".pdf,.jpg,.jpeg,.png">
                         </label>
                         <div id="file-list" class="mt-2 space-y-1"></div>
                     </div>
@@ -631,24 +681,6 @@ const assetTypes = {
     inventory: @json($valuableTypes)
 };
 
-// Family circles with members for joint ownership
-const familyCirclesData = @json($familyCircles->mapWithKeys(function($circle) {
-    return [$circle->id => [
-        'name' => $circle->name,
-        'members' => $circle->members->map(function($member) {
-            return [
-                'id' => $member->id,
-                'first_name' => $member->first_name,
-                'last_name' => $member->last_name,
-                'email' => $member->email,
-            ];
-        })->values()
-    ]];
-}));
-
-// Existing asset owners for pre-selection when editing
-const existingOwners = @json($asset ? $asset->owners->pluck('ownership_percentage', 'family_member_id')->filter(function($v, $k) { return $k !== null; }) : []);
-
 const currentAssetType = @json(old('asset_type', $asset?->asset_type ?? ''));
 let externalOwnerIndex = {{ $asset ? $asset->owners->whereNull('family_member_id')->count() : 0 }};
 
@@ -687,63 +719,57 @@ function toggleOwnershipSection(value) {
     }
 }
 
-// Update family members list based on selected circle
-function updateFamilyMembersList(circleId) {
-    const container = document.getElementById('family-member-owners');
-    const membersContainer = document.getElementById('family-members-container');
-    const noMembersMessage = document.getElementById('no-members-message');
+// Load members based on selected family circle
+function loadCircleMembers(circleId) {
+    const membersSection = document.getElementById('family-members-section');
+    const membersContainer = document.getElementById('family-member-owners');
 
-    // Clear existing members
-    container.innerHTML = '';
-
-    if (!circleId || !familyCirclesData[circleId]) {
-        membersContainer.classList.add('hidden');
+    if (!circleId) {
+        membersSection.classList.add('hidden');
+        membersContainer.innerHTML = '';
         return;
     }
 
-    const circle = familyCirclesData[circleId];
-    const members = circle.members;
+    // Get members from the selected option's data attribute
+    const select = document.getElementById('family-circle-select');
+    const selectedOption = select.options[select.selectedIndex];
+    const members = JSON.parse(selectedOption.dataset.members || '[]');
+
+    // Clear and populate members
+    membersContainer.innerHTML = '';
 
     if (members.length === 0) {
-        membersContainer.classList.remove('hidden');
-        noMembersMessage.classList.remove('hidden');
-        container.classList.add('hidden');
-        return;
+        membersContainer.innerHTML = '<p class="text-sm text-slate-500 p-3 bg-white rounded-lg border border-slate-200">No members found in this circle.</p>';
+    } else {
+        members.forEach(member => {
+            const memberHtml = `
+                <div class="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                    <input type="checkbox" name="family_owners[${member.id}][selected]" value="1"
+                        class="checkbox checkbox-sm checkbox-primary family-owner-checkbox"
+                        data-member-id="${member.id}">
+                    <div class="flex-1">
+                        <span class="font-medium text-slate-800">${member.first_name} ${member.last_name || ''}</span>
+                        ${member.email ? `<span class="text-xs text-slate-400 ml-2">${member.email}</span>` : ''}
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="number" name="family_owners[${member.id}][percentage]"
+                            class="w-20 px-2 py-1.5 text-sm border border-slate-300 rounded-lg text-center focus:border-violet-500 focus:outline-none"
+                            placeholder="%" min="0" max="100" step="0.01"
+                            oninput="calculateTotalPercentage()">
+                        <span class="text-xs text-slate-500">%</span>
+                    </div>
+                </div>
+            `;
+            membersContainer.insertAdjacentHTML('beforeend', memberHtml);
+        });
+
+        // Re-attach event listeners for checkboxes
+        document.querySelectorAll('.family-owner-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', calculateTotalPercentage);
+        });
     }
 
-    membersContainer.classList.remove('hidden');
-    noMembersMessage.classList.add('hidden');
-    container.classList.remove('hidden');
-
-    // Populate members
-    members.forEach(member => {
-        const isSelected = existingOwners[member.id] !== undefined;
-        const percentage = existingOwners[member.id] || '';
-
-        const html = `
-            <div class="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200">
-                <input type="checkbox" name="family_owners[${member.id}][selected]" value="1"
-                    class="checkbox checkbox-sm checkbox-primary family-owner-checkbox"
-                    data-member-id="${member.id}"
-                    ${isSelected ? 'checked' : ''}
-                    onchange="calculateTotalPercentage()">
-                <div class="flex-1">
-                    <span class="font-medium text-slate-800">${member.first_name} ${member.last_name}</span>
-                    ${member.email ? `<span class="text-xs text-slate-400 ml-2">${member.email}</span>` : ''}
-                </div>
-                <div class="flex items-center gap-2">
-                    <input type="number" name="family_owners[${member.id}][percentage]"
-                        class="w-20 px-2 py-1.5 text-sm border border-slate-300 rounded-lg text-center focus:border-violet-500 focus:outline-none"
-                        placeholder="%" min="0" max="100" step="0.01"
-                        value="${percentage}"
-                        oninput="calculateTotalPercentage()">
-                    <span class="text-xs text-slate-500">%</span>
-                </div>
-            </div>
-        `;
-        container.insertAdjacentHTML('beforeend', html);
-    });
-
+    membersSection.classList.remove('hidden');
     calculateTotalPercentage();
 }
 
@@ -883,6 +909,398 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+});
+
+// Clear all validation errors
+function clearValidationErrors() {
+    const errorElements = ['family-owners-error', 'external-owners-error', 'ownership-error'];
+    errorElements.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.textContent = '';
+            el.classList.add('hidden');
+        }
+    });
+
+    // Remove error styling from inputs
+    document.querySelectorAll('.percentage-error').forEach(el => {
+        el.classList.remove('percentage-error', 'border-rose-500');
+    });
+}
+
+// Show inline error
+function showInlineError(elementId, message) {
+    const el = document.getElementById(elementId);
+    if (el) {
+        el.textContent = message;
+        el.classList.remove('hidden');
+    }
+}
+
+// Validate form before submission
+function validateAssetForm() {
+    const ownershipType = document.getElementById('ownership_type').value;
+
+    // Clear previous errors
+    clearValidationErrors();
+
+    // Only validate if joint ownership is selected
+    if (ownershipType !== 'joint') {
+        return true;
+    }
+
+    // Check if at least one owner is selected
+    const checkedFamilyOwners = document.querySelectorAll('.family-owner-checkbox:checked');
+    const externalOwnerRows = document.querySelectorAll('.external-owner-row');
+    let hasExternalOwner = false;
+
+    externalOwnerRows.forEach(row => {
+        const firstName = row.querySelector('input[name$="[first_name]"]')?.value?.trim();
+        const lastName = row.querySelector('input[name$="[last_name]"]')?.value?.trim();
+        if (firstName || lastName) {
+            hasExternalOwner = true;
+        }
+    });
+
+    if (checkedFamilyOwners.length === 0 && !hasExternalOwner) {
+        showInlineError('ownership-error', 'Please select at least one joint owner or add an external owner.');
+        return false;
+    }
+
+    // Validate that selected family members have percentages
+    let hasError = false;
+    let familyErrors = [];
+
+    checkedFamilyOwners.forEach(checkbox => {
+        const row = checkbox.closest('.flex');
+        const percentageInput = row.querySelector('input[type="number"]');
+        const memberName = row.querySelector('.font-medium')?.textContent?.trim() || 'A member';
+
+        if (!percentageInput || !percentageInput.value || percentageInput.value === '') {
+            hasError = true;
+            familyErrors.push(memberName);
+            if (percentageInput) {
+                percentageInput.classList.add('percentage-error', 'border-rose-500');
+            }
+        }
+    });
+
+    if (familyErrors.length > 0) {
+        showInlineError('family-owners-error', `Please enter ownership percentage for: ${familyErrors.join(', ')}`);
+    }
+
+    // Check external owners have percentages
+    let externalErrors = [];
+    externalOwnerRows.forEach((row, index) => {
+        const firstName = row.querySelector('input[name$="[first_name]"]')?.value?.trim();
+        const lastName = row.querySelector('input[name$="[last_name]"]')?.value?.trim();
+        const percentageInput = row.querySelector('input[name$="[percentage]"]');
+        const percentage = percentageInput?.value;
+
+        if ((firstName || lastName) && (!percentage || percentage === '')) {
+            hasError = true;
+            externalErrors.push(`${firstName || ''} ${lastName || ''}`.trim());
+            if (percentageInput) {
+                percentageInput.classList.add('percentage-error', 'border-rose-500');
+            }
+        }
+    });
+
+    if (externalErrors.length > 0) {
+        showInlineError('external-owners-error', `Please enter ownership percentage for: ${externalErrors.join(', ')}`);
+    }
+
+    if (hasError) {
+        // Scroll to the joint ownership section
+        document.getElementById('joint-ownership-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+    }
+
+    return true;
+}
+
+// ==========================================
+// Smarty Address Autocomplete
+// ==========================================
+const smartyWebsiteKey = '{{ config("services.smarty.website_key") }}';
+let smartyDebounceTimer = null;
+
+// Initialize Smarty autocomplete
+function initSmartyAutocomplete() {
+    const addressInput = document.getElementById('smarty-address');
+    const suggestionsContainer = document.getElementById('smarty-suggestions');
+
+    if (!addressInput || !suggestionsContainer || !smartyWebsiteKey) {
+        console.log('Smarty autocomplete not initialized: missing elements or key');
+        return;
+    }
+
+    // Handle input on address field
+    addressInput.addEventListener('input', function() {
+        const query = this.value.trim();
+
+        // Clear previous timer
+        if (smartyDebounceTimer) {
+            clearTimeout(smartyDebounceTimer);
+        }
+
+        // Hide suggestions if query is too short
+        if (query.length < 3) {
+            suggestionsContainer.classList.add('hidden');
+            suggestionsContainer.innerHTML = '';
+            return;
+        }
+
+        // Debounce API calls (300ms)
+        smartyDebounceTimer = setTimeout(() => {
+            fetchSmartyAddresses(query);
+        }, 300);
+    });
+
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!addressInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+            suggestionsContainer.classList.add('hidden');
+        }
+    });
+
+    // Handle keyboard navigation
+    addressInput.addEventListener('keydown', function(e) {
+        const items = suggestionsContainer.querySelectorAll('.smarty-suggestion');
+        const activeItem = suggestionsContainer.querySelector('.smarty-suggestion.bg-violet-50');
+        let currentIndex = -1;
+
+        items.forEach((item, index) => {
+            if (item.classList.contains('bg-violet-50')) {
+                currentIndex = index;
+            }
+        });
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (currentIndex < items.length - 1) {
+                if (activeItem) activeItem.classList.remove('bg-violet-50');
+                items[currentIndex + 1].classList.add('bg-violet-50');
+                items[currentIndex + 1].scrollIntoView({ block: 'nearest' });
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (currentIndex > 0) {
+                if (activeItem) activeItem.classList.remove('bg-violet-50');
+                items[currentIndex - 1].classList.add('bg-violet-50');
+                items[currentIndex - 1].scrollIntoView({ block: 'nearest' });
+            }
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (activeItem) {
+                activeItem.click();
+            }
+        } else if (e.key === 'Escape') {
+            suggestionsContainer.classList.add('hidden');
+        }
+    });
+}
+
+// Fetch addresses from Smarty API
+async function fetchSmartyAddresses(query) {
+    const suggestionsContainer = document.getElementById('smarty-suggestions');
+
+    try {
+        // Show loading state
+        suggestionsContainer.innerHTML = `
+            <div class="p-3 text-sm text-slate-500 flex items-center gap-2">
+                <svg class="animate-spin h-4 w-4 text-violet-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Searching addresses...
+            </div>
+        `;
+        suggestionsContainer.classList.remove('hidden');
+
+        // Call Smarty US Autocomplete Pro API
+        const url = `https://us-autocomplete-pro.api.smarty.com/lookup?key=${encodeURIComponent(smartyWebsiteKey)}&search=${encodeURIComponent(query)}&max_results=10`;
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch addresses');
+        }
+
+        const data = await response.json();
+
+        if (data.suggestions && data.suggestions.length > 0) {
+            displaySuggestions(data.suggestions);
+        } else {
+            suggestionsContainer.innerHTML = `
+                <div class="p-3 text-sm text-slate-500">
+                    No addresses found. Try a different search.
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Smarty API error:', error);
+        suggestionsContainer.innerHTML = `
+            <div class="p-3 text-sm text-slate-500">
+                Could not search addresses. Please enter manually.
+            </div>
+        `;
+    }
+}
+
+// Display suggestions in dropdown
+function displaySuggestions(suggestions) {
+    const suggestionsContainer = document.getElementById('smarty-suggestions');
+    suggestionsContainer.innerHTML = '';
+
+    suggestions.forEach((suggestion, index) => {
+        const div = document.createElement('div');
+        div.className = 'smarty-suggestion p-3 hover:bg-violet-50 cursor-pointer border-b border-slate-100 last:border-b-0 transition-colors';
+
+        // Build full address display
+        const streetLine = suggestion.street_line || '';
+        const secondary = suggestion.secondary ? ` ${suggestion.secondary}` : '';
+        const city = suggestion.city || '';
+        const state = suggestion.state || '';
+        const zipcode = suggestion.zipcode || '';
+
+        const fullAddress = `${streetLine}${secondary}`;
+        const cityStateZip = `${city}, ${state} ${zipcode}`;
+
+        div.innerHTML = `
+            <div class="flex items-start gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-400 mt-0.5 flex-shrink-0">
+                    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                </svg>
+                <div>
+                    <div class="text-sm font-medium text-slate-800">${fullAddress}</div>
+                    <div class="text-xs text-slate-500">${cityStateZip}</div>
+                </div>
+            </div>
+        `;
+
+        // Store suggestion data for selection
+        div.dataset.streetLine = streetLine;
+        div.dataset.secondary = suggestion.secondary || '';
+        div.dataset.city = city;
+        div.dataset.state = state;
+        div.dataset.zipcode = zipcode;
+        div.dataset.entries = suggestion.entries || 0;
+
+        div.addEventListener('click', function() {
+            selectSuggestion(this);
+        });
+
+        suggestionsContainer.appendChild(div);
+    });
+
+    suggestionsContainer.classList.remove('hidden');
+}
+
+// Select a suggestion and fill form fields
+function selectSuggestion(element) {
+    const streetLine = element.dataset.streetLine || '';
+    const secondary = element.dataset.secondary || '';
+    const city = element.dataset.city || '';
+    const state = element.dataset.state || '';
+    const zipcode = element.dataset.zipcode || '';
+    const entries = parseInt(element.dataset.entries) || 0;
+
+    // Build full street address
+    let fullStreet = streetLine;
+    if (secondary) {
+        fullStreet += ` ${secondary}`;
+    }
+
+    // If there are multiple entries (e.g., apartment building), show secondary selector
+    if (entries > 1 && !secondary) {
+        // Fetch secondary addresses
+        fetchSecondaryAddresses(streetLine, city, state, zipcode);
+        return;
+    }
+
+    // Fill form fields
+    document.getElementById('smarty-address').value = fullStreet;
+    document.getElementById('smarty-city').value = city;
+    document.getElementById('smarty-state').value = state;
+    document.getElementById('smarty-zipcode').value = zipcode;
+    document.getElementById('smarty-country').value = 'USA';
+
+    // Hide suggestions
+    document.getElementById('smarty-suggestions').classList.add('hidden');
+
+    // Add visual feedback
+    const addressInput = document.getElementById('smarty-address');
+    addressInput.classList.add('border-emerald-500', 'ring-2', 'ring-emerald-500/20');
+    setTimeout(() => {
+        addressInput.classList.remove('border-emerald-500', 'ring-2', 'ring-emerald-500/20');
+    }, 1500);
+}
+
+// Fetch secondary addresses (for buildings with multiple units)
+async function fetchSecondaryAddresses(streetLine, city, state, zipcode) {
+    const suggestionsContainer = document.getElementById('smarty-suggestions');
+
+    try {
+        // Show loading
+        suggestionsContainer.innerHTML = `
+            <div class="p-3 text-sm text-slate-500 flex items-center gap-2">
+                <svg class="animate-spin h-4 w-4 text-violet-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Loading unit options...
+            </div>
+        `;
+
+        // Search for secondary addresses
+        const selected = `${streetLine} (${city}) ${state} ${zipcode}`;
+        const url = `https://us-autocomplete-pro.api.smarty.com/lookup?key=${encodeURIComponent(smartyWebsiteKey)}&search=${encodeURIComponent(streetLine)}&selected=${encodeURIComponent(selected)}&max_results=20`;
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch secondary addresses');
+        }
+
+        const data = await response.json();
+
+        if (data.suggestions && data.suggestions.length > 0) {
+            // Add a "back" option
+            suggestionsContainer.innerHTML = `
+                <div class="p-2 bg-slate-50 border-b border-slate-200 flex items-center gap-2 text-xs text-slate-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    </svg>
+                    Select a unit for ${streetLine}
+                </div>
+            `;
+            displaySuggestions(data.suggestions);
+        } else {
+            // No secondary options, just use the main address
+            document.getElementById('smarty-address').value = streetLine;
+            document.getElementById('smarty-city').value = city;
+            document.getElementById('smarty-state').value = state;
+            document.getElementById('smarty-zipcode').value = zipcode;
+            document.getElementById('smarty-country').value = 'USA';
+            suggestionsContainer.classList.add('hidden');
+        }
+    } catch (error) {
+        console.error('Smarty secondary API error:', error);
+        // Fall back to main address
+        document.getElementById('smarty-address').value = streetLine;
+        document.getElementById('smarty-city').value = city;
+        document.getElementById('smarty-state').value = state;
+        document.getElementById('smarty-zipcode').value = zipcode;
+        document.getElementById('smarty-country').value = 'USA';
+        suggestionsContainer.classList.add('hidden');
+    }
+}
+
+// Initialize Smarty on page load
+document.addEventListener('DOMContentLoaded', function() {
+    initSmartyAutocomplete();
 });
 </script>
 @endpush
