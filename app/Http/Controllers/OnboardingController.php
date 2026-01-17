@@ -201,6 +201,14 @@ class OnboardingController extends Controller
         ]);
 
         $user = $request->user();
+
+        // DEBUG: Log before update
+        Log::info('Onboarding step 2 - Before update', [
+            'user_id' => $user->id,
+            'input_first_name' => $request->first_name,
+            'input_last_name' => $request->last_name,
+        ]);
+
         $user->update([
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
@@ -208,6 +216,15 @@ class OnboardingController extends Controller
             'backup_email' => $request->backup_email,
             'country_code' => $request->country_code,
             'phone' => $request->phone,
+        ]);
+
+        // DEBUG: Check raw database value after save
+        $rawUser = \Illuminate\Support\Facades\DB::table('users')->where('id', $user->id)->first();
+        Log::info('Onboarding step 2 - After update (raw DB)', [
+            'user_id' => $user->id,
+            'raw_first_name' => $rawUser->first_name ?? 'NULL',
+            'raw_last_name' => $rawUser->last_name ?? 'NULL',
+            'is_encrypted' => str_starts_with($rawUser->first_name ?? '', 'eyJ') ? 'YES' : 'NO',
         ]);
 
         $tenant = $user->tenant;
