@@ -141,32 +141,24 @@
                                 </div>
                             </div>
 
-                            <!-- Existing Family Members Selection -->
+                            <!-- Family Circle Selection -->
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-2">Select from Family Members</label>
-                                <div id="family-member-owners" class="space-y-2">
-                                    @foreach($familyMembers as $member)
-                                        <div class="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200">
-                                            <input type="checkbox" name="family_owners[{{ $member->id }}][selected]" value="1"
-                                                class="checkbox checkbox-sm checkbox-primary family-owner-checkbox"
-                                                data-member-id="{{ $member->id }}"
-                                                {{ ($asset && $asset->owners->pluck('family_member_id')->contains($member->id)) ? 'checked' : '' }}>
-                                            <div class="flex-1">
-                                                <span class="font-medium text-slate-800">{{ $member->first_name }} {{ $member->last_name }}</span>
-                                                @if($member->email)
-                                                    <span class="text-xs text-slate-400 ml-2">{{ $member->email }}</span>
-                                                @endif
-                                            </div>
-                                            <div class="flex items-center gap-2">
-                                                <input type="number" name="family_owners[{{ $member->id }}][percentage]"
-                                                    class="w-20 px-2 py-1.5 text-sm border border-slate-300 rounded-lg text-center focus:border-violet-500 focus:outline-none"
-                                                    placeholder="%" min="0" max="100" step="0.01"
-                                                    value="{{ $asset?->owners->where('family_member_id', $member->id)->first()?->ownership_percentage ?? '' }}">
-                                                <span class="text-xs text-slate-500">%</span>
-                                            </div>
-                                        </div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Select Family Circle</label>
+                                <select id="joint-family-circle" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20" onchange="updateFamilyMembersList(this.value)">
+                                    <option value="">-- Select a Family Circle --</option>
+                                    @foreach($familyCircles as $circle)
+                                        <option value="{{ $circle->id }}">{{ $circle->name }}</option>
                                     @endforeach
+                                </select>
+                            </div>
+
+                            <!-- Family Members Selection (Dynamic based on circle) -->
+                            <div id="family-members-container" class="hidden">
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Select Family Members as Co-Owners</label>
+                                <div id="family-member-owners" class="space-y-2">
+                                    <!-- Members will be populated dynamically -->
                                 </div>
+                                <p id="no-members-message" class="hidden text-sm text-slate-500 italic py-3 text-center">No members found in this circle</p>
                             </div>
 
                             <!-- Divider -->
@@ -525,6 +517,14 @@
                         label="Renewal Date"
                         :value="$asset?->insurance_renewal_date"
                     />
+
+                    <div>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="insurance_reminder" value="1" class="checkbox checkbox-sm checkbox-primary" {{ old('insurance_reminder', $asset?->insurance_reminder ?? false) ? 'checked' : '' }}>
+                            <span class="ml-2 text-sm text-slate-700">Remind me before renewal date</span>
+                        </label>
+                        <p class="text-xs text-slate-400 mt-1 ml-6">You'll receive a reminder notification before the renewal date</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -580,9 +580,9 @@
                             <div class="flex flex-col items-center justify-center pt-5 pb-6">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-slate-400 mb-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
                                 <p class="text-sm text-slate-500"><span class="font-medium text-orange-600">Click to upload</span> or drag and drop</p>
-                                <p class="text-xs text-slate-400 mt-1">PDF, JPG, PNG (max 10MB each)</p>
+                                <p class="text-xs text-slate-400 mt-1">PDF, Word, JPG, PNG (max 10MB each)</p>
                             </div>
-                            <input id="document-upload" type="file" name="documents[]" class="hidden" multiple accept=".pdf,.jpg,.jpeg,.png">
+                            <input id="document-upload" type="file" name="documents[]" class="hidden" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
                         </label>
                         <div id="file-list" class="mt-2 space-y-1"></div>
                     </div>
@@ -631,6 +631,24 @@ const assetTypes = {
     inventory: @json($valuableTypes)
 };
 
+// Family circles with members for joint ownership
+const familyCirclesData = @json($familyCircles->mapWithKeys(function($circle) {
+    return [$circle->id => [
+        'name' => $circle->name,
+        'members' => $circle->members->map(function($member) {
+            return [
+                'id' => $member->id,
+                'first_name' => $member->first_name,
+                'last_name' => $member->last_name,
+                'email' => $member->email,
+            ];
+        })->values()
+    ]];
+}));
+
+// Existing asset owners for pre-selection when editing
+const existingOwners = @json($asset ? $asset->owners->pluck('ownership_percentage', 'family_member_id')->filter(function($v, $k) { return $k !== null; }) : []);
+
 const currentAssetType = @json(old('asset_type', $asset?->asset_type ?? ''));
 let externalOwnerIndex = {{ $asset ? $asset->owners->whereNull('family_member_id')->count() : 0 }};
 
@@ -667,6 +685,66 @@ function toggleOwnershipSection(value) {
     } else {
         section.classList.add('hidden');
     }
+}
+
+// Update family members list based on selected circle
+function updateFamilyMembersList(circleId) {
+    const container = document.getElementById('family-member-owners');
+    const membersContainer = document.getElementById('family-members-container');
+    const noMembersMessage = document.getElementById('no-members-message');
+
+    // Clear existing members
+    container.innerHTML = '';
+
+    if (!circleId || !familyCirclesData[circleId]) {
+        membersContainer.classList.add('hidden');
+        return;
+    }
+
+    const circle = familyCirclesData[circleId];
+    const members = circle.members;
+
+    if (members.length === 0) {
+        membersContainer.classList.remove('hidden');
+        noMembersMessage.classList.remove('hidden');
+        container.classList.add('hidden');
+        return;
+    }
+
+    membersContainer.classList.remove('hidden');
+    noMembersMessage.classList.add('hidden');
+    container.classList.remove('hidden');
+
+    // Populate members
+    members.forEach(member => {
+        const isSelected = existingOwners[member.id] !== undefined;
+        const percentage = existingOwners[member.id] || '';
+
+        const html = `
+            <div class="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                <input type="checkbox" name="family_owners[${member.id}][selected]" value="1"
+                    class="checkbox checkbox-sm checkbox-primary family-owner-checkbox"
+                    data-member-id="${member.id}"
+                    ${isSelected ? 'checked' : ''}
+                    onchange="calculateTotalPercentage()">
+                <div class="flex-1">
+                    <span class="font-medium text-slate-800">${member.first_name} ${member.last_name}</span>
+                    ${member.email ? `<span class="text-xs text-slate-400 ml-2">${member.email}</span>` : ''}
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="number" name="family_owners[${member.id}][percentage]"
+                        class="w-20 px-2 py-1.5 text-sm border border-slate-300 rounded-lg text-center focus:border-violet-500 focus:outline-none"
+                        placeholder="%" min="0" max="100" step="0.01"
+                        value="${percentage}"
+                        oninput="calculateTotalPercentage()">
+                    <span class="text-xs text-slate-500">%</span>
+                </div>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', html);
+    });
+
+    calculateTotalPercentage();
 }
 
 // Add external owner row

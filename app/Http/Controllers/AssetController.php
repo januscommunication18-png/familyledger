@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Asset;
 use App\Models\AssetDocument;
 use App\Models\AssetOwner;
+use App\Models\FamilyCircle;
 use App\Models\FamilyMember;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -69,9 +70,19 @@ class AssetController extends Controller
         $familyMembers = $this->getUniqueFamilyMembers($user->tenant_id);
         $category = $request->get('category', 'property');
 
+        // Get family circles with their members for joint ownership
+        $familyCircles = FamilyCircle::where('tenant_id', $user->tenant_id)
+            ->with(['members' => function ($query) use ($user) {
+                $query->where('linked_user_id', '!=', $user->id)
+                    ->orWhereNull('linked_user_id');
+            }])
+            ->orderBy('name')
+            ->get();
+
         return view('pages.assets.form', [
             'asset' => null,
             'familyMembers' => $familyMembers,
+            'familyCircles' => $familyCircles,
             'category' => $category,
             'categories' => Asset::CATEGORIES,
             'propertyTypes' => Asset::PROPERTY_TYPES,
@@ -134,6 +145,7 @@ class AssetController extends Controller
             'insurance_provider' => 'nullable|string|max:255',
             'insurance_policy_number' => 'nullable|string|max:100',
             'insurance_renewal_date' => 'nullable|date',
+            'insurance_reminder' => 'nullable|boolean',
             'is_insured' => 'nullable|boolean',
             // Owners - Family members
             'family_owners' => 'nullable|array',
@@ -148,7 +160,7 @@ class AssetController extends Controller
             'external_owners.*.percentage' => 'nullable|numeric|min:0|max:100',
             // Documents
             'documents' => 'nullable|array',
-            'documents.*' => 'file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'documents.*' => 'file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
             'document_types' => 'nullable|array',
             'document_types.*' => 'nullable|string|in:' . implode(',', array_keys(Asset::DOCUMENT_TYPES)),
         ]);
@@ -217,16 +229,28 @@ class AssetController extends Controller
      */
     public function edit(Asset $asset)
     {
-        if ($asset->tenant_id !== Auth::user()->tenant_id) {
+        $user = Auth::user();
+
+        if ($asset->tenant_id !== $user->tenant_id) {
             abort(403);
         }
 
         $asset->load(['owners.familyMember', 'documents']);
-        $familyMembers = $this->getUniqueFamilyMembers(Auth::user()->tenant_id);
+        $familyMembers = $this->getUniqueFamilyMembers($user->tenant_id);
+
+        // Get family circles with their members for joint ownership
+        $familyCircles = FamilyCircle::where('tenant_id', $user->tenant_id)
+            ->with(['members' => function ($query) use ($user) {
+                $query->where('linked_user_id', '!=', $user->id)
+                    ->orWhereNull('linked_user_id');
+            }])
+            ->orderBy('name')
+            ->get();
 
         return view('pages.assets.form', [
             'asset' => $asset,
             'familyMembers' => $familyMembers,
+            'familyCircles' => $familyCircles,
             'category' => $asset->asset_category,
             'categories' => Asset::CATEGORIES,
             'propertyTypes' => Asset::PROPERTY_TYPES,
@@ -293,6 +317,7 @@ class AssetController extends Controller
             'insurance_provider' => 'nullable|string|max:255',
             'insurance_policy_number' => 'nullable|string|max:100',
             'insurance_renewal_date' => 'nullable|date',
+            'insurance_reminder' => 'nullable|boolean',
             'is_insured' => 'nullable|boolean',
             // Owners - Family members
             'family_owners' => 'nullable|array',
@@ -307,7 +332,7 @@ class AssetController extends Controller
             'external_owners.*.percentage' => 'nullable|numeric|min:0|max:100',
             // Documents
             'documents' => 'nullable|array',
-            'documents.*' => 'file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'documents.*' => 'file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
             'document_types' => 'nullable|array',
             'document_types.*' => 'nullable|string|in:' . implode(',', array_keys(Asset::DOCUMENT_TYPES)),
         ]);

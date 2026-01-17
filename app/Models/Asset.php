@@ -55,6 +55,7 @@ class Asset extends Model
         'insurance_provider',
         'insurance_policy_number',
         'insurance_renewal_date',
+        'insurance_reminder',
         'is_insured',
         // Security
         'is_encrypted',
@@ -68,6 +69,7 @@ class Asset extends Model
         'appraisal_value' => 'decimal:2',
         'warranty_expiry' => 'date',
         'insurance_renewal_date' => 'date',
+        'insurance_reminder' => 'boolean',
         'is_insured' => 'boolean',
         'is_encrypted' => 'boolean',
         'vehicle_year' => 'integer',
