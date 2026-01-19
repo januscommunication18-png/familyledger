@@ -246,6 +246,9 @@ class DocumentController extends Controller
             abort(403);
         }
 
+        // Load the policyholders and coveredMembers relationships
+        $insurance->load(['policyholders', 'coveredMembers']);
+
         $familyMembers = $this->getUniqueFamilyMembers(Auth::user()->tenant_id);
 
         return view('pages.documents.insurance-form', [
