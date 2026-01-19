@@ -101,12 +101,8 @@
             <label class="label">
                 <span class="label-text">Country / Region <span class="text-error">*</span></span>
             </label>
-            <select name="country" class="select select-bordered w-full @error('country') select-error @enderror" required>
-                <option value="">Select country</option>
-                @foreach($countries as $code => $name)
-                    <option value="{{ $code }}" {{ old('country', $tenant['country'] ?? 'US') === $code ? 'selected' : '' }}>{{ $name }}</option>
-                @endforeach
-            </select>
+            <input type="hidden" name="country" value="US">
+            <input type="text" value="United States" class="input input-bordered w-full bg-base-200" readonly disabled>
             @error('country')
                 <label class="label"><span class="label-text-alt text-error">{{ $message }}</span></label>
             @enderror

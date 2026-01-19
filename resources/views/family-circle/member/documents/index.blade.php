@@ -49,14 +49,25 @@
     </div>
 
     <!-- Document Categories -->
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         @foreach($documentTypes as $typeKey => $typeName)
+            @if($typeKey === 'other')
+                @continue
+            @endif
             @php
                 $typeDoc = $documents->where('document_type', $typeKey)->first();
                 $hasDoc = $typeDoc !== null;
+
+                // Generate route for each document type
+                $docRoute = match($typeKey) {
+                    'drivers_license' => route('family-circle.member.drivers-license', [$member->familyCircle, $member]),
+                    'passport' => route('family-circle.member.passport', [$member->familyCircle, $member]),
+                    'social_security' => route('family-circle.member.social-security', [$member->familyCircle, $member]),
+                    'birth_certificate' => route('family-circle.member.birth-certificate', [$member->familyCircle, $member]),
+                    default => null,
+                };
             @endphp
-            <div class="card {{ $hasDoc ? 'bg-base-100' : 'bg-slate-50 border border-dashed border-slate-200' }} shadow-sm hover:shadow-md transition-all cursor-pointer"
-                 onclick="{{ $hasDoc ? "viewDocumentModal('{$typeDoc->id}')" : "addDocumentOfType('{$typeKey}')" }}">
+            <a href="{{ $docRoute }}" class="card {{ $hasDoc ? 'bg-base-100' : 'bg-slate-50 border border-dashed border-slate-200' }} shadow-sm hover:shadow-md transition-all cursor-pointer">
                 <div class="card-body p-4 text-center">
                     <div class="w-12 h-12 mx-auto rounded-xl {{ $hasDoc ? 'bg-violet-100' : 'bg-slate-100' }} flex items-center justify-center mb-2">
                         @if($typeKey === 'drivers_license')
@@ -84,7 +95,7 @@
                         <span class="text-xs text-slate-400">Click to add</span>
                     @endif
                 </div>
-            </div>
+            </a>
         @endforeach
     </div>
 
