@@ -179,23 +179,38 @@ class DocumentController extends Controller
 
         $insurance = InsurancePolicy::create($data);
 
-        // Attach policyholders (filter out empty/null values)
+        // Attach policyholders (filter out empty/null values and duplicates)
         if (!empty($validated['policyholders'])) {
             $policyholderIds = collect($validated['policyholders'])
                 ->filter(fn($id) => !empty($id) && is_numeric($id))
+                ->unique()
+                ->values()
                 ->toArray();
             if (!empty($policyholderIds)) {
-                $insurance->policyholders()->attach($policyholderIds, ['member_type' => 'policyholder']);
+                $syncData = [];
+                foreach ($policyholderIds as $id) {
+                    $syncData[$id] = ['member_type' => 'policyholder'];
+                }
+                $insurance->policyholders()->syncWithoutDetaching($syncData);
             }
         }
 
-        // Attach covered members (filter out empty/null values)
+        // Attach covered members (filter out empty/null values, duplicates, and those already added as policyholders)
         if (!empty($validated['covered_members'])) {
             $coveredIds = collect($validated['covered_members'])
                 ->filter(fn($id) => !empty($id) && is_numeric($id))
+                ->unique()
+                ->values()
                 ->toArray();
+            // Remove any IDs that were already added as policyholders (since unique constraint doesn't allow same member twice)
+            $existingMemberIds = $insurance->policyholders()->pluck('family_members.id')->toArray();
+            $coveredIds = array_diff($coveredIds, $existingMemberIds);
             if (!empty($coveredIds)) {
-                $insurance->coveredMembers()->attach($coveredIds, ['member_type' => 'covered']);
+                $syncData = [];
+                foreach ($coveredIds as $id) {
+                    $syncData[$id] = ['member_type' => 'covered'];
+                }
+                $insurance->coveredMembers()->syncWithoutDetaching($syncData);
             }
         }
 
@@ -301,22 +316,38 @@ class DocumentController extends Controller
 
         $insurance->update($data);
 
-        // Sync policyholders (filter out empty/null values)
+        // Sync policyholders (filter out empty/null values and duplicates)
         $policyholderIds = isset($validated['policyholders'])
-            ? collect($validated['policyholders'])->filter(fn($id) => !empty($id) && is_numeric($id))->toArray()
+            ? collect($validated['policyholders'])->filter(fn($id) => !empty($id) && is_numeric($id))->unique()->values()->toArray()
             : [];
-        $insurance->policyholders()->detach();
+
+        // Sync covered members (filter out empty/null values and duplicates)
+        $coveredIds = isset($validated['covered_members'])
+            ? collect($validated['covered_members'])->filter(fn($id) => !empty($id) && is_numeric($id))->unique()->values()->toArray()
+            : [];
+
+        // Remove any covered IDs that are also policyholders (unique constraint prevents same member twice)
+        $coveredIds = array_diff($coveredIds, $policyholderIds);
+
+        // Detach all existing members first
+        \DB::table('insurance_policy_members')->where('insurance_policy_id', $insurance->id)->delete();
+
+        // Re-attach policyholders
         if (!empty($policyholderIds)) {
-            $insurance->policyholders()->attach($policyholderIds, ['member_type' => 'policyholder']);
+            $syncData = [];
+            foreach ($policyholderIds as $id) {
+                $syncData[$id] = ['member_type' => 'policyholder'];
+            }
+            $insurance->policyholders()->syncWithoutDetaching($syncData);
         }
 
-        // Sync covered members (filter out empty/null values)
-        $coveredIds = isset($validated['covered_members'])
-            ? collect($validated['covered_members'])->filter(fn($id) => !empty($id) && is_numeric($id))->toArray()
-            : [];
-        $insurance->coveredMembers()->detach();
+        // Re-attach covered members
         if (!empty($coveredIds)) {
-            $insurance->coveredMembers()->attach($coveredIds, ['member_type' => 'covered']);
+            $syncData = [];
+            foreach ($coveredIds as $id) {
+                $syncData[$id] = ['member_type' => 'covered'];
+            }
+            $insurance->coveredMembers()->syncWithoutDetaching($syncData);
         }
 
         return redirect()->route('documents.index', ['tab' => 'insurance'])

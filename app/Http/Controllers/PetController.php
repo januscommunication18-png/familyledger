@@ -112,7 +112,7 @@ class PetController extends Controller
         // Handle photo upload
         $photoPath = null;
         if ($request->hasFile('photo')) {
-            $photoPath = $request->file('photo')->store('pets/photos', 'public');
+            $photoPath = $request->file('photo')->store('family-ledger/pets/photos', 'do_spaces');
         }
 
         $pet = Pet::create([
@@ -263,14 +263,14 @@ class PetController extends Controller
         if ($request->hasFile('photo')) {
             // Delete old photo
             if ($pet->photo) {
-                Storage::disk('public')->delete($pet->photo);
+                Storage::disk('do_spaces')->delete($pet->photo);
             }
-            $pet->photo = $request->file('photo')->store('pets/photos', 'public');
+            $pet->photo = $request->file('photo')->store('family-ledger/pets/photos', 'do_spaces');
         }
 
         // Handle photo removal
         if ($request->boolean('remove_photo') && $pet->photo) {
-            Storage::disk('public')->delete($pet->photo);
+            Storage::disk('do_spaces')->delete($pet->photo);
             $pet->photo = null;
         }
 
@@ -334,7 +334,7 @@ class PetController extends Controller
 
         // Delete photo
         if ($pet->photo) {
-            Storage::disk('public')->delete($pet->photo);
+            Storage::disk('do_spaces')->delete($pet->photo);
         }
 
         $pet->delete();

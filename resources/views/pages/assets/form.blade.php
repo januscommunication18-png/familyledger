@@ -684,6 +684,9 @@ const assetTypes = {
 const currentAssetType = @json(old('asset_type', $asset?->asset_type ?? ''));
 let externalOwnerIndex = {{ $asset ? $asset->owners->whereNull('family_member_id')->count() : 0 }};
 
+// Existing family owners for edit mode (family_member_id => percentage)
+const existingFamilyOwners = @json($asset ? $asset->owners->whereNotNull('family_member_id')->pluck('ownership_percentage', 'family_member_id') : []);
+
 function updateAssetType(category) {
     const select = document.getElementById('asset_type');
 
@@ -742,11 +745,16 @@ function loadCircleMembers(circleId) {
         membersContainer.innerHTML = '<p class="text-sm text-slate-500 p-3 bg-white rounded-lg border border-slate-200">No members found in this circle.</p>';
     } else {
         members.forEach(member => {
+            // Check if this member is an existing owner
+            const isExistingOwner = existingFamilyOwners.hasOwnProperty(member.id);
+            const existingPercentage = isExistingOwner ? existingFamilyOwners[member.id] : '';
+
             const memberHtml = `
                 <div class="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200">
                     <input type="checkbox" name="family_owners[${member.id}][selected]" value="1"
                         class="checkbox checkbox-sm checkbox-primary family-owner-checkbox"
-                        data-member-id="${member.id}">
+                        data-member-id="${member.id}"
+                        ${isExistingOwner ? 'checked' : ''}>
                     <div class="flex-1">
                         <span class="font-medium text-slate-800">${member.first_name} ${member.last_name || ''}</span>
                         ${member.email ? `<span class="text-xs text-slate-400 ml-2">${member.email}</span>` : ''}
@@ -755,6 +763,7 @@ function loadCircleMembers(circleId) {
                         <input type="number" name="family_owners[${member.id}][percentage]"
                             class="w-20 px-2 py-1.5 text-sm border border-slate-300 rounded-lg text-center focus:border-violet-500 focus:outline-none"
                             placeholder="%" min="0" max="100" step="0.01"
+                            value="${existingPercentage}"
                             oninput="calculateTotalPercentage()">
                         <span class="text-xs text-slate-500">%</span>
                     </div>
@@ -874,6 +883,31 @@ document.addEventListener('DOMContentLoaded', function() {
     const ownershipType = document.getElementById('ownership_type');
     if (ownershipType) {
         toggleOwnershipSection(ownershipType.value);
+    }
+
+    // Auto-select family circle if there are existing family owners (edit mode)
+    if (Object.keys(existingFamilyOwners).length > 0) {
+        const familyCircleSelect = document.getElementById('family-circle-select');
+        if (familyCircleSelect) {
+            // Find which circle contains the existing family owners
+            const existingOwnerIds = Object.keys(existingFamilyOwners).map(id => parseInt(id));
+
+            for (let i = 0; i < familyCircleSelect.options.length; i++) {
+                const option = familyCircleSelect.options[i];
+                if (option.dataset.members) {
+                    const members = JSON.parse(option.dataset.members);
+                    const memberIds = members.map(m => m.id);
+
+                    // Check if this circle contains any of the existing owners
+                    const hasOwner = existingOwnerIds.some(ownerId => memberIds.includes(ownerId));
+                    if (hasOwner) {
+                        familyCircleSelect.value = option.value;
+                        loadCircleMembers(option.value);
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     // Add event listeners for percentage calculations

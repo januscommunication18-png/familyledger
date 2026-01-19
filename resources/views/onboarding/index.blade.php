@@ -150,18 +150,21 @@
 
                         <div class="form-control">
                             <label class="label"><span class="label-text">Country <span class="text-error">*</span></span></label>
-                            <select name="country" id="country-select" class="select select-bordered w-full" required>
-                                <option value="">Select country</option>
-                                @foreach($countries as $code => $name)
-                                    <option value="{{ $code }}" {{ old('country', $tenant['country'] ?? '') == $code ? 'selected' : '' }}>{{ $name }}</option>
-                                @endforeach
-                            </select>
+                            <input type="hidden" name="country" id="country-select" value="US">
+                            <input type="text" value="United States" class="input input-bordered w-full bg-base-200" readonly disabled>
                         </div>
 
                         <div class="form-control">
                             <label class="label"><span class="label-text">Timezone <span class="text-error">*</span></span></label>
-                            <select name="timezone" id="timezone-select" class="select select-bordered w-full" required disabled>
-                                <option value="">Select country first</option>
+                            <select name="timezone" id="timezone-select" class="select select-bordered w-full" required>
+                                <option value="">Select timezone</option>
+                                <option value="America/New_York" {{ old('timezone', $tenant['timezone'] ?? '') == 'America/New_York' ? 'selected' : '' }}>Eastern (New York)</option>
+                                <option value="America/Chicago" {{ old('timezone', $tenant['timezone'] ?? '') == 'America/Chicago' ? 'selected' : '' }}>Central (Chicago)</option>
+                                <option value="America/Denver" {{ old('timezone', $tenant['timezone'] ?? '') == 'America/Denver' ? 'selected' : '' }}>Mountain (Denver)</option>
+                                <option value="America/Phoenix" {{ old('timezone', $tenant['timezone'] ?? '') == 'America/Phoenix' ? 'selected' : '' }}>Arizona (Phoenix)</option>
+                                <option value="America/Los_Angeles" {{ old('timezone', $tenant['timezone'] ?? '') == 'America/Los_Angeles' ? 'selected' : '' }}>Pacific (Los Angeles)</option>
+                                <option value="America/Anchorage" {{ old('timezone', $tenant['timezone'] ?? '') == 'America/Anchorage' ? 'selected' : '' }}>Alaska (Anchorage)</option>
+                                <option value="Pacific/Honolulu" {{ old('timezone', $tenant['timezone'] ?? '') == 'Pacific/Honolulu' ? 'selected' : '' }}>Hawaii (Honolulu)</option>
                             </select>
                         </div>
 
@@ -183,91 +186,6 @@
                 </form>
                 <form id="back-form" action="/onboarding/back" method="POST" class="hidden">@csrf</form>
 
-                <script>
-                    const timezonesByCountry = {
-                        'US': [
-                            { value: 'America/New_York', label: 'Eastern (New York)' },
-                            { value: 'America/Chicago', label: 'Central (Chicago)' },
-                            { value: 'America/Denver', label: 'Mountain (Denver)' },
-                            { value: 'America/Phoenix', label: 'Arizona (Phoenix)' },
-                            { value: 'America/Los_Angeles', label: 'Pacific (Los Angeles)' },
-                            { value: 'America/Anchorage', label: 'Alaska (Anchorage)' },
-                            { value: 'Pacific/Honolulu', label: 'Hawaii (Honolulu)' }
-                        ],
-                        'GB': [
-                            { value: 'Europe/London', label: 'London' }
-                        ],
-                        'CA': [
-                            { value: 'America/Toronto', label: 'Eastern (Toronto)' },
-                            { value: 'America/Vancouver', label: 'Pacific (Vancouver)' },
-                            { value: 'America/Edmonton', label: 'Mountain (Edmonton)' },
-                            { value: 'America/Winnipeg', label: 'Central (Winnipeg)' },
-                            { value: 'America/Halifax', label: 'Atlantic (Halifax)' },
-                            { value: 'America/St_Johns', label: 'Newfoundland (St. John\'s)' }
-                        ],
-                        'AU': [
-                            { value: 'Australia/Sydney', label: 'Sydney' },
-                            { value: 'Australia/Melbourne', label: 'Melbourne' },
-                            { value: 'Australia/Brisbane', label: 'Brisbane' },
-                            { value: 'Australia/Perth', label: 'Perth' },
-                            { value: 'Australia/Adelaide', label: 'Adelaide' },
-                            { value: 'Australia/Darwin', label: 'Darwin' },
-                            { value: 'Australia/Hobart', label: 'Hobart' }
-                        ],
-                        'DE': [
-                            { value: 'Europe/Berlin', label: 'Berlin' }
-                        ],
-                        'FR': [
-                            { value: 'Europe/Paris', label: 'Paris' }
-                        ],
-                        'OTHER': [
-                            { value: 'UTC', label: 'UTC (Coordinated Universal Time)' }
-                        ]
-                    };
-
-                    const countrySelect = document.getElementById('country-select');
-                    const timezoneSelect = document.getElementById('timezone-select');
-                    const savedTimezone = "{{ old('timezone', $tenant['timezone'] ?? '') }}";
-
-                    function updateTimezones() {
-                        const country = countrySelect.value;
-                        timezoneSelect.innerHTML = '';
-
-                        if (!country) {
-                            timezoneSelect.innerHTML = '<option value="">Select country first</option>';
-                            timezoneSelect.disabled = true;
-                            return;
-                        }
-
-                        const timezones = timezonesByCountry[country] || [];
-                        timezoneSelect.disabled = false;
-
-                        if (timezones.length === 0) {
-                            timezoneSelect.innerHTML = '<option value="">No timezones available</option>';
-                            return;
-                        }
-
-                        timezoneSelect.innerHTML = '<option value="">Select timezone</option>';
-                        timezones.forEach(tz => {
-                            const option = document.createElement('option');
-                            option.value = tz.value;
-                            option.textContent = tz.label;
-                            if (tz.value === savedTimezone) {
-                                option.selected = true;
-                            }
-                            timezoneSelect.appendChild(option);
-                        });
-                    }
-
-                    countrySelect.addEventListener('change', updateTimezones);
-
-                    // Initialize on page load
-                    document.addEventListener('DOMContentLoaded', function() {
-                        if (countrySelect.value) {
-                            updateTimezones();
-                        }
-                    });
-                </script>
 
                 @elseif($step == 3)
                 <!-- Step 3: Role Selection -->

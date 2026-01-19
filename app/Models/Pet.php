@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 class Pet extends Model
 {
@@ -243,7 +244,7 @@ class Pet extends Model
     public function getPhotoUrlAttribute(): ?string
     {
         if ($this->photo) {
-            return asset('storage/' . $this->photo);
+            return Storage::disk('do_spaces')->url($this->photo);
         }
         return null;
     }
