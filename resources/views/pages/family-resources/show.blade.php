@@ -16,6 +16,13 @@
     <li aria-current="page" class="truncate max-w-[200px]">{{ $resource->name }}</li>
 @endsection
 
+@section('page-actions')
+    <a href="{{ route('family-resources.index') }}" class="btn btn-ghost btn-sm gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+        Back
+    </a>
+@endsection
+
 @section('content')
 <div class="space-y-6">
     @if(session('success'))
@@ -174,12 +181,12 @@
             </div>
 
             <!-- Notes -->
-            @if($resource->notes)
+            @if($resource->notes && strip_tags($resource->notes) !== '')
             <div class="card bg-base-100 shadow-sm">
                 <div class="card-body">
                     <h2 class="card-title text-lg mb-4">Notes</h2>
                     <div class="prose prose-sm max-w-none">
-                        {!! nl2br(e($resource->notes)) !!}
+                        {!! $resource->notes !!}
                     </div>
                 </div>
             </div>

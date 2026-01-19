@@ -30,31 +30,49 @@
             </div>
         </div>
         <div class="flex items-center gap-2">
+            @if($isOwner)
+                <button type="button" onclick="toggleShareModal()" class="btn btn-ghost btn-sm gap-1" title="Share">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+                    <span class="hidden sm:inline">Share</span>
+                </button>
+            @endif
+            <button type="button" onclick="printList()" class="btn btn-ghost btn-sm gap-1" title="Print">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+                <span class="hidden sm:inline">Print</span>
+            </button>
+            @if($isOwner)
+                <button type="button" onclick="toggleEmailModal()" class="btn btn-ghost btn-sm gap-1" title="Email">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                    <span class="hidden sm:inline">Email</span>
+                </button>
+            @endif
             <a href="{{ route('shopping.store-mode', $list) }}" class="btn btn-outline btn-sm gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                 Store Mode
             </a>
-            <div class="relative">
-                <button type="button" onclick="toggleOptionsMenu()" class="btn btn-ghost btn-sm btn-circle">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
-                </button>
-                <div id="optionsMenu" class="hidden absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg min-w-40 py-1 z-50">
-                    <button type="button" onclick="toggleEditModal(); toggleOptionsMenu();" class="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                        Edit List
+            @if($isOwner)
+                <div class="relative">
+                    <button type="button" onclick="toggleOptionsMenu()" class="btn btn-ghost btn-sm btn-circle">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
                     </button>
-                    @if(!$list->is_default)
-                        <form action="{{ route('shopping.destroy', $list) }}" method="POST" onsubmit="return confirm('Delete this shopping list?')">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="w-full px-4 py-2 text-left text-sm text-rose-600 hover:bg-rose-50 flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                                Delete List
-                            </button>
-                        </form>
-                    @endif
+                    <div id="optionsMenu" class="hidden absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg min-w-40 py-1 z-50">
+                        <button type="button" onclick="toggleEditModal(); toggleOptionsMenu();" class="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                            Edit List
+                        </button>
+                        @if(!$list->is_default)
+                            <form action="{{ route('shopping.destroy', $list) }}" method="POST" onsubmit="return confirm('Delete this shopping list?')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="w-full px-4 py-2 text-left text-sm text-rose-600 hover:bg-rose-50 flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                                    Delete List
+                                </button>
+                            </form>
+                        @endif
+                    </div>
                 </div>
-            </div>
+            @endif
         </div>
     </div>
 
@@ -213,6 +231,182 @@
         </div>
     </div>
 </div>
+
+<!-- Share List Modal -->
+<div id="shareModal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="toggleShareModal()"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <form action="{{ route('shopping.share', $list) }}" method="POST">
+                @csrf
+                <div class="p-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-slate-900">Share Shopping List</h3>
+                            <p class="text-sm text-slate-500">Selected members will see this list in their portal</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 max-h-64 overflow-y-auto">
+                        @forelse($familyMembers ?? [] as $member)
+                            <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors">
+                                <input type="checkbox" name="members[]" value="{{ $member->id }}" class="checkbox checkbox-sm checkbox-primary"
+                                    {{ in_array($member->id, $sharedWithMembers ?? []) ? 'checked' : '' }}>
+                                <div class="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-br from-emerald-400 to-teal-500">
+                                    @if($member->profile_image_url)
+                                        <img src="{{ $member->profile_image_url }}" alt="{{ $member->first_name }}" class="w-full h-full object-cover">
+                                    @else
+                                        <div class="w-full h-full flex items-center justify-center">
+                                            <span class="text-sm font-semibold text-white">{{ strtoupper(substr($member->first_name, 0, 1)) }}</span>
+                                        </div>
+                                    @endif
+                                </div>
+                                <div class="flex-1">
+                                    <p class="font-medium text-slate-900">{{ $member->full_name }}</p>
+                                    @if($member->email)
+                                        <p class="text-xs text-slate-500">{{ $member->email }}</p>
+                                    @endif
+                                </div>
+                            </label>
+                        @empty
+                            <div class="text-center py-4 text-slate-500">
+                                <p>No family members found.</p>
+                                <a href="{{ route('family-circle.index') }}" class="text-sm text-emerald-600 hover:underline">Add family members first</a>
+                            </div>
+                        @endforelse
+                    </div>
+                </div>
+                <div class="flex gap-3 p-6 pt-0">
+                    <button type="button" onclick="toggleShareModal()" class="flex-1 btn btn-ghost">Cancel</button>
+                    <button type="submit" class="flex-1 btn btn-primary gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+                        Share List
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Email List Modal -->
+<div id="emailModal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="toggleEmailModal()"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <form action="{{ route('shopping.email', $list) }}" method="POST">
+                @csrf
+                <div class="p-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-violet-600"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-slate-900">Email Shopping List</h3>
+                            <p class="text-sm text-slate-500">Send this list via email to selected members</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 max-h-64 overflow-y-auto">
+                        @forelse($familyMembers ?? [] as $member)
+                            @if($member->email)
+                                <label class="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors">
+                                    <input type="checkbox" name="members[]" value="{{ $member->id }}" class="checkbox checkbox-sm checkbox-violet">
+                                    <div class="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-br from-violet-400 to-purple-500">
+                                        @if($member->profile_image_url)
+                                            <img src="{{ $member->profile_image_url }}" alt="{{ $member->first_name }}" class="w-full h-full object-cover">
+                                        @else
+                                            <div class="w-full h-full flex items-center justify-center">
+                                                <span class="text-sm font-semibold text-white">{{ strtoupper(substr($member->first_name, 0, 1)) }}</span>
+                                            </div>
+                                        @endif
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="font-medium text-slate-900">{{ $member->full_name }}</p>
+                                        <p class="text-xs text-slate-500">{{ $member->email }}</p>
+                                    </div>
+                                </label>
+                            @endif
+                        @empty
+                            <div class="text-center py-4 text-slate-500">
+                                <p>No family members with email found.</p>
+                            </div>
+                        @endforelse
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Additional Message (Optional)</label>
+                        <textarea name="message" rows="2" placeholder="Add a personal note..."
+                            class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20"></textarea>
+                    </div>
+                </div>
+                <div class="flex gap-3 p-6 pt-0">
+                    <button type="button" onclick="toggleEmailModal()" class="flex-1 btn btn-ghost">Cancel</button>
+                    <button type="submit" class="flex-1 btn bg-violet-600 hover:bg-violet-700 text-white gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                        Send Email
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Print Styles -->
+<style>
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    #printArea, #printArea * {
+        visibility: visible;
+    }
+    #printArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+    }
+    .no-print {
+        display: none !important;
+    }
+}
+</style>
+
+<!-- Hidden Print Area -->
+<div id="printArea" class="hidden print:block">
+    <div class="p-8">
+        <h1 class="text-2xl font-bold mb-2">{{ $list->name }}</h1>
+        @if($list->store_name)
+            <p class="text-gray-600 mb-4">{{ $list->store_name }}</p>
+        @endif
+        <p class="text-sm text-gray-500 mb-6">{{ now()->format('F j, Y') }}</p>
+
+        <div class="space-y-4">
+            @php
+                $printUnchecked = $items->where('is_checked', false)->groupBy('category');
+            @endphp
+
+            @foreach($printUnchecked as $category => $categoryItems)
+                <div>
+                    <h3 class="font-semibold text-gray-700 border-b pb-1 mb-2">{{ $categories[$category] ?? 'Other' }}</h3>
+                    <ul class="space-y-1">
+                        @foreach($categoryItems as $item)
+                            <li class="flex items-center gap-2">
+                                <span class="w-4 h-4 border border-gray-400 rounded"></span>
+                                <span>{{ $item->name }}@if($item->quantity > 1) ({{ $item->quantity }})@endif</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endforeach
+        </div>
+
+        <p class="text-xs text-gray-400 mt-8">Printed from FamilyLedger</p>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
@@ -313,12 +507,43 @@ function toggleEditModal() {
     document.body.style.overflow = modal.classList.contains('hidden') ? '' : 'hidden';
 }
 
+// Share modal
+function toggleShareModal() {
+    const modal = document.getElementById('shareModal');
+    modal.classList.toggle('hidden');
+    document.body.style.overflow = modal.classList.contains('hidden') ? '' : 'hidden';
+}
+
+// Email modal
+function toggleEmailModal() {
+    const modal = document.getElementById('emailModal');
+    modal.classList.toggle('hidden');
+    document.body.style.overflow = modal.classList.contains('hidden') ? '' : 'hidden';
+}
+
+// Print list
+function printList() {
+    const printArea = document.getElementById('printArea');
+    printArea.classList.remove('hidden');
+    window.print();
+    printArea.classList.add('hidden');
+}
+
 // Escape key handler
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         const editModal = document.getElementById('editModal');
+        const shareModal = document.getElementById('shareModal');
+        const emailModal = document.getElementById('emailModal');
+
         if (!editModal.classList.contains('hidden')) {
             toggleEditModal();
+        }
+        if (!shareModal.classList.contains('hidden')) {
+            toggleShareModal();
+        }
+        if (!emailModal.classList.contains('hidden')) {
+            toggleEmailModal();
         }
     }
 });

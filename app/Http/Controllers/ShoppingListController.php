@@ -2,20 +2,57 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FamilyMember;
 use App\Models\ShoppingList;
 use App\Models\ShoppingItem;
 use App\Models\ShoppingItemHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 
 class ShoppingListController extends Controller
 {
+    /**
+     * Check if the current user has access to a shopping list.
+     * User has access if they own the list OR if the list is shared with them.
+     */
+    private function userHasAccess(ShoppingList $shoppingList): bool
+    {
+        $user = Auth::user();
+
+        // User owns the list
+        if ($shoppingList->tenant_id === $user->tenant_id) {
+            return true;
+        }
+
+        // Check if list is shared with user via their linked family member
+        $linkedMember = FamilyMember::where('linked_user_id', $user->id)->first();
+        if ($linkedMember) {
+            return $shoppingList->sharedWithMembers()
+                ->where('family_member_id', $linkedMember->id)
+                ->exists();
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if user owns the shopping list (not just has access).
+     */
+    private function userOwns(ShoppingList $shoppingList): bool
+    {
+        return $shoppingList->tenant_id === Auth::user()->tenant_id;
+    }
+
     /**
      * Display a listing of shopping lists.
      */
     public function index()
     {
-        $lists = ShoppingList::where('tenant_id', Auth::user()->tenant_id)
+        $user = Auth::user();
+
+        // Get user's own lists
+        $ownLists = ShoppingList::where('tenant_id', $user->tenant_id)
             ->withCount(['items', 'items as unchecked_count' => function ($query) {
                 $query->where('is_checked', false);
             }])
@@ -23,15 +60,38 @@ class ShoppingListController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Create default list if none exists
-        if ($lists->isEmpty()) {
+        // Get lists shared with this user (via their linked family member)
+        $linkedMember = FamilyMember::where('linked_user_id', $user->id)->first();
+        $sharedLists = collect();
+
+        if ($linkedMember) {
+            $sharedLists = ShoppingList::whereHas('sharedWithMembers', function ($query) use ($linkedMember) {
+                $query->where('family_member_id', $linkedMember->id);
+            })
+            ->where('tenant_id', '!=', $user->tenant_id) // Exclude own tenant's lists (already shown)
+            ->withCount(['items', 'items as unchecked_count' => function ($query) {
+                $query->where('is_checked', false);
+            }])
+            ->orderBy('name')
+            ->get()
+            ->map(function ($list) {
+                $list->is_shared = true;
+                return $list;
+            });
+        }
+
+        // Merge own lists and shared lists
+        $lists = $ownLists->merge($sharedLists);
+
+        // Create default list if no own lists exist
+        if ($ownLists->isEmpty()) {
             $defaultList = ShoppingList::create([
-                'tenant_id' => Auth::user()->tenant_id,
+                'tenant_id' => $user->tenant_id,
                 'name' => 'Family Shopping List',
                 'color' => 'emerald',
                 'is_default' => true,
             ]);
-            $lists = collect([$defaultList]);
+            $lists = collect([$defaultList])->merge($sharedLists);
         }
 
         return view('shopping.index', [
@@ -50,6 +110,7 @@ class ShoppingListController extends Controller
             'name' => 'required|string|max:255',
             'store' => 'nullable|string|max:50',
             'color' => 'nullable|string|max:20',
+            'recurring' => 'nullable|string|max:20',
         ]);
 
         $list = ShoppingList::create([
@@ -57,6 +118,7 @@ class ShoppingListController extends Controller
             'name' => $validated['name'],
             'store' => $validated['store'] ?? null,
             'color' => $validated['color'] ?? 'emerald',
+            'recurring' => $validated['recurring'] ?? null,
             'is_default' => false,
         ]);
 
@@ -73,10 +135,12 @@ class ShoppingListController extends Controller
      */
     public function show(ShoppingList $shoppingList)
     {
-        // Ensure user has access
-        if ($shoppingList->tenant_id !== Auth::user()->tenant_id) {
+        // Ensure user has access (owns or has shared access)
+        if (!$this->userHasAccess($shoppingList)) {
             abort(403);
         }
+
+        $isOwner = $this->userOwns($shoppingList);
 
         $items = $shoppingList->items()
             ->with(['addedBy', 'checkedBy'])
@@ -86,14 +150,26 @@ class ShoppingListController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // Get recently purchased items for suggestions
-        $recentItems = ShoppingItemHistory::where('tenant_id', Auth::user()->tenant_id)
-            ->orderByDesc('last_purchased_at')
-            ->limit(10)
-            ->get();
+        // Get recently purchased items for suggestions (only for owner)
+        $recentItems = collect();
+        $frequentItems = collect();
+        $familyMembers = collect();
+        $sharedWithMembers = [];
 
-        // Get frequently bought items
-        $frequentItems = ShoppingItemHistory::getFrequentItems(Auth::user()->tenant_id, 10);
+        if ($isOwner) {
+            $recentItems = ShoppingItemHistory::where('tenant_id', Auth::user()->tenant_id)
+                ->orderByDesc('last_purchased_at')
+                ->limit(10)
+                ->get();
+
+            $frequentItems = ShoppingItemHistory::getFrequentItems(Auth::user()->tenant_id, 10);
+
+            // Get family members for sharing
+            $familyMembers = FamilyMember::where('tenant_id', Auth::user()->tenant_id)->get();
+
+            // Get shared members IDs
+            $sharedWithMembers = $shoppingList->sharedWithMembers()->pluck('family_member_id')->toArray();
+        }
 
         return view('shopping.show', [
             'list' => $shoppingList,
@@ -101,6 +177,9 @@ class ShoppingListController extends Controller
             'categories' => ShoppingItem::CATEGORIES,
             'recentItems' => $recentItems,
             'frequentItems' => $frequentItems,
+            'familyMembers' => $familyMembers,
+            'sharedWithMembers' => $sharedWithMembers,
+            'isOwner' => $isOwner,
         ]);
     }
 
@@ -109,7 +188,7 @@ class ShoppingListController extends Controller
      */
     public function storeMode(ShoppingList $shoppingList)
     {
-        if ($shoppingList->tenant_id !== Auth::user()->tenant_id) {
+        if (!$this->userHasAccess($shoppingList)) {
             abort(403);
         }
 
@@ -124,6 +203,7 @@ class ShoppingListController extends Controller
             'list' => $shoppingList,
             'items' => $items,
             'categories' => ShoppingItem::CATEGORIES,
+            'isOwner' => $this->userOwns($shoppingList),
         ]);
     }
 
@@ -175,7 +255,7 @@ class ShoppingListController extends Controller
      */
     public function addItem(Request $request, ShoppingList $shoppingList)
     {
-        if ($shoppingList->tenant_id !== Auth::user()->tenant_id) {
+        if (!$this->userHasAccess($shoppingList)) {
             abort(403);
         }
 
@@ -186,8 +266,9 @@ class ShoppingListController extends Controller
             'notes' => 'nullable|string|max:500',
         ]);
 
+        // Use the list's tenant_id (not the current user's) so items belong to the list owner
         $item = ShoppingItem::create([
-            'tenant_id' => Auth::user()->tenant_id,
+            'tenant_id' => $shoppingList->tenant_id,
             'shopping_list_id' => $shoppingList->id,
             'name' => $validated['name'],
             'quantity' => $validated['quantity'] ?? null,
@@ -215,16 +296,17 @@ class ShoppingListController extends Controller
      */
     public function toggleItem(Request $request, ShoppingItem $item)
     {
-        if ($item->tenant_id !== Auth::user()->tenant_id) {
+        // Check access via the shopping list
+        if (!$this->userHasAccess($item->shoppingList)) {
             abort(403);
         }
 
         $item->toggleChecked(Auth::id());
 
-        // Add to history when checked
+        // Add to history when checked (record on the list owner's tenant)
         if ($item->is_checked) {
             ShoppingItemHistory::recordPurchase(
-                Auth::user()->tenant_id,
+                $item->tenant_id,
                 $item->name,
                 $item->category,
                 $item->quantity
@@ -246,7 +328,8 @@ class ShoppingListController extends Controller
      */
     public function updateItem(Request $request, ShoppingItem $item)
     {
-        if ($item->tenant_id !== Auth::user()->tenant_id) {
+        // Check access via the shopping list
+        if (!$this->userHasAccess($item->shoppingList)) {
             abort(403);
         }
 
@@ -271,7 +354,8 @@ class ShoppingListController extends Controller
      */
     public function deleteItem(ShoppingItem $item)
     {
-        if ($item->tenant_id !== Auth::user()->tenant_id) {
+        // Check access via the shopping list
+        if (!$this->userHasAccess($item->shoppingList)) {
             abort(403);
         }
 
@@ -289,7 +373,7 @@ class ShoppingListController extends Controller
      */
     public function clearChecked(ShoppingList $shoppingList)
     {
-        if ($shoppingList->tenant_id !== Auth::user()->tenant_id) {
+        if (!$this->userHasAccess($shoppingList)) {
             abort(403);
         }
 
@@ -316,5 +400,75 @@ class ShoppingListController extends Controller
         );
 
         return response()->json($suggestions);
+    }
+
+    /**
+     * Share shopping list with family members.
+     */
+    public function share(Request $request, ShoppingList $shoppingList)
+    {
+        if ($shoppingList->tenant_id !== Auth::user()->tenant_id) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'members' => 'nullable|array',
+            'members.*' => 'exists:family_members,id',
+        ]);
+
+        // Sync the shared members
+        $memberIds = $validated['members'] ?? [];
+        $shoppingList->sharedWithMembers()->sync($memberIds);
+
+        return back()->with('success', 'Shopping list sharing updated successfully.');
+    }
+
+    /**
+     * Email shopping list to selected members.
+     */
+    public function email(Request $request, ShoppingList $shoppingList)
+    {
+        if ($shoppingList->tenant_id !== Auth::user()->tenant_id) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'members' => 'required|array|min:1',
+            'members.*' => 'exists:family_members,id',
+            'message' => 'nullable|string|max:500',
+        ]);
+
+        // Get family members with emails
+        $members = FamilyMember::whereIn('id', $validated['members'])
+            ->whereNotNull('email')
+            ->get();
+
+        if ($members->isEmpty()) {
+            return back()->with('error', 'No members with valid email addresses selected.');
+        }
+
+        // Get items for the list
+        $items = $shoppingList->items()
+            ->where('is_checked', false)
+            ->orderBy('category')
+            ->get()
+            ->groupBy('category');
+
+        // Send email to each member
+        foreach ($members as $member) {
+            Mail::send('emails.shopping-list', [
+                'list' => $shoppingList,
+                'items' => $items,
+                'categories' => ShoppingItem::CATEGORIES,
+                'member' => $member,
+                'senderName' => Auth::user()->name,
+                'personalMessage' => $validated['message'] ?? null,
+            ], function ($mail) use ($member, $shoppingList) {
+                $mail->to($member->email, $member->full_name)
+                    ->subject('Shopping List: ' . $shoppingList->name);
+            });
+        }
+
+        return back()->with('success', 'Shopping list emailed to ' . $members->count() . ' member(s).');
     }
 }

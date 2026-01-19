@@ -541,6 +541,10 @@ Route::middleware(['security.code', 'auth'])->group(function () {
         Route::delete('/items/{item}', [ShoppingListController::class, 'deleteItem'])->name('items.destroy');
         Route::post('/{shoppingList}/clear-checked', [ShoppingListController::class, 'clearChecked'])->name('clear-checked');
 
+        // Share & Email
+        Route::post('/{shoppingList}/share', [ShoppingListController::class, 'share'])->name('share');
+        Route::post('/{shoppingList}/email', [ShoppingListController::class, 'email'])->name('email');
+
         // Suggestions
         Route::get('/api/suggestions', [ShoppingListController::class, 'suggestions'])->name('suggestions');
     });

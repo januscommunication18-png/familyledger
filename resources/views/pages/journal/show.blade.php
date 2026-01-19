@@ -16,6 +16,10 @@
 
 @section('page-actions')
     <div class="flex items-center gap-2">
+        <a href="{{ route('journal.index') }}" class="btn btn-ghost btn-sm gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            Back
+        </a>
         <form method="POST" action="{{ route('journal.toggle-pin', $entry) }}" class="inline">
             @csrf
             @method('PATCH')
@@ -109,26 +113,99 @@
 
             <!-- Body -->
             <div class="prose prose-slate max-w-none mb-6">
-                {!! nl2br(e($entry->body)) !!}
+                {!! $entry->body !!}
             </div>
 
             <!-- Photos Gallery -->
             @if($entry->attachments->where('type', 'photo')->count())
-                <div class="mb-6">
+                <div class="mb-6" x-data="imageGallery()">
                     <h3 class="text-sm font-semibold text-slate-600 mb-3 flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
                         Photos
                     </h3>
                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        @foreach($entry->attachments->where('type', 'photo') as $photo)
-                            <a href="{{ $photo->url }}" target="_blank"
-                               class="aspect-square rounded-xl overflow-hidden bg-slate-100 hover:opacity-90 transition-opacity">
+                        @foreach($entry->attachments->where('type', 'photo') as $index => $photo)
+                            <button type="button" @click="openModal('{{ $photo->url }}', {{ $index }})"
+                               class="aspect-square rounded-xl overflow-hidden bg-slate-100 hover:opacity-90 transition-opacity cursor-pointer">
                                 <img src="{{ $photo->thumbnail_url }}" alt=""
                                      class="w-full h-full object-cover">
-                            </a>
+                            </button>
                         @endforeach
                     </div>
+
+                    <!-- Image Modal -->
+                    <div x-show="isOpen" x-cloak
+                         class="fixed inset-0 z-50 flex items-center justify-center"
+                         @keydown.escape.window="closeModal()"
+                         @keydown.arrow-left.window="prevImage()"
+                         @keydown.arrow-right.window="nextImage()">
+                        <!-- Backdrop -->
+                        <div class="absolute inset-0 bg-black/90" @click="closeModal()"></div>
+
+                        <!-- Modal Content -->
+                        <div class="relative z-10 max-w-5xl max-h-[90vh] w-full mx-4">
+                            <!-- Close Button -->
+                            <button @click="closeModal()" class="absolute -top-12 right-0 text-white hover:text-slate-300 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                            </button>
+
+                            <!-- Image -->
+                            <img :src="currentImage" alt="" class="max-w-full max-h-[85vh] mx-auto rounded-lg shadow-2xl object-contain">
+
+                            <!-- Navigation Arrows -->
+                            @if($entry->attachments->where('type', 'photo')->count() > 1)
+                                <button @click="prevImage()" class="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 md:-translate-x-16 p-2 text-white hover:text-slate-300 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                                </button>
+                                <button @click="nextImage()" class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 md:translate-x-16 p-2 text-white hover:text-slate-300 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                                </button>
+                            @endif
+
+                            <!-- Image Counter -->
+                            <div class="absolute -bottom-10 left-1/2 -translate-x-1/2 text-white text-sm">
+                                <span x-text="currentIndex + 1"></span> / <span>{{ $entry->attachments->where('type', 'photo')->count() }}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
+                @push('scripts')
+                <script>
+                function imageGallery() {
+                    return {
+                        isOpen: false,
+                        currentImage: '',
+                        currentIndex: 0,
+                        images: [
+                            @foreach($entry->attachments->where('type', 'photo') as $photo)
+                                '{{ $photo->url }}',
+                            @endforeach
+                        ],
+                        openModal(url, index) {
+                            this.currentImage = url;
+                            this.currentIndex = index;
+                            this.isOpen = true;
+                            document.body.style.overflow = 'hidden';
+                        },
+                        closeModal() {
+                            this.isOpen = false;
+                            document.body.style.overflow = '';
+                        },
+                        nextImage() {
+                            if (!this.isOpen) return;
+                            this.currentIndex = (this.currentIndex + 1) % this.images.length;
+                            this.currentImage = this.images[this.currentIndex];
+                        },
+                        prevImage() {
+                            if (!this.isOpen) return;
+                            this.currentIndex = (this.currentIndex - 1 + this.images.length) % this.images.length;
+                            this.currentImage = this.images[this.currentIndex];
+                        }
+                    }
+                }
+                </script>
+                @endpush
             @endif
 
             <!-- File Attachments -->
@@ -216,4 +293,8 @@
         </div>
     </div>
 </div>
+
+<style>
+    [x-cloak] { display: none !important; }
+</style>
 @endsection

@@ -175,8 +175,8 @@ class Pet extends Model
     public function getAgeAttribute(): ?string
     {
         if ($this->date_of_birth) {
-            $years = $this->date_of_birth->diffInYears(now());
-            $months = $this->date_of_birth->diffInMonths(now()) % 12;
+            $years = (int) $this->date_of_birth->diffInYears(now());
+            $months = (int) ($this->date_of_birth->diffInMonths(now()) % 12);
 
             if ($years > 0) {
                 return $years . ' ' . ($years === 1 ? 'year' : 'years') .

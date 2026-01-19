@@ -42,10 +42,16 @@
                     </div>
                 </div>
                 @if($access->hasFullAccess)
-                    <a href="{{ route('family-circle.member.edit', [$circle, $member]) }}" class="btn btn-sm btn-ghost gap-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                        Edit
-                    </a>
+                    <div class="flex items-center gap-2">
+                        <a href="{{ route('family-circle.member.edit', [$circle, $member]) }}" class="btn btn-sm btn-ghost gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                            Edit
+                        </a>
+                        <button type="button" onclick="showDeleteMemberModal()" class="btn btn-sm btn-ghost text-error gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                            Delete
+                        </button>
+                    </div>
                 @endif
             </div>
 
@@ -818,6 +824,31 @@
     </div>
 </div>
 
+<!-- Delete Member Confirmation Modal -->
+<div id="deleteMemberModal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black/50" onclick="closeDeleteMemberModal()"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
+        <div class="bg-base-100 rounded-xl shadow-xl max-w-sm w-full p-6 pointer-events-auto">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded-full bg-error/10 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-error"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                </div>
+                <h3 class="font-bold text-lg text-error">Delete Member</h3>
+            </div>
+            <p class="text-sm text-base-content/70 mb-2">Are you sure you want to delete <strong>{{ $member->full_name }}</strong>?</p>
+            <p class="text-sm text-base-content/60 mb-6">This will also remove all associated documents, medical records, and other related data. This action cannot be undone.</p>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="closeDeleteMemberModal()" class="btn btn-ghost">Cancel</button>
+                <form action="{{ route('family-circle.member.destroy', [$circle, $member]) }}" method="POST" class="inline">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-error">Delete Member</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
@@ -836,5 +867,26 @@ function toggleImmigrationEdit() {
     display.classList.toggle('hidden');
     edit.classList.toggle('hidden');
 }
+
+// Delete member modal functions
+function showDeleteMemberModal() {
+    document.getElementById('deleteMemberModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeDeleteMemberModal() {
+    document.getElementById('deleteMemberModal').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('deleteMemberModal');
+        if (modal && !modal.classList.contains('hidden')) {
+            closeDeleteMemberModal();
+        }
+    }
+});
 </script>
 @endpush

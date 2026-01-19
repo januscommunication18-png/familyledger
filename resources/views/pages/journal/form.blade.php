@@ -86,9 +86,13 @@
 
                 <!-- Body -->
                 <div class="form-control mb-4">
-                    <textarea name="body" rows="10"
-                              class="textarea textarea-bordered text-base leading-relaxed"
-                              placeholder="What's on your mind?" required>{{ old('body', $entry?->body) }}</textarea>
+                    <x-quill-editor
+                        name="body"
+                        :value="old('body', $entry?->body ?? '')"
+                        placeholder="What's on your mind?"
+                        height="300px"
+                        toolbar="standard"
+                    />
                 </div>
 
                 <!-- Date & Time -->

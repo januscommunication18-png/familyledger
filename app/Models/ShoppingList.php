@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -18,11 +19,30 @@ class ShoppingList extends Model
         'store',
         'color',
         'is_default',
+        'recurring',
     ];
 
     protected $casts = [
         'is_default' => 'boolean',
     ];
+
+    /**
+     * Recurring frequencies.
+     */
+    public const RECURRING_FREQUENCIES = [
+        'none' => 'Not Recurring',
+        'weekly' => 'Weekly',
+        'bi_weekly' => 'Bi-Weekly',
+        'monthly' => 'Monthly',
+    ];
+
+    /**
+     * Get the recurring label.
+     */
+    public function getRecurringLabelAttribute(): ?string
+    {
+        return $this->recurring ? (self::RECURRING_FREQUENCIES[$this->recurring] ?? null) : null;
+    }
 
     /**
      * Store types.
@@ -70,6 +90,15 @@ class ShoppingList extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    /**
+     * Get family members this list is shared with.
+     */
+    public function sharedWithMembers(): BelongsToMany
+    {
+        return $this->belongsToMany(FamilyMember::class, 'shopping_list_shares')
+            ->withTimestamps();
     }
 
     /**

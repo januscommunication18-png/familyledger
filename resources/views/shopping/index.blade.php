@@ -42,8 +42,17 @@
                             <div>
                                 <h3 class="font-semibold text-slate-900 text-lg flex items-center gap-2">
                                     {{ $list->name }}
+                                    @if($list->is_shared ?? false)
+                                        <span class="badge badge-sm badge-secondary gap-1">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+                                            Shared
+                                        </span>
+                                    @endif
                                     @if($list->is_default)
                                         <span class="badge badge-sm badge-primary">Default</span>
+                                    @endif
+                                    @if($list->recurring)
+                                        <span class="badge badge-sm badge-info">{{ $list->recurring_label }}</span>
                                     @endif
                                 </h3>
                                 @if($list->store_name)
@@ -120,6 +129,15 @@
                                 <option value="">No specific store</option>
                                 @foreach($stores as $key => $label)
                                     <option value="{{ $key }}">{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Recurring (Optional)</label>
+                            <select name="recurring" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 bg-white">
+                                @foreach(\App\Models\ShoppingList::RECURRING_FREQUENCIES as $key => $label)
+                                    <option value="{{ $key === 'none' ? '' : $key }}">{{ $label }}</option>
                                 @endforeach
                             </select>
                         </div>
