@@ -1,4 +1,4 @@
-<div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow" x-data="{ menuOpen: false }">
+<div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow" x-data="{ menuOpen: false, deleteModalOpen: false }">
     <div class="card-body p-4">
         <!-- Header -->
         <div class="flex items-start justify-between gap-3">
@@ -80,14 +80,42 @@
                             </button>
                         </form>
                         <div class="border-t border-slate-100 my-1"></div>
-                        <form method="POST" action="{{ route('journal.destroy', $entry) }}" onsubmit="return confirm('Delete this entry?')">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="flex items-center gap-2 px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 w-full text-left">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-                                Delete
-                            </button>
-                        </form>
+                        <button type="button" @click="deleteModalOpen = true; menuOpen = false" class="flex items-center gap-2 px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 w-full text-left">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div x-show="deleteModalOpen" x-cloak class="fixed inset-0 z-50" @keydown.escape.window="deleteModalOpen = false">
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="deleteModalOpen = false"></div>
+            <div class="fixed inset-0 flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md" @click.stop>
+                    <div class="p-6">
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-rose-600"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold text-slate-900">Delete Entry</h3>
+                                <p class="text-sm text-slate-500">This action cannot be undone</p>
+                            </div>
+                        </div>
+                        <p class="text-slate-600 mb-6">Are you sure you want to delete "<span class="font-medium">{{ $entry->title ?: Str::limit(strip_tags($entry->body), 30) }}</span>"?</p>
+                        <div class="flex gap-3">
+                            <button type="button" @click="deleteModalOpen = false" class="flex-1 btn btn-ghost">Cancel</button>
+                            <form method="POST" action="{{ route('journal.destroy', $entry) }}" class="flex-1">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="w-full btn btn-error gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg>
+                                    Delete
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -106,6 +106,117 @@
             </div>
         </div>
 
+        <!-- Birthday Reminders -->
+        @if($birthdayReminders->count() > 0)
+        <div class="card bg-base-100 shadow-sm border-l-4 border-pink-500">
+            <div class="card-body">
+                <div class="flex items-center gap-2 mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-pink-500"><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1"/><path d="M2 21h20"/><path d="M7 8v3"/><path d="M12 8v3"/><path d="M17 8v3"/><path d="M7 4h.01"/><path d="M12 4h.01"/><path d="M17 4h.01"/></svg>
+                    <h2 class="card-title text-pink-500">Upcoming Birthdays ({{ $birthdayReminders->count() }})</h2>
+                </div>
+                <div class="space-y-3">
+                    @foreach($birthdayReminders as $birthday)
+                    <div class="flex items-center justify-between p-3 rounded-lg
+                        @if($birthday['days_until'] === 0) bg-pink-100 border border-pink-300
+                        @elseif($birthday['days_until'] === 1) bg-pink-50 border border-pink-200
+                        @else bg-base-200/50 @endif">
+                        <div class="flex items-center gap-3">
+                            @if($birthday['person']->profile_image_url)
+                                <img src="{{ $birthday['person']->profile_image_url }}" alt="{{ $birthday['person']->full_name }}"
+                                     class="w-10 h-10 rounded-full object-cover">
+                            @else
+                                <div class="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center">
+                                    <span class="text-pink-600 font-semibold text-sm">{{ $birthday['person']->initials }}</span>
+                                </div>
+                            @endif
+                            <div>
+                                <a href="{{ route('people.show', $birthday['person']) }}" class="font-medium hover:text-pink-600 transition-colors">
+                                    {{ $birthday['person']->full_name }}
+                                </a>
+                                <div class="text-sm text-base-content/60">
+                                    @if($birthday['days_until'] === 0)
+                                        <span class="text-pink-600 font-semibold">Today!</span>
+                                    @elseif($birthday['days_until'] === 1)
+                                        <span class="text-pink-500 font-medium">Tomorrow</span>
+                                    @else
+                                        In {{ $birthday['days_until'] }} days
+                                    @endif
+                                    <span class="mx-1">&bull;</span>
+                                    {{ $birthday['birthday_date']->format('M j') }}
+                                    <span class="mx-1">&bull;</span>
+                                    Turning {{ $birthday['age'] }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="badge badge-sm bg-pink-100 text-pink-700 border-pink-200">
+                                {{ $birthday['person']->relationship_name }}
+                            </span>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+        @endif
+
+        <!-- Important Date Reminders -->
+        @if($importantDateReminders->count() > 0)
+        <div class="card bg-base-100 shadow-sm border-l-4 border-rose-500">
+            <div class="card-body">
+                <div class="flex items-center gap-2 mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-rose-500"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                    <h2 class="card-title text-rose-500">Important Dates ({{ $importantDateReminders->count() }})</h2>
+                </div>
+                <div class="space-y-3">
+                    @foreach($importantDateReminders as $dateReminder)
+                    <div class="flex items-center justify-between p-3 rounded-lg
+                        @if($dateReminder['days_until'] === 0) bg-rose-100 border border-rose-300
+                        @elseif($dateReminder['days_until'] === 1) bg-rose-50 border border-rose-200
+                        @else bg-base-200/50 @endif">
+                        <div class="flex items-center gap-3">
+                            @if($dateReminder['person']->profile_image_url)
+                                <img src="{{ $dateReminder['person']->profile_image_url }}" alt="{{ $dateReminder['person']->full_name }}"
+                                     class="w-10 h-10 rounded-full object-cover">
+                            @else
+                                <div class="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center">
+                                    <span class="text-rose-600 font-semibold text-sm">{{ $dateReminder['person']->initials }}</span>
+                                </div>
+                            @endif
+                            <div>
+                                <div class="font-medium">{{ $dateReminder['important_date']->label }}</div>
+                                <div class="text-sm text-base-content/60">
+                                    <a href="{{ route('people.show', $dateReminder['person']) }}" class="hover:text-rose-600 transition-colors">
+                                        {{ $dateReminder['person']->full_name }}
+                                    </a>
+                                    <span class="mx-1">&bull;</span>
+                                    @if($dateReminder['days_until'] === 0)
+                                        <span class="text-rose-600 font-semibold">Today!</span>
+                                    @elseif($dateReminder['days_until'] === 1)
+                                        <span class="text-rose-500 font-medium">Tomorrow</span>
+                                    @else
+                                        In {{ $dateReminder['days_until'] }} days
+                                    @endif
+                                    <span class="mx-1">&bull;</span>
+                                    {{ $dateReminder['next_date']->format('M j, Y') }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            @if($dateReminder['is_recurring'])
+                                <span class="badge badge-sm bg-blue-100 text-blue-700 border-blue-200">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+                                    Yearly
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+        @endif
+
         <!-- Overdue Reminders -->
         @if($overdue->count() > 0)
         <div class="card bg-base-100 shadow-sm border-l-4 border-error">

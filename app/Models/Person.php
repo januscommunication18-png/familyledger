@@ -80,6 +80,7 @@ class Person extends Model
         'company',
         'job_title',
         'birthday',
+        'birthday_reminder',
         'notes',
         'how_we_know',
         'tags',
@@ -94,6 +95,7 @@ class Person extends Model
 
     protected $casts = [
         'birthday' => 'date',
+        'birthday_reminder' => 'boolean',
         'last_synced_at' => 'datetime',
         'tags' => 'array',
         'visible_to_members' => 'array',

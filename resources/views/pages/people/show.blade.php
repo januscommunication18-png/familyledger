@@ -14,8 +14,23 @@
     <li aria-current="page">{{ $person->full_name }}</li>
 @endsection
 
+@section('page-actions')
+    <a href="{{ route('people.index') }}" class="btn btn-ghost btn-sm gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+        Back
+    </a>
+    <a href="{{ route('people.edit', $person) }}" class="btn btn-primary btn-sm gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+        Edit
+    </a>
+    <button type="button" @click="$dispatch('open-delete-modal')" class="btn btn-outline btn-error btn-sm gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+        Delete
+    </button>
+@endsection
+
 @section('content')
-<div class="max-w-4xl mx-auto">
+<div class="max-w-4xl mx-auto" x-data="{ deleteModalOpen: false }" @open-delete-modal.window="deleteModalOpen = true">
     <!-- Hero Card -->
     <div class="card bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 text-white shadow-xl mb-6 overflow-hidden">
         <div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"0.05\"%3E%3Cpath d=\"M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-50"></div>
@@ -70,8 +85,8 @@
     </div>
 
     <!-- Quick Stats -->
-    @if($person->company || $person->job_title || $person->birthday || $person->how_we_know)
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    @if($person->company || $person->job_title || $person->birthday)
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         @if($person->company)
         <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
             <div class="card-body p-4">
@@ -118,22 +133,6 @@
         </div>
         @endif
 
-        @if($person->how_we_know)
-        <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow {{ !$person->company && !$person->birthday ? 'col-span-2' : '' }}">
-            <div class="card-body p-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-                    </div>
-                    <div class="min-w-0">
-                        <p class="text-xs text-slate-400 uppercase tracking-wide">How We Know</p>
-                        <p class="font-semibold text-slate-900">{{ $person->how_we_know }}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        @endif
-
         @if($person->created_at)
         <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
             <div class="card-body p-4">
@@ -157,7 +156,7 @@
         <!-- Main Content -->
         <div class="lg:col-span-2 space-y-6">
             <!-- Contact Information -->
-            @if($person->emails->count() > 0 || $person->phones->count() > 0 || $person->addresses->count() > 0)
+            @if($person->emails->count() > 0 || $person->phones->count() > 0 || $person->addresses->count() > 0 || $person->how_we_know)
             <div class="card bg-base-100 shadow-sm">
                 <div class="card-body">
                     <div class="flex items-center gap-3 mb-5">
@@ -248,6 +247,19 @@
                                     </a>
                                 </div>
                                 @endforeach
+                            </div>
+                        </div>
+                        @endif
+
+                        <!-- How We Know -->
+                        @if($person->how_we_know)
+                        <div>
+                            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">How We Know Each Other</h3>
+                            <div class="flex items-center gap-3 p-3 bg-gradient-to-r from-slate-50 to-transparent rounded-xl">
+                                <div class="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                                </div>
+                                <p class="font-medium text-slate-800">{{ $person->how_we_know }}</p>
                             </div>
                         </div>
                         @endif
@@ -473,7 +485,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
             Edit
         </a>
-        <button type="button" onclick="document.getElementById('deleteModal').showModal()" class="btn btn-outline btn-error gap-2">
+        <button type="button" @click="deleteModalOpen = true" class="btn btn-outline btn-error gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
             Delete
         </button>
@@ -482,37 +494,40 @@
             Back
         </a>
     </div>
-</div>
 
-<!-- Delete Confirmation Modal -->
-<dialog id="deleteModal" class="modal">
-    <div class="modal-box max-w-md">
-        <div class="flex flex-col items-center text-center">
-            <!-- Warning Icon -->
-            <div class="w-16 h-16 rounded-full bg-error/10 flex items-center justify-center mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-error"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-            </div>
+    <!-- Delete Confirmation Modal (Alpine.js) -->
+    <div x-show="deleteModalOpen" x-cloak class="fixed inset-0 z-50" @keydown.escape.window="deleteModalOpen = false">
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="deleteModalOpen = false"></div>
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md" @click.stop>
+                <div class="p-6">
+                    <div class="flex flex-col items-center text-center">
+                        <!-- Warning Icon -->
+                        <div class="w-16 h-16 rounded-full bg-rose-100 flex items-center justify-center mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-rose-600"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                        </div>
 
-            <h3 class="text-xl font-bold text-slate-900 mb-2">Delete Contact</h3>
-            <p class="text-slate-500 mb-6">Are you sure you want to delete <span class="font-semibold text-slate-700">{{ $person->full_name }}</span>? This action cannot be undone and all associated data will be permanently removed.</p>
+                        <h3 class="text-xl font-bold text-slate-900 mb-2">Delete Contact</h3>
+                        <p class="text-slate-500 mb-6">Are you sure you want to delete <span class="font-semibold text-slate-700">{{ $person->full_name }}</span>? This action cannot be undone and all associated data will be permanently removed.</p>
 
-            <div class="flex gap-3 w-full">
-                <button type="button" onclick="document.getElementById('deleteModal').close()" class="btn btn-ghost flex-1">
-                    Cancel
-                </button>
-                <form action="{{ route('people.destroy', $person) }}" method="POST" class="flex-1">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-error w-full gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                        Delete
-                    </button>
-                </form>
+                        <div class="flex gap-3 w-full">
+                            <button type="button" @click="deleteModalOpen = false" class="btn btn-ghost flex-1">
+                                Cancel
+                            </button>
+                            <form action="{{ route('people.destroy', $person) }}" method="POST" class="flex-1">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-error w-full gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                                    Delete
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    <form method="dialog" class="modal-backdrop">
-        <button>close</button>
-    </form>
-</dialog>
+</div>
+
 @endsection

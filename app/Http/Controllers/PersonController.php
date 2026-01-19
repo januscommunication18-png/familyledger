@@ -99,6 +99,9 @@ class PersonController extends Controller
         // Parse date formats before validation
         $this->parseDateInputs($request);
 
+        // Handle checkbox boolean - set to false if not present
+        $request->merge(['birthday_reminder' => $request->has('birthday_reminder')]);
+
         $validated = $this->validatePerson($request);
 
         $data = collect($validated)->except([
@@ -206,6 +209,9 @@ class PersonController extends Controller
 
         // Parse date formats before validation
         $this->parseDateInputs($request);
+
+        // Handle checkbox boolean - set to false if not present
+        $request->merge(['birthday_reminder' => $request->has('birthday_reminder')]);
 
         $validated = $this->validatePerson($request);
 
@@ -319,6 +325,7 @@ class PersonController extends Controller
             'company' => 'nullable|string|max:255',
             'job_title' => 'nullable|string|max:255',
             'birthday' => 'nullable|date',
+            'birthday_reminder' => 'nullable|boolean',
             'notes' => 'nullable|string',
             'how_we_know' => 'nullable|string|max:255',
             'tags_input' => 'nullable|string',
@@ -518,11 +525,19 @@ class PersonController extends Controller
             }
         }
 
-        // Parse important dates
+        // Parse important dates from separate month/day/year fields
         if ($request->has('important_dates')) {
             $importantDates = $request->input('important_dates');
             foreach ($importantDates as $index => $dateData) {
-                if (!empty($dateData['date'])) {
+                // Handle new format with separate month/day/year fields
+                if (!empty($dateData['date_month']) && !empty($dateData['date_day']) && !empty($dateData['date_year'])) {
+                    $month = str_pad($dateData['date_month'], 2, '0', STR_PAD_LEFT);
+                    $day = str_pad($dateData['date_day'], 2, '0', STR_PAD_LEFT);
+                    $year = $dateData['date_year'];
+                    $importantDates[$index]['date'] = "{$year}-{$month}-{$day}";
+                }
+                // Handle legacy format (m/d/Y string)
+                elseif (!empty($dateData['date'])) {
                     $parsed = \DateTime::createFromFormat('m/d/Y', $dateData['date']);
                     if ($parsed) {
                         $importantDates[$index]['date'] = $parsed->format('Y-m-d');
