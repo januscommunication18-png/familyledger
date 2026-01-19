@@ -7,6 +7,7 @@ use App\Models\AssetDocument;
 use App\Models\AssetOwner;
 use App\Models\FamilyCircle;
 use App\Models\FamilyMember;
+use App\Models\TodoItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -97,6 +98,7 @@ class AssetController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'image' => 'nullable|image|max:5120', // 5MB max
             'asset_category' => 'required|string|in:' . implode(',', array_keys(Asset::CATEGORIES)),
             'asset_type' => 'required|string|max:100',
             'ownership_type' => 'nullable|string|in:' . implode(',', array_keys(Asset::OWNERSHIP_TYPES)),
@@ -138,6 +140,7 @@ class AssetController extends Controller
             'insurance_policy_number' => 'nullable|string|max:100',
             'insurance_renewal_date' => 'nullable|date',
             'is_insured' => 'nullable|boolean',
+            'add_renewal_reminder' => 'nullable|boolean',
             // Owners - Family members
             'family_owners' => 'nullable|array',
             'family_owners.*.selected' => 'nullable|in:1',
@@ -168,12 +171,17 @@ class AssetController extends Controller
             }
         }
 
-        $data = collect($validated)->except(['family_owners', 'external_owners', 'documents', 'document_types'])->toArray();
+        $data = collect($validated)->except(['family_owners', 'external_owners', 'documents', 'document_types', 'image'])->toArray();
         $data['tenant_id'] = Auth::user()->tenant_id;
         $data['status'] = $data['status'] ?? 'active';
         $data['ownership_type'] = $data['ownership_type'] ?? 'individual';
         $data['currency'] = $data['currency'] ?? 'USD';
         $data['is_insured'] = $request->boolean('is_insured');
+
+        // Handle image upload to Digital Ocean
+        if ($request->hasFile('image')) {
+            $data['image'] = $request->file('image')->store('family-ledger/assets/images', 'do_spaces');
+        }
 
         $asset = Asset::create($data);
 
@@ -202,6 +210,20 @@ class AssetController extends Controller
                     'uploaded_by' => Auth::id(),
                 ]);
             }
+        }
+
+        // Create reminder for insurance renewal if requested
+        if ($request->boolean('add_renewal_reminder') && !empty($validated['insurance_renewal_date'])) {
+            TodoItem::create([
+                'tenant_id' => Auth::user()->tenant_id,
+                'title' => "Insurance renewal for {$asset->name}",
+                'description' => "Insurance policy renewal reminder for asset: {$asset->name}",
+                'category' => 'bills',
+                'priority' => 'medium',
+                'status' => 'open',
+                'due_date' => $validated['insurance_renewal_date'],
+                'created_by' => Auth::id(),
+            ]);
         }
 
         return redirect()->route('assets.index', ['tab' => $asset->asset_category])
@@ -270,6 +292,8 @@ class AssetController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'image' => 'nullable|image|max:5120', // 5MB max
+            'remove_image' => 'nullable|boolean',
             'asset_category' => 'required|string|in:' . implode(',', array_keys(Asset::CATEGORIES)),
             'asset_type' => 'required|string|max:100',
             'ownership_type' => 'nullable|string|in:' . implode(',', array_keys(Asset::OWNERSHIP_TYPES)),
@@ -311,6 +335,7 @@ class AssetController extends Controller
             'insurance_policy_number' => 'nullable|string|max:100',
             'insurance_renewal_date' => 'nullable|date',
             'is_insured' => 'nullable|boolean',
+            'add_renewal_reminder' => 'nullable|boolean',
             // Owners - Family members
             'family_owners' => 'nullable|array',
             'family_owners.*.selected' => 'nullable|in:1',
@@ -341,8 +366,23 @@ class AssetController extends Controller
             }
         }
 
-        $data = collect($validated)->except(['family_owners', 'external_owners', 'documents', 'document_types'])->toArray();
+        $data = collect($validated)->except(['family_owners', 'external_owners', 'documents', 'document_types', 'image', 'remove_image'])->toArray();
         $data['is_insured'] = $request->boolean('is_insured');
+
+        // Handle image upload to Digital Ocean
+        if ($request->hasFile('image')) {
+            // Delete old image
+            if ($asset->image) {
+                Storage::disk('do_spaces')->delete($asset->image);
+            }
+            $data['image'] = $request->file('image')->store('family-ledger/assets/images', 'do_spaces');
+        }
+
+        // Handle image removal
+        if ($request->boolean('remove_image') && $asset->image) {
+            Storage::disk('do_spaces')->delete($asset->image);
+            $data['image'] = null;
+        }
 
         $asset->update($data);
 
@@ -375,6 +415,20 @@ class AssetController extends Controller
             }
         }
 
+        // Create reminder for insurance renewal if requested
+        if ($request->boolean('add_renewal_reminder') && !empty($validated['insurance_renewal_date'])) {
+            TodoItem::create([
+                'tenant_id' => Auth::user()->tenant_id,
+                'title' => "Insurance renewal for {$asset->name}",
+                'description' => "Insurance policy renewal reminder for asset: {$asset->name}",
+                'category' => 'bills',
+                'priority' => 'medium',
+                'status' => 'open',
+                'due_date' => $validated['insurance_renewal_date'],
+                'created_by' => Auth::id(),
+            ]);
+        }
+
         return redirect()->route('assets.index', ['tab' => $asset->asset_category])
             ->with('success', 'Asset updated successfully');
     }
@@ -386,6 +440,11 @@ class AssetController extends Controller
     {
         if ($asset->tenant_id !== Auth::user()->tenant_id) {
             abort(403);
+        }
+
+        // Delete asset image from Digital Ocean
+        if ($asset->image) {
+            Storage::disk('do_spaces')->delete($asset->image);
         }
 
         // Delete uploaded documents

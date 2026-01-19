@@ -44,6 +44,54 @@
             @method('PUT')
         @endif
 
+        <!-- Asset Image -->
+        <div class="card bg-base-100 shadow-sm mb-6">
+            <div class="card-body">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-violet-600"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800">Asset Image</h2>
+                        <p class="text-xs text-slate-400">Upload a photo of your asset</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-6">
+                    <!-- Image Preview -->
+                    <div class="relative">
+                        @if($asset && $asset->image)
+                            <img src="{{ $asset->image_url }}" alt="{{ $asset->name }}" class="w-32 h-32 rounded-xl object-cover border-2 border-slate-200" id="asset-image-preview">
+                        @else
+                            <div class="w-32 h-32 rounded-xl bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center border-2 border-dashed border-amber-300" id="asset-image-placeholder">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-amber-400"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                            </div>
+                            <img src="" alt="Preview" class="w-32 h-32 rounded-xl object-cover border-2 border-slate-200 hidden" id="asset-image-preview">
+                        @endif
+                    </div>
+
+                    <!-- Upload Controls -->
+                    <div class="flex-1">
+                        <label for="asset-image-upload" class="btn btn-outline btn-sm gap-2 cursor-pointer">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                            Choose Image
+                        </label>
+                        <input type="file" name="image" id="asset-image-upload" accept="image/*" class="hidden" onchange="previewAssetImage(this)">
+                        <p class="text-xs text-slate-500 mt-2">Max 5MB. JPG, PNG or GIF.</p>
+                        @if($asset && $asset->image)
+                            <label class="flex items-center gap-2 mt-3 cursor-pointer">
+                                <input type="checkbox" name="remove_image" value="1" class="checkbox checkbox-sm checkbox-error">
+                                <span class="text-sm text-error">Remove current image</span>
+                            </label>
+                        @endif
+                        @error('image')
+                            <p class="text-error text-sm mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Asset Category -->
         <div class="card bg-base-100 shadow-sm">
             <div class="card-body">
@@ -575,6 +623,17 @@
                         label="Renewal Date"
                         :value="$asset?->insurance_renewal_date"
                     />
+
+                    <!-- Add Reminder Checkbox -->
+                    <div id="renewal-reminder-container" class="hidden">
+                        <label class="flex items-center gap-3 cursor-pointer p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <input type="checkbox" name="add_renewal_reminder" value="1" class="checkbox checkbox-primary checkbox-sm" {{ old('add_renewal_reminder') ? 'checked' : '' }}>
+                            <div>
+                                <span class="text-sm font-medium text-blue-800">Add Reminder</span>
+                                <p class="text-xs text-blue-600">You'll be reminded on the renewal date</p>
+                            </div>
+                        </label>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1335,6 +1394,53 @@ async function fetchSecondaryAddresses(streetLine, city, state, zipcode) {
 // Initialize Smarty on page load
 document.addEventListener('DOMContentLoaded', function() {
     initSmartyAutocomplete();
+});
+
+// Preview asset image
+function previewAssetImage(input) {
+    const preview = document.getElementById('asset-image-preview');
+    const placeholder = document.getElementById('asset-image-placeholder');
+
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.classList.remove('hidden');
+            if (placeholder) placeholder.classList.add('hidden');
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// Show/hide renewal reminder checkbox when insurance renewal date is entered
+function initRenewalReminderToggle() {
+    const monthSelect = document.getElementById('insurance_renewal_date_month');
+    const dayInput = document.getElementById('insurance_renewal_date_day');
+    const yearInput = document.getElementById('insurance_renewal_date_year');
+    const reminderContainer = document.getElementById('renewal-reminder-container');
+
+    if (!monthSelect || !dayInput || !yearInput || !reminderContainer) return;
+
+    function checkDateFilled() {
+        const hasFilled = monthSelect.value && dayInput.value && yearInput.value;
+        if (hasFilled) {
+            reminderContainer.classList.remove('hidden');
+        } else {
+            reminderContainer.classList.add('hidden');
+        }
+    }
+
+    monthSelect.addEventListener('change', checkDateFilled);
+    dayInput.addEventListener('input', checkDateFilled);
+    yearInput.addEventListener('input', checkDateFilled);
+
+    // Check initial state
+    checkDateFilled();
+}
+
+// Initialize reminder toggle on page load
+document.addEventListener('DOMContentLoaded', function() {
+    initRenewalReminderToggle();
 });
 </script>
 @endpush

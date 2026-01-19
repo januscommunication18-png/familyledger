@@ -13,9 +13,13 @@
             <div class="border border-base-200 rounded-xl p-4 hover:border-primary/30 transition-colors">
                 <div class="flex items-start justify-between">
                     <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                            <span class="icon-[tabler--home] size-6 text-primary"></span>
-                        </div>
+                        @if($asset->image)
+                            <img src="{{ $asset->image_url }}" alt="{{ $asset->name }}" class="w-12 h-12 rounded-lg object-cover flex-shrink-0">
+                        @else
+                            <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                <span class="icon-[tabler--home] size-6 text-primary"></span>
+                            </div>
+                        @endif
                         <div>
                             <div class="flex items-center gap-2 mb-1">
                                 <h3 class="font-semibold text-base-content">{{ $asset->name }}</h3>
