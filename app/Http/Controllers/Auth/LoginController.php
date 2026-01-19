@@ -77,44 +77,30 @@ class LoginController extends Controller
         // Clear rate limits on success
         RateLimiter::clear($key);
 
-        // Check if MFA is required
-        if ($user->hasTwoFactorEnabled() || $user->hasSmsMfaEnabled()) {
-            // Preserve intended URL for after MFA
-            $intendedUrl = session('url.intended');
+        // All password logins require verification code
+        // Preserve intended URL for after MFA
+        $intendedUrl = session('url.intended');
 
-            Auth::logout();
-            session(['mfa_required' => true, 'mfa_user_id' => $user->id]);
+        Auth::logout();
 
-            // Restore intended URL
-            if ($intendedUrl) {
-                session(['url.intended' => $intendedUrl]);
-            }
+        // Store verification session data
+        session([
+            'mfa_required' => true,
+            'mfa_user_id' => $user->id,
+            'mfa_login_type' => 'password', // Mark this as password login requiring verification
+            'mfa_has_authenticator' => $user->hasTwoFactorEnabled(), // Check if authenticator is set up
+        ]);
 
-            $this->logLoginAttempt($email, $request, true, 'mfa_required', $user->id);
-
-            return response()->json([
-                'mfa_required' => true,
-                'redirect' => '/auth/mfa',
-            ]);
+        // Restore intended URL
+        if ($intendedUrl) {
+            session(['url.intended' => $intendedUrl]);
         }
 
-        $user->recordLogin();
-        $this->logLoginAttempt($email, $request, true, null, $user->id);
-
-        $request->session()->regenerate();
-
-        // Check for intended URL (e.g., from collaborator invite)
-        $redirect = session()->pull('url.intended', '/dashboard');
+        $this->logLoginAttempt($email, $request, true, 'verification_required', $user->id);
 
         return response()->json([
-            'message' => 'Login successful',
-            'redirect' => $redirect,
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->role,
-            ],
+            'mfa_required' => true,
+            'redirect' => '/auth/mfa',
         ]);
     }
 

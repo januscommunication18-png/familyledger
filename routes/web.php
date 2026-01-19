@@ -129,6 +129,8 @@ Route::middleware(['security.code', 'auth'])->group(function () {
     // MFA Settings
     Route::post('/settings/mfa/sms/enable', [MfaController::class, 'enableSmsMfa']);
     Route::post('/settings/mfa/sms/confirm', [MfaController::class, 'confirmSmsMfa']);
+    Route::post('/settings/mfa/authenticator/setup', [MfaController::class, 'setupAuthenticator']);
+    Route::post('/settings/mfa/authenticator/confirm', [MfaController::class, 'confirmAuthenticator']);
     Route::post('/settings/mfa/disable', [MfaController::class, 'disableMfa']);
 
     // Unlink Social Account

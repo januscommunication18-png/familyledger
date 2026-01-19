@@ -1,28 +1,79 @@
 @extends('layouts.auth')
 
-@section('title', 'Two-Factor Authentication')
+@section('title', 'Verify Your Identity')
 
 @section('content')
 <div id="mfa-app">
     <div class="text-center mb-6">
-        <div class="w-16 h-16 bg-warning/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
         </div>
-        <h2 class="text-2xl font-semibold">Two-Factor Authentication</h2>
+        <h2 class="text-2xl font-semibold">Verify Your Identity</h2>
         <p class="text-base-content/60 mt-2" id="method-description">
-            @if($method === 'sms')
-                Enter the code sent to your phone ending in {{ $phone_last_four }}
-            @elseif($method === 'email')
-                Enter the code sent to {{ $email }}
+            @if($isPasswordLogin ?? false)
+                @if(!($hasAuthenticator ?? false))
+                    @if($emailAutoSent ?? false)
+                        We've sent a verification code to {{ $email }}
+                    @else
+                        Enter the verification code sent to {{ $email }}
+                    @endif
+                @else
+                    Choose how you'd like to verify your identity
+                @endif
             @else
-                Enter the code from your authenticator app
+                @if($method === 'sms')
+                    Enter the code sent to your phone ending in {{ $phone_last_four }}
+                @elseif($method === 'email')
+                    Enter the code sent to {{ $email }}
+                @else
+                    Enter the code from your authenticator app
+                @endif
             @endif
         </p>
     </div>
 
-    <!-- Method Selection -->
+    @if($emailAutoSent ?? false)
+    <!-- Email Code Auto-Sent Notice -->
+    <div class="alert alert-info mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+        <span>A verification code has been sent to your email</span>
+    </div>
+    @endif
+
+    <!-- Method Selection - Only show if user has authenticator enabled -->
+    @if(($isPasswordLogin ?? false) && ($hasAuthenticator ?? false))
+    <div class="mb-6">
+        <label class="label">
+            <span class="label-text text-base-content/70">Choose Verification Method</span>
+        </label>
+        <div class="grid grid-cols-2 gap-3">
+            <!-- Authenticator Option -->
+            <button type="button" id="btn-authenticator" onclick="selectMethod('authenticator')"
+                    class="btn {{ $method === 'authenticator' ? 'btn-primary' : 'btn-outline' }} flex-col h-auto py-4 gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                <span class="font-medium">Authenticator App</span>
+                <span class="text-xs opacity-70">Use your authenticator code</span>
+            </button>
+
+            <!-- Email Option -->
+            <button type="button" id="btn-email" onclick="selectMethod('email')"
+                    class="btn {{ $method === 'email' ? 'btn-primary' : 'btn-outline' }} flex-col h-auto py-4 gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <span class="font-medium">Email Code</span>
+                <span class="text-xs opacity-70">Send code to {{ $email }}</span>
+            </button>
+        </div>
+    </div>
+    @elseif(!($isPasswordLogin ?? false))
+    <!-- Original Method Selection for non-password logins -->
     <div class="mb-6">
         <label class="label">
             <span class="label-text text-base-content/70">Verification Method</span>
@@ -86,6 +137,7 @@
             @endif
         </div>
     </div>
+    @endif
 
     <!-- Authenticator Instructions -->
     <div id="authenticator-section" class="{{ $method === 'authenticator' ? '' : 'hidden' }}">
@@ -103,9 +155,13 @@
     <div id="email-section" class="{{ $method === 'email' ? '' : 'hidden' }}">
         <button id="send-email-btn" class="btn btn-outline btn-block mb-4">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                @if($emailAutoSent ?? false)
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                @else
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                @endif
             </svg>
-            Send Email Code
+            {{ ($emailAutoSent ?? false) ? 'Resend Code' : 'Send Email Code' }}
         </button>
     </div>
 
@@ -168,6 +224,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
     const maskedEmail = '{{ $email ?? "" }}';
     const phoneLastFour = '{{ $phone_last_four ?? "" }}';
+    const isPasswordLogin = {{ ($isPasswordLogin ?? false) ? 'true' : 'false' }};
+    const hasAuthenticator = {{ ($hasAuthenticator ?? false) ? 'true' : 'false' }};
+    const emailAutoSent = {{ ($emailAutoSent ?? false) ? 'true' : 'false' }};
     let currentMethod = '{{ $method }}';
 
     // Focus on code input
@@ -188,9 +247,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Show/hide sections
-        document.getElementById('authenticator-section').classList.toggle('hidden', method !== 'authenticator');
-        document.getElementById('email-section').classList.toggle('hidden', method !== 'email');
-        document.getElementById('sms-section').classList.toggle('hidden', method !== 'sms');
+        const authSection = document.getElementById('authenticator-section');
+        const emailSection = document.getElementById('email-section');
+        const smsSection = document.getElementById('sms-section');
+
+        if (authSection) authSection.classList.toggle('hidden', method !== 'authenticator');
+        if (emailSection) emailSection.classList.toggle('hidden', method !== 'email');
+        if (smsSection) smsSection.classList.toggle('hidden', method !== 'sms');
 
         // Update description
         const descEl = document.getElementById('method-description');

@@ -272,20 +272,85 @@
                             </div>
                         </div>
 
-                        <div class="flex gap-2">
-                            @if($user->phone)
-                            <form action="/settings/mfa/sms/enable" method="POST">
-                                @csrf
-                                <button type="submit" class="btn btn-primary btn-sm gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-                                    Enable SMS 2FA
+                        <div class="space-y-3">
+                            <p class="text-sm text-base-content/70 font-medium">Choose a 2FA method:</p>
+                            <div class="flex flex-wrap gap-2">
+                                {{-- Authenticator App Option --}}
+                                <button type="button" onclick="initAuthenticatorSetup()" class="btn btn-primary btn-sm gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                                    Authenticator App
                                 </button>
-                            </form>
-                            @else
-                            <p class="text-sm text-base-content/60">Add a phone number in Profile settings to enable SMS 2FA</p>
-                            @endif
+
+                                {{-- SMS Option --}}
+                                @if($user->phone)
+                                <form action="/settings/mfa/sms/enable" method="POST" class="inline">
+                                    @csrf
+                                    <button type="submit" class="btn btn-outline btn-sm gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                                        SMS Code
+                                    </button>
+                                </form>
+                                @else
+                                <span class="text-sm text-base-content/50 self-center">Add a phone number in Profile to enable SMS 2FA</span>
+                                @endif
+                            </div>
                         </div>
                     @endif
+                </div>
+            </div>
+
+            {{-- Authenticator Setup Modal --}}
+            <div id="authenticatorSetupModal" class="fixed inset-0 z-50 hidden">
+                <div class="fixed inset-0 bg-black/50" onclick="closeAuthenticatorModal()"></div>
+                <div class="fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
+                    <div class="bg-base-100 rounded-xl shadow-xl max-w-md w-full p-6 pointer-events-auto">
+                        <h3 class="font-bold text-lg mb-4">Set Up Authenticator App</h3>
+
+                        {{-- Step 1: QR Code --}}
+                        <div id="authenticatorStep1">
+                            <p class="text-sm text-base-content/70 mb-4">
+                                Scan this QR code with your authenticator app (Google Authenticator, Authy, 1Password, etc.)
+                            </p>
+
+                            <div id="qrCodeContainer" class="flex justify-center items-center mb-4 min-h-[200px] bg-base-200 rounded-lg">
+                                <span class="loading loading-spinner loading-lg"></span>
+                            </div>
+
+                            <div class="bg-base-200 rounded-lg p-3 mb-4">
+                                <p class="text-xs text-base-content/60 mb-1">Can't scan? Enter this code manually:</p>
+                                <code id="secretKey" class="text-sm font-mono select-all break-all">Loading...</code>
+                            </div>
+
+                            <button type="button" onclick="showAuthenticatorStep2()" class="btn btn-primary w-full">
+                                I've Scanned the Code
+                            </button>
+                        </div>
+
+                        {{-- Step 2: Verify Code --}}
+                        <div id="authenticatorStep2" class="hidden">
+                            <p class="text-sm text-base-content/70 mb-4">
+                                Enter the 6-digit code from your authenticator app to verify the setup.
+                            </p>
+
+                            <div class="form-control mb-4">
+                                <input type="text" id="authenticatorCode" maxlength="6" placeholder="000000" class="input input-bordered text-center text-2xl tracking-widest font-mono" autocomplete="off" />
+                                <label class="label">
+                                    <span id="authenticatorError" class="label-text-alt text-error hidden"></span>
+                                </label>
+                            </div>
+
+                            <div class="flex gap-2">
+                                <button type="button" onclick="showAuthenticatorStep1()" class="btn btn-ghost flex-1">Back</button>
+                                <button type="button" onclick="verifyAuthenticatorCode()" id="verifyAuthBtn" class="btn btn-primary flex-1">
+                                    Verify & Enable
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-4 border-t flex justify-end">
+                            <button type="button" onclick="closeAuthenticatorModal()" class="btn btn-ghost btn-sm">Cancel</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -762,5 +827,139 @@ function previewAvatar(input) {
         reader.readAsDataURL(input.files[0]);
     }
 }
+
+// Authenticator Setup
+let authenticatorSecret = '';
+
+function initAuthenticatorSetup() {
+    const modal = document.getElementById('authenticatorSetupModal');
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    // Reset to step 1
+    document.getElementById('authenticatorStep1').classList.remove('hidden');
+    document.getElementById('authenticatorStep2').classList.add('hidden');
+    document.getElementById('authenticatorCode').value = '';
+    document.getElementById('authenticatorError').classList.add('hidden');
+
+    // Show loading state
+    document.getElementById('qrCodeContainer').innerHTML = '<span class="loading loading-spinner loading-lg"></span>';
+    document.getElementById('secretKey').textContent = 'Loading...';
+
+    // Fetch QR code and secret from server
+    fetch('/settings/mfa/authenticator/setup', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            authenticatorSecret = data.secret;
+            document.getElementById('qrCodeContainer').innerHTML = data.qr_code;
+            document.getElementById('secretKey').textContent = data.secret;
+        } else {
+            document.getElementById('qrCodeContainer').innerHTML = '<p class="text-error text-sm">Failed to generate QR code. Please try again.</p>';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('qrCodeContainer').innerHTML = '<p class="text-error text-sm">Failed to generate QR code. Please try again.</p>';
+    });
+}
+
+function showAuthenticatorStep1() {
+    document.getElementById('authenticatorStep1').classList.remove('hidden');
+    document.getElementById('authenticatorStep2').classList.add('hidden');
+}
+
+function showAuthenticatorStep2() {
+    document.getElementById('authenticatorStep1').classList.add('hidden');
+    document.getElementById('authenticatorStep2').classList.remove('hidden');
+    document.getElementById('authenticatorCode').focus();
+}
+
+function verifyAuthenticatorCode() {
+    const code = document.getElementById('authenticatorCode').value.trim();
+    const errorEl = document.getElementById('authenticatorError');
+    const verifyBtn = document.getElementById('verifyAuthBtn');
+
+    if (code.length !== 6 || !/^\d+$/.test(code)) {
+        errorEl.textContent = 'Please enter a valid 6-digit code';
+        errorEl.classList.remove('hidden');
+        return;
+    }
+
+    // Disable button and show loading
+    verifyBtn.disabled = true;
+    verifyBtn.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Verifying...';
+    errorEl.classList.add('hidden');
+
+    fetch('/settings/mfa/authenticator/confirm', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            code: code,
+            secret: authenticatorSecret
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close modal and reload page to show success
+            closeAuthenticatorModal();
+            window.location.reload();
+        } else {
+            errorEl.textContent = data.message || 'Invalid code. Please try again.';
+            errorEl.classList.remove('hidden');
+            verifyBtn.disabled = false;
+            verifyBtn.innerHTML = 'Verify & Enable';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        errorEl.textContent = 'An error occurred. Please try again.';
+        errorEl.classList.remove('hidden');
+        verifyBtn.disabled = false;
+        verifyBtn.innerHTML = 'Verify & Enable';
+    });
+}
+
+function closeAuthenticatorModal() {
+    const modal = document.getElementById('authenticatorSetupModal');
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
+    authenticatorSecret = '';
+}
+
+// Allow Enter key to submit code and Escape to close modal
+document.addEventListener('DOMContentLoaded', function() {
+    const codeInput = document.getElementById('authenticatorCode');
+    if (codeInput) {
+        codeInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                verifyAuthenticatorCode();
+            }
+        });
+    }
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('authenticatorSetupModal');
+            if (modal && !modal.classList.contains('hidden')) {
+                closeAuthenticatorModal();
+            }
+        }
+    });
+});
 </script>
 @endsection

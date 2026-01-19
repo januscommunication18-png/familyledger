@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\SafeEncrypted;
 use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -41,17 +42,17 @@ class InsurancePolicy extends Model
         'expiration_date' => 'date',
         'premium_amount' => 'decimal:2',
         'policy_documents' => 'array',
-        // AES-256 encrypted PII fields
-        'provider_name' => 'encrypted',
-        'policy_number' => 'encrypted',
-        'group_number' => 'encrypted',
-        'plan_name' => 'encrypted',
-        'agent_name' => 'encrypted',
-        'agent_phone' => 'encrypted',
-        'agent_email' => 'encrypted',
-        'claims_phone' => 'encrypted',
-        'coverage_details' => 'encrypted',
-        'notes' => 'encrypted',
+        // AES-256 encrypted PII fields (using SafeEncrypted for graceful error handling)
+        'provider_name' => SafeEncrypted::class,
+        'policy_number' => SafeEncrypted::class,
+        'group_number' => SafeEncrypted::class,
+        'plan_name' => SafeEncrypted::class,
+        'agent_name' => SafeEncrypted::class,
+        'agent_phone' => SafeEncrypted::class,
+        'agent_email' => SafeEncrypted::class,
+        'claims_phone' => SafeEncrypted::class,
+        'coverage_details' => SafeEncrypted::class,
+        'notes' => SafeEncrypted::class,
     ];
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\SafeEncrypted;
 use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -91,14 +92,14 @@ class FamilyMember extends Model
         'date_of_birth' => 'date',
         'is_minor' => 'boolean',
         'co_parenting_enabled' => 'boolean',
-        // AES-256 encrypted PII fields
-        'first_name' => 'encrypted',
-        'last_name' => 'encrypted',
-        'email' => 'encrypted',
-        'phone' => 'encrypted',
-        'phone_country_code' => 'encrypted',
-        'father_name' => 'encrypted',
-        'mother_name' => 'encrypted',
+        // AES-256 encrypted PII fields (using SafeEncrypted for graceful error handling)
+        'first_name' => SafeEncrypted::class,
+        'last_name' => SafeEncrypted::class,
+        'email' => SafeEncrypted::class,
+        'phone' => SafeEncrypted::class,
+        'phone_country_code' => SafeEncrypted::class,
+        'father_name' => SafeEncrypted::class,
+        'mother_name' => SafeEncrypted::class,
     ];
 
     /**
