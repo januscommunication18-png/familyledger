@@ -28,6 +28,7 @@ use App\Http\Controllers\PetController;
 use App\Http\Controllers\JournalController;
 use App\Http\Controllers\CollaboratorController;
 use App\Http\Controllers\CoparentingController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\RemindersController;
 use App\Http\Controllers\CoparentMessagesController;
 use App\Http\Controllers\ExpensesController;
@@ -138,9 +139,9 @@ Route::middleware(['security.code', 'auth'])->group(function () {
         ->where('provider', 'google|apple|facebook');
 
     // Dashboard (requires email verification AND onboarding completion)
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->middleware(['verified', 'onboarding'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])
+        ->middleware(['verified', 'onboarding'])
+        ->name('dashboard');
 
     // Family Circle
     Route::middleware(['verified', 'onboarding'])->prefix('family-circle')->name('family-circle.')->group(function () {

@@ -3,8 +3,10 @@
 namespace App\Http\Resources\V1;
 
 use App\Models\MemberDocument;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class FamilyMemberResource extends JsonResource
 {
@@ -25,7 +27,7 @@ class FamilyMemberResource extends JsonResource
             'relationship' => $this->relationship,
             'relationship_name' => $this->relationship_name,
             'is_minor' => (bool) $this->is_minor,
-            'profile_image_url' => $this->profile_image_url,
+            'profile_image_url' => $this->getProfileImageWithFallback(),
             'immigration_status' => $this->immigration_status,
             'immigration_status_name' => $this->immigration_status_name,
             'co_parenting_enabled' => (bool) $this->co_parenting_enabled,
@@ -139,5 +141,26 @@ class FamilyMemberResource extends JsonResource
             'days_until_expiry' => $document->expiry_date ? now()->diffInDays($document->expiry_date, false) : null,
             'status' => $document->isExpired() ? 'expired' : 'valid',
         ];
+    }
+
+    /**
+     * Get profile image URL with fallback to user avatar if member has matching email.
+     */
+    protected function getProfileImageWithFallback(): ?string
+    {
+        // First, try the member's own profile image
+        if ($this->profile_image_url) {
+            return $this->profile_image_url;
+        }
+
+        // Fallback: Check if there's a user with matching email and use their avatar
+        if ($this->email) {
+            $user = User::where('email', $this->email)->first();
+            if ($user && $user->avatar) {
+                return Storage::disk('do_spaces')->url($user->avatar);
+            }
+        }
+
+        return null;
     }
 }

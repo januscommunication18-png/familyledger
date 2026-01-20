@@ -166,14 +166,14 @@ class DocumentController extends Controller
         if ($request->hasFile('card_front_image')) {
             $data['card_front_image'] = $request->file('card_front_image')->store(
                 'documents/insurance/cards',
-                'private'
+                'do_spaces'
             );
         }
 
         if ($request->hasFile('card_back_image')) {
             $data['card_back_image'] = $request->file('card_back_image')->store(
                 'documents/insurance/cards',
-                'private'
+                'do_spaces'
             );
         }
 
@@ -299,21 +299,21 @@ class DocumentController extends Controller
         // Handle file uploads
         if ($request->hasFile('card_front_image')) {
             if ($insurance->card_front_image) {
-                Storage::disk('private')->delete($insurance->card_front_image);
+                Storage::disk('do_spaces')->delete($insurance->card_front_image);
             }
             $data['card_front_image'] = $request->file('card_front_image')->store(
                 'documents/insurance/cards',
-                'private'
+                'do_spaces'
             );
         }
 
         if ($request->hasFile('card_back_image')) {
             if ($insurance->card_back_image) {
-                Storage::disk('private')->delete($insurance->card_back_image);
+                Storage::disk('do_spaces')->delete($insurance->card_back_image);
             }
             $data['card_back_image'] = $request->file('card_back_image')->store(
                 'documents/insurance/cards',
-                'private'
+                'do_spaces'
             );
         }
 
@@ -368,10 +368,10 @@ class DocumentController extends Controller
 
         // Delete uploaded files
         if ($insurance->card_front_image) {
-            Storage::disk('private')->delete($insurance->card_front_image);
+            Storage::disk('do_spaces')->delete($insurance->card_front_image);
         }
         if ($insurance->card_back_image) {
-            Storage::disk('private')->delete($insurance->card_back_image);
+            Storage::disk('do_spaces')->delete($insurance->card_back_image);
         }
 
         $insurance->delete();
@@ -437,7 +437,7 @@ class DocumentController extends Controller
         if ($request->hasFile('federal_returns')) {
             $paths = [];
             foreach ($request->file('federal_returns') as $file) {
-                $paths[] = $file->store('documents/tax-returns/federal', 'private');
+                $paths[] = $file->store('documents/tax-returns/federal', 'do_spaces');
             }
             $data['federal_returns'] = $paths;
         }
@@ -445,7 +445,7 @@ class DocumentController extends Controller
         if ($request->hasFile('state_returns')) {
             $paths = [];
             foreach ($request->file('state_returns') as $file) {
-                $paths[] = $file->store('documents/tax-returns/state', 'private');
+                $paths[] = $file->store('documents/tax-returns/state', 'do_spaces');
             }
             $data['state_returns'] = $paths;
         }
@@ -453,7 +453,7 @@ class DocumentController extends Controller
         if ($request->hasFile('supporting_documents')) {
             $paths = [];
             foreach ($request->file('supporting_documents') as $file) {
-                $paths[] = $file->store('documents/tax-returns/supporting', 'private');
+                $paths[] = $file->store('documents/tax-returns/supporting', 'do_spaces');
             }
             $data['supporting_documents'] = $paths;
         }
@@ -555,7 +555,7 @@ class DocumentController extends Controller
         if ($request->hasFile('federal_returns')) {
             $paths = $taxReturn->federal_returns ?? [];
             foreach ($request->file('federal_returns') as $file) {
-                $paths[] = $file->store('documents/tax-returns/federal', 'private');
+                $paths[] = $file->store('documents/tax-returns/federal', 'do_spaces');
             }
             $data['federal_returns'] = $paths;
         }
@@ -563,7 +563,7 @@ class DocumentController extends Controller
         if ($request->hasFile('state_returns')) {
             $paths = $taxReturn->state_returns ?? [];
             foreach ($request->file('state_returns') as $file) {
-                $paths[] = $file->store('documents/tax-returns/state', 'private');
+                $paths[] = $file->store('documents/tax-returns/state', 'do_spaces');
             }
             $data['state_returns'] = $paths;
         }
@@ -571,7 +571,7 @@ class DocumentController extends Controller
         if ($request->hasFile('supporting_documents')) {
             $paths = $taxReturn->supporting_documents ?? [];
             foreach ($request->file('supporting_documents') as $file) {
-                $paths[] = $file->store('documents/tax-returns/supporting', 'private');
+                $paths[] = $file->store('documents/tax-returns/supporting', 'do_spaces');
             }
             $data['supporting_documents'] = $paths;
         }
@@ -599,13 +599,13 @@ class DocumentController extends Controller
 
         // Delete uploaded files
         foreach ($taxReturn->federal_returns ?? [] as $path) {
-            Storage::disk('private')->delete($path);
+            Storage::disk('do_spaces')->delete($path);
         }
         foreach ($taxReturn->state_returns ?? [] as $path) {
-            Storage::disk('private')->delete($path);
+            Storage::disk('do_spaces')->delete($path);
         }
         foreach ($taxReturn->supporting_documents ?? [] as $path) {
-            Storage::disk('private')->delete($path);
+            Storage::disk('do_spaces')->delete($path);
         }
 
         $taxReturn->delete();
@@ -625,11 +625,11 @@ class DocumentController extends Controller
 
         $path = $type === 'front' ? $insurance->card_front_image : $insurance->card_back_image;
 
-        if (!$path || !Storage::disk('private')->exists($path)) {
+        if (!$path || !Storage::disk('do_spaces')->exists($path)) {
             abort(404);
         }
 
-        return Storage::disk('private')->response($path);
+        return Storage::disk('do_spaces')->response($path);
     }
 
     /**
@@ -654,10 +654,10 @@ class DocumentController extends Controller
 
         $path = $files[$index];
 
-        if (!Storage::disk('private')->exists($path)) {
+        if (!Storage::disk('do_spaces')->exists($path)) {
             abort(404);
         }
 
-        return Storage::disk('private')->download($path, basename($path));
+        return Storage::disk('do_spaces')->download($path, basename($path));
     }
 }

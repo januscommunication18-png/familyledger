@@ -15,6 +15,7 @@ class AssetResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'image_url' => $this->image_url,
             'asset_category' => $this->asset_category,
             'asset_type' => $this->asset_type,
             'description' => $this->description,

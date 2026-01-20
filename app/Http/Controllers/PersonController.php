@@ -272,7 +272,7 @@ class PersonController extends Controller
 
         // Delete attachments
         foreach ($person->attachments as $attachment) {
-            Storage::disk('private')->delete($attachment->file_path);
+            Storage::disk('do_spaces')->delete($attachment->file_path);
         }
 
         $person->delete();
@@ -290,7 +290,7 @@ class PersonController extends Controller
             abort(403);
         }
 
-        Storage::disk('private')->delete($attachment->file_path);
+        Storage::disk('do_spaces')->delete($attachment->file_path);
         $attachment->delete();
 
         return back()->with('success', 'Attachment deleted successfully');
@@ -305,11 +305,11 @@ class PersonController extends Controller
             abort(403);
         }
 
-        if (!Storage::disk('private')->exists($attachment->file_path)) {
+        if (!Storage::disk('do_spaces')->exists($attachment->file_path)) {
             abort(404);
         }
 
-        return Storage::disk('private')->download($attachment->file_path, $attachment->original_filename);
+        return Storage::disk('do_spaces')->download($attachment->file_path, $attachment->original_filename);
     }
 
     /**
@@ -495,7 +495,7 @@ class PersonController extends Controller
         foreach ($files as $index => $file) {
             $path = $file->store(
                 'people/' . Auth::user()->tenant_id . '/' . $person->id,
-                'private'
+                'do_spaces'
             );
 
             PersonAttachment::create([

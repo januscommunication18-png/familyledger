@@ -94,7 +94,7 @@ class FamilyResourceFile extends Model
      */
     public function getUrl(): ?string
     {
-        if (!Storage::disk('private')->exists($this->file_path)) {
+        if (!Storage::disk('do_spaces')->exists($this->file_path)) {
             return null;
         }
         return route('family-resources.files.download', ['familyResource' => $this->family_resource_id, 'file' => $this->id]);

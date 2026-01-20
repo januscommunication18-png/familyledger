@@ -195,7 +195,7 @@ class LegalDocumentController extends Controller
                         continue; // Skip files that are too large
                     }
 
-                    $path = $file->store('documents/legal/' . $document->id, 'private');
+                    $path = $file->store('documents/legal/' . $document->id, 'do_spaces');
 
                     LegalDocumentFile::create([
                         'legal_document_id' => $document->id,
@@ -334,7 +334,7 @@ class LegalDocumentController extends Controller
                         continue; // Skip files that are too large
                     }
 
-                    $path = $file->store('documents/legal/' . $legalDocument->id, 'private');
+                    $path = $file->store('documents/legal/' . $legalDocument->id, 'do_spaces');
 
                     LegalDocumentFile::create([
                         'legal_document_id' => $legalDocument->id,
@@ -363,7 +363,7 @@ class LegalDocumentController extends Controller
 
         // Delete all files from storage
         foreach ($legalDocument->files as $file) {
-            Storage::disk('private')->delete($file->file_path);
+            Storage::disk('do_spaces')->delete($file->file_path);
         }
 
         $legalDocument->delete();
@@ -385,11 +385,11 @@ class LegalDocumentController extends Controller
             abort(404);
         }
 
-        if (!Storage::disk('private')->exists($file->file_path)) {
+        if (!Storage::disk('do_spaces')->exists($file->file_path)) {
             abort(404);
         }
 
-        return Storage::disk('private')->download($file->file_path, $file->original_name);
+        return Storage::disk('do_spaces')->download($file->file_path, $file->original_name);
     }
 
     /**
@@ -405,11 +405,11 @@ class LegalDocumentController extends Controller
             abort(404);
         }
 
-        if (!Storage::disk('private')->exists($file->file_path)) {
+        if (!Storage::disk('do_spaces')->exists($file->file_path)) {
             abort(404);
         }
 
-        return Storage::disk('private')->response($file->file_path);
+        return Storage::disk('do_spaces')->response($file->file_path);
     }
 
     /**
@@ -425,7 +425,7 @@ class LegalDocumentController extends Controller
             abort(404);
         }
 
-        Storage::disk('private')->delete($file->file_path);
+        Storage::disk('do_spaces')->delete($file->file_path);
         $file->delete();
 
         return back()->with('success', 'File deleted successfully.');

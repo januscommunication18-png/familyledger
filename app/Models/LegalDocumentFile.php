@@ -94,7 +94,7 @@ class LegalDocumentFile extends Model
      */
     public function getUrl(): ?string
     {
-        if (!Storage::disk('private')->exists($this->file_path)) {
+        if (!Storage::disk('do_spaces')->exists($this->file_path)) {
             return null;
         }
         return route('legal.files.download', ['legalDocument' => $this->legal_document_id, 'file' => $this->id]);

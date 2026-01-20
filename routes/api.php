@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\PeopleController;
 use App\Http\Controllers\Api\V1\ResourceController;
 use App\Http\Controllers\Api\V1\BudgetController;
 use App\Http\Controllers\Api\V1\CoparentingController;
+use App\Http\Controllers\Api\V1\LegalDocumentApiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -92,6 +93,8 @@ Route::prefix('v1')->group(function () {
         Route::prefix('family-circles/{familyCircle}')->group(function () {
             Route::get('/members', [FamilyMemberController::class, 'index']);
             Route::get('/members/{member}', [FamilyMemberController::class, 'show']);
+            Route::get('/resources', [FamilyCircleController::class, 'resources']);
+            Route::get('/legal-documents', [FamilyCircleController::class, 'legalDocuments']);
         });
 
         // Assets
@@ -175,6 +178,10 @@ Route::prefix('v1')->group(function () {
         Route::get('/resources', [ResourceController::class, 'index']);
         Route::get('/resources/type/{type}', [ResourceController::class, 'byType']);
         Route::get('/resources/{resource}', [ResourceController::class, 'show']);
+
+        // Legal Documents
+        Route::get('/legal-documents', [LegalDocumentApiController::class, 'index']);
+        Route::get('/legal-documents/{legalDocument}', [LegalDocumentApiController::class, 'show']);
 
         // Co-parenting
         Route::prefix('coparenting')->group(function () {

@@ -482,7 +482,7 @@ class MemberMedicalController extends Controller
         // Handle file upload
         if ($request->hasFile('document')) {
             $file = $request->file('document');
-            $path = $file->store('vaccinations/' . $member->id, 'private');
+            $path = $file->store('vaccinations/' . $member->id, 'do_spaces');
             $validated['document_path'] = $path;
             $validated['document_name'] = $file->getClientOriginalName();
         }
@@ -527,10 +527,10 @@ class MemberMedicalController extends Controller
         if ($request->hasFile('document')) {
             // Delete old file if exists
             if ($vaccination->document_path) {
-                Storage::disk('private')->delete($vaccination->document_path);
+                Storage::disk('do_spaces')->delete($vaccination->document_path);
             }
             $file = $request->file('document');
-            $path = $file->store('vaccinations/' . $member->id, 'private');
+            $path = $file->store('vaccinations/' . $member->id, 'do_spaces');
             $validated['document_path'] = $path;
             $validated['document_name'] = $file->getClientOriginalName();
         }
@@ -558,7 +558,7 @@ class MemberMedicalController extends Controller
 
         // Delete file if exists
         if ($vaccination->document_path) {
-            Storage::disk('private')->delete($vaccination->document_path);
+            Storage::disk('do_spaces')->delete($vaccination->document_path);
         }
 
         $vaccination->delete();
@@ -581,11 +581,11 @@ class MemberMedicalController extends Controller
             abort(403);
         }
 
-        if (!$vaccination->document_path || !Storage::disk('private')->exists($vaccination->document_path)) {
+        if (!$vaccination->document_path || !Storage::disk('do_spaces')->exists($vaccination->document_path)) {
             abort(404);
         }
 
-        return Storage::disk('private')->download(
+        return Storage::disk('do_spaces')->download(
             $vaccination->document_path,
             $vaccination->document_name
         );

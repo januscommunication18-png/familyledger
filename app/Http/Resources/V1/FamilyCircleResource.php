@@ -4,6 +4,7 @@ namespace App\Http\Resources\V1;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class FamilyCircleResource extends JsonResource
 {
@@ -16,7 +17,7 @@ class FamilyCircleResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'description' => $this->description,
-            'cover_image_url' => $this->cover_image ? asset('storage/' . $this->cover_image) : null,
+            'cover_image_url' => $this->cover_image ? Storage::disk('do_spaces')->url($this->cover_image) : null,
             'members_count' => $this->whenCounted('familyMembers', $this->family_members_count ?? $this->familyMembers()->count()),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),

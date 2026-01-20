@@ -196,7 +196,7 @@ class AssetController extends Controller
             foreach ($request->file('documents') as $index => $file) {
                 $path = $file->store(
                     'documents/assets/' . Auth::user()->tenant_id . '/' . $asset->id,
-                    'private'
+                    'do_spaces'
                 );
 
                 AssetDocument::create([
@@ -399,7 +399,7 @@ class AssetController extends Controller
             foreach ($request->file('documents') as $index => $file) {
                 $path = $file->store(
                     'documents/assets/' . Auth::user()->tenant_id . '/' . $asset->id,
-                    'private'
+                    'do_spaces'
                 );
 
                 AssetDocument::create([
@@ -450,7 +450,7 @@ class AssetController extends Controller
         // Delete uploaded documents
         foreach ($asset->documents as $document) {
             if ($document->file_path) {
-                Storage::disk('private')->delete($document->file_path);
+                Storage::disk('do_spaces')->delete($document->file_path);
             }
         }
 
@@ -479,7 +479,7 @@ class AssetController extends Controller
         $file = $request->file('document');
         $path = $file->store(
             'documents/assets/' . Auth::user()->tenant_id . '/' . $asset->id,
-            'private'
+            'do_spaces'
         );
 
         $tags = null;
@@ -512,7 +512,7 @@ class AssetController extends Controller
         }
 
         if ($document->file_path) {
-            Storage::disk('private')->delete($document->file_path);
+            Storage::disk('do_spaces')->delete($document->file_path);
         }
 
         $document->delete();
@@ -529,11 +529,11 @@ class AssetController extends Controller
             abort(403);
         }
 
-        if (!$document->file_path || !Storage::disk('private')->exists($document->file_path)) {
+        if (!$document->file_path || !Storage::disk('do_spaces')->exists($document->file_path)) {
             abort(404);
         }
 
-        return Storage::disk('private')->download($document->file_path, $document->original_filename);
+        return Storage::disk('do_spaces')->download($document->file_path, $document->original_filename);
     }
 
     /**
@@ -545,11 +545,11 @@ class AssetController extends Controller
             abort(403);
         }
 
-        if (!$document->file_path || !Storage::disk('private')->exists($document->file_path)) {
+        if (!$document->file_path || !Storage::disk('do_spaces')->exists($document->file_path)) {
             abort(404);
         }
 
-        return Storage::disk('private')->response($document->file_path);
+        return Storage::disk('do_spaces')->response($document->file_path);
     }
 
     /**
@@ -637,11 +637,12 @@ class AssetController extends Controller
     }
 
     /**
-     * Validate that all selected owners have percentage values.
+     * Validate that all selected owners have percentage values and total equals 100%.
      */
     private function validateOwnerPercentages(array $familyOwners, array $externalOwners): array
     {
         $errors = [];
+        $totalPercentage = 0;
 
         // Check family member owners
         foreach ($familyOwners as $memberId => $ownerData) {
@@ -650,6 +651,7 @@ class AssetController extends Controller
                     $errors['family_owners'] = 'Please enter ownership percentage for all selected family members.';
                     break;
                 }
+                $totalPercentage += (float) $ownerData['percentage'];
             }
         }
 
@@ -661,6 +663,7 @@ class AssetController extends Controller
                     $errors['external_owners'] = 'Please enter ownership percentage for all external owners.';
                     break;
                 }
+                $totalPercentage += (float) $ownerData['percentage'];
             }
         }
 
@@ -683,6 +686,11 @@ class AssetController extends Controller
 
         if (!$hasOwner) {
             $errors['ownership_type'] = 'Please select at least one joint owner or add an external owner.';
+        }
+
+        // Check that total percentage equals 100%
+        if ($hasOwner && empty($errors) && abs($totalPercentage - 100) > 0.01) {
+            $errors['ownership_percentage'] = 'Total ownership percentage must equal 100%. Current total: ' . number_format($totalPercentage, 2) . '%';
         }
 
         return $errors;

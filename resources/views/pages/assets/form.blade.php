@@ -291,14 +291,20 @@
                             </div>
 
                             <!-- Total Percentage Indicator -->
-                            <div class="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
-                                <span class="text-sm font-medium text-slate-700">Total Ownership</span>
-                                <span id="total-percentage" class="text-sm font-bold text-violet-600">0%</span>
+                            <div id="total-percentage-container" class="p-3 bg-white rounded-lg border border-slate-200">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm font-medium text-slate-700">Total Ownership</span>
+                                    <span id="total-percentage" class="text-sm font-bold text-violet-600">0%</span>
+                                </div>
+                                <p id="percentage-error" class="text-rose-500 text-xs mt-2 hidden"></p>
                             </div>
 
                             <!-- General ownership error -->
                             <p id="ownership-error" class="text-rose-500 text-sm hidden"></p>
                             @error('ownership_type')
+                                <p class="text-rose-500 text-sm">{{ $message }}</p>
+                            @enderror
+                            @error('ownership_percentage')
                                 <p class="text-rose-500 text-sm">{{ $message }}</p>
                             @enderror
                         </div>
@@ -916,19 +922,40 @@ function calculateTotalPercentage() {
     });
 
     const totalElement = document.getElementById('total-percentage');
+    const percentageError = document.getElementById('percentage-error');
+    const container = document.getElementById('total-percentage-container');
+
     totalElement.textContent = total.toFixed(2) + '%';
 
-    // Color code based on total
-    if (total === 100) {
+    // Color code based on total and show/hide error
+    if (Math.abs(total - 100) < 0.01) {
         totalElement.classList.remove('text-violet-600', 'text-rose-600');
         totalElement.classList.add('text-emerald-600');
-    } else if (total > 100) {
+        container.classList.remove('border-rose-300', 'bg-rose-50');
+        container.classList.add('border-slate-200', 'bg-white');
+        percentageError.classList.add('hidden');
+        percentageError.textContent = '';
+    } else if (total > 0) {
         totalElement.classList.remove('text-violet-600', 'text-emerald-600');
         totalElement.classList.add('text-rose-600');
+        container.classList.remove('border-slate-200', 'bg-white');
+        container.classList.add('border-rose-300', 'bg-rose-50');
+        percentageError.classList.remove('hidden');
+        if (total > 100) {
+            percentageError.textContent = 'Total exceeds 100%. Please adjust the percentages.';
+        } else {
+            percentageError.textContent = 'Total must equal 100%. Currently ' + (100 - total).toFixed(2) + '% remaining.';
+        }
     } else {
         totalElement.classList.remove('text-emerald-600', 'text-rose-600');
         totalElement.classList.add('text-violet-600');
+        container.classList.remove('border-rose-300', 'bg-rose-50');
+        container.classList.add('border-slate-200', 'bg-white');
+        percentageError.classList.add('hidden');
+        percentageError.textContent = '';
     }
+
+    return total;
 }
 
 // Initialize on page load
@@ -1106,6 +1133,14 @@ function validateAssetForm() {
     if (hasError) {
         // Scroll to the joint ownership section
         document.getElementById('joint-ownership-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+    }
+
+    // Check if total percentage equals 100%
+    const totalPercentage = calculateTotalPercentage();
+    if (Math.abs(totalPercentage - 100) > 0.01) {
+        // Scroll to the total percentage indicator
+        document.getElementById('total-percentage-container')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return false;
     }
 

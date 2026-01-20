@@ -3,19 +3,39 @@
 @section('title', 'Dashboard')
 @section('page-name', 'Home')
 
-@section('page-title', 'Welcome, ' . (auth()->user()->name ?? 'User') . '!')
-@section('page-description', 'Your family\'s important information, all in one place.')
+@section('page-title', 'Welcome back, ' . (explode(' ', auth()->user()->name ?? 'User')[0]) . '!')
+@section('page-description', 'Here\'s what\'s happening with your family today.')
+
+@push('styles')
+<style>
+    .stat-card {
+        transition: all 0.3s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+    }
+    .gradient-primary {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    }
+    .gradient-success {
+        background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    }
+    .gradient-warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    }
+    .gradient-danger {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+    .gradient-info {
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+    }
+    .gradient-pink {
+        background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+    }
+</style>
+@endpush
 
 @section('content')
-@php
-    // Check for pending co-parent invites for the current user
-    $pendingCoparentInvites = \App\Models\CollaboratorInvite::where('email', auth()->user()->email)
-        ->coparentInvites()
-        ->pending()
-        ->with(['inviter', 'familyMembers'])
-        ->get();
-@endphp
-
 {{-- Pending Co-parent Invitations --}}
 @if($pendingCoparentInvites->count() > 0)
 <div class="mb-6">
@@ -30,7 +50,6 @@
                     <p class="text-sm text-pink-600">You have {{ $pendingCoparentInvites->count() }} pending co-parent {{ Str::plural('invitation', $pendingCoparentInvites->count()) }}</p>
                 </div>
             </div>
-
             <div class="space-y-3">
                 @foreach($pendingCoparentInvites as $invite)
                 <div class="flex items-center justify-between p-3 rounded-lg bg-white/80">
@@ -57,187 +76,551 @@
 </div>
 @endif
 
-<!-- Quick Stats -->
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6">
-    <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
+<!-- Main Stats Cards -->
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+    <!-- Family Members -->
+    <a href="{{ route('family-circle.index') }}" class="stat-card card bg-base-100 shadow-sm hover:shadow-lg border-l-4 border-l-primary">
         <div class="card-body p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm text-base-content/60">Documents</p>
-                    <p class="text-2xl font-bold mt-1">0</p>
+                    <p class="text-xs text-base-content/60 uppercase tracking-wide">Family</p>
+                    <p class="text-2xl font-bold text-primary">{{ $familyMembers->count() }}</p>
+                    <p class="text-xs text-base-content/50">{{ $familyCircles->count() }} {{ Str::plural('circle', $familyCircles->count()) }}</p>
                 </div>
-                <div class="p-3 rounded-full bg-primary/10">
-                    <span class="icon-[tabler--file-text] size-6 text-primary"></span>
+                <div class="p-2 rounded-xl gradient-primary">
+                    <span class="icon-[tabler--users] size-5 text-white"></span>
                 </div>
             </div>
         </div>
-    </div>
+    </a>
 
-    <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
+    <!-- Assets -->
+    <a href="{{ route('assets.index') }}" class="stat-card card bg-base-100 shadow-sm hover:shadow-lg border-l-4 border-l-success">
         <div class="card-body p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm text-base-content/60">Family Members</p>
-                    <p class="text-2xl font-bold mt-1">1</p>
+                    <p class="text-xs text-base-content/60 uppercase tracking-wide">Assets</p>
+                    <p class="text-2xl font-bold text-success">{{ $assets->count() }}</p>
+                    <p class="text-xs text-base-content/50">${{ number_format($totalAssetValue, 0) }}</p>
                 </div>
-                <div class="p-3 rounded-full bg-secondary/10">
-                    <span class="icon-[tabler--users] size-6 text-secondary"></span>
+                <div class="p-2 rounded-xl gradient-success">
+                    <span class="icon-[tabler--building-bank] size-5 text-white"></span>
                 </div>
             </div>
         </div>
-    </div>
+    </a>
 
-    <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
+    <!-- Documents -->
+    <a href="{{ route('legal.index') }}" class="stat-card card bg-base-100 shadow-sm hover:shadow-lg border-l-4 border-l-info">
         <div class="card-body p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm text-base-content/60">Pending Tasks</p>
-                    <p class="text-2xl font-bold mt-1">0</p>
+                    <p class="text-xs text-base-content/60 uppercase tracking-wide">Documents</p>
+                    <p class="text-2xl font-bold text-info">{{ $totalDocuments }}</p>
+                    <p class="text-xs text-base-content/50">{{ $legalDocuments }} legal</p>
                 </div>
-                <div class="p-3 rounded-full bg-accent/10">
-                    <span class="icon-[tabler--checklist] size-6 text-accent"></span>
+                <div class="p-2 rounded-xl gradient-info">
+                    <span class="icon-[tabler--file-text] size-5 text-white"></span>
                 </div>
             </div>
         </div>
-    </div>
+    </a>
 
-    <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
+    <!-- Tasks -->
+    <a href="{{ route('goals-todo.index') }}" class="stat-card card bg-base-100 shadow-sm hover:shadow-lg border-l-4 border-l-warning">
         <div class="card-body p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm text-base-content/60">Reminders</p>
-                    <p class="text-2xl font-bold mt-1">0</p>
+                    <p class="text-xs text-base-content/60 uppercase tracking-wide">Tasks</p>
+                    <p class="text-2xl font-bold text-warning">{{ $pendingTasks }}</p>
+                    <p class="text-xs text-base-content/50">{{ $overdueTasks }} overdue</p>
                 </div>
-                <div class="p-3 rounded-full bg-warning/10">
-                    <span class="icon-[tabler--bell] size-6 text-warning"></span>
+                <div class="p-2 rounded-xl gradient-warning">
+                    <span class="icon-[tabler--checklist] size-5 text-white"></span>
                 </div>
             </div>
+        </div>
+    </a>
+
+    <!-- Goals -->
+    <a href="{{ route('goals-todo.goals.index') }}" class="stat-card card bg-base-100 shadow-sm hover:shadow-lg border-l-4 border-l-secondary">
+        <div class="card-body p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-base-content/60 uppercase tracking-wide">Goals</p>
+                    <p class="text-2xl font-bold text-secondary">{{ $activeGoals }}</p>
+                    <p class="text-xs text-base-content/50">{{ $completedGoals }} done</p>
+                </div>
+                <div class="p-2 rounded-xl bg-gradient-to-br from-secondary to-purple-600">
+                    <span class="icon-[tabler--target] size-5 text-white"></span>
+                </div>
+            </div>
+        </div>
+    </a>
+
+    <!-- Insurance -->
+    <a href="{{ route('documents.index', ['tab' => 'insurance']) }}" class="stat-card card bg-base-100 shadow-sm hover:shadow-lg border-l-4 border-l-pink-500">
+        <div class="card-body p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-base-content/60 uppercase tracking-wide">Insurance</p>
+                    <p class="text-2xl font-bold text-pink-500">{{ $activeInsurance }}</p>
+                    <p class="text-xs text-base-content/50">{{ $expiringInsurance }} expiring</p>
+                </div>
+                <div class="p-2 rounded-xl gradient-pink">
+                    <span class="icon-[tabler--shield-check] size-5 text-white"></span>
+                </div>
+            </div>
+        </div>
+    </a>
+</div>
+
+<!-- Charts Row -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Income vs Expenses Chart -->
+    <div class="card bg-base-100 shadow-sm">
+        <div class="card-body">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h2 class="card-title text-lg">Income vs Expenses</h2>
+                    <p class="text-sm text-base-content/60">Last 6 months overview</p>
+                </div>
+                <a href="{{ route('expenses.index') }}" class="btn btn-ghost btn-sm">
+                    View All
+                    <span class="icon-[tabler--arrow-right] size-4"></span>
+                </a>
+            </div>
+            <div id="income-expense-chart" class="h-64"></div>
+        </div>
+    </div>
+
+    <!-- Asset Allocation Chart -->
+    <div class="card bg-base-100 shadow-sm">
+        <div class="card-body">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h2 class="card-title text-lg">Asset Allocation</h2>
+                    <p class="text-sm text-base-content/60">Portfolio breakdown by category</p>
+                </div>
+                <a href="{{ route('assets.index') }}" class="btn btn-ghost btn-sm">
+                    View All
+                    <span class="icon-[tabler--arrow-right] size-4"></span>
+                </a>
+            </div>
+            @if($assets->count() > 0)
+            <div id="asset-allocation-chart" class="h-64"></div>
+            @else
+            <div class="flex flex-col items-center justify-center h-64 text-base-content/50">
+                <span class="icon-[tabler--chart-pie] size-16 opacity-30"></span>
+                <p class="mt-4">No assets tracked yet</p>
+                <a href="{{ route('assets.create') }}" class="btn btn-primary btn-sm mt-3">Add Asset</a>
+            </div>
+            @endif
         </div>
     </div>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <!-- Main Content Column -->
-    <div class="lg:col-span-2 space-y-6">
-        <!-- Recent Activity -->
-        <div class="card bg-base-100 shadow-sm">
-            <div class="card-body">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="card-title text-lg">Recent Activity</h2>
-                    <a href="#" class="btn btn-ghost btn-sm">View All</a>
+<!-- Monthly Spending & Tasks Row -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <!-- Monthly Spending Breakdown -->
+    <div class="card bg-base-100 shadow-sm">
+        <div class="card-body">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h2 class="card-title text-lg">This Month's Spending</h2>
+                    <p class="text-sm text-base-content/60">{{ now()->format('F Y') }}</p>
                 </div>
-                <div class="space-y-4">
-                    <div class="flex items-start gap-3 p-3 rounded-lg bg-base-200/50">
-                        <div class="p-2 rounded-full bg-primary/10">
-                            <span class="icon-[tabler--user-plus] size-4 text-primary"></span>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-medium">Account created</p>
-                            <p class="text-xs text-base-content/60">Welcome to Family Ledger! Start by adding your family members.</p>
-                            <p class="text-xs text-base-content/40 mt-1">Just now</p>
-                        </div>
-                    </div>
-
-                    <div class="text-center py-8 text-base-content/60">
-                        <span class="icon-[tabler--clock] size-12 opacity-30"></span>
-                        <p class="mt-2">No recent activity yet</p>
-                        <p class="text-sm">Your activity history will appear here</p>
-                    </div>
+                <div class="text-right">
+                    <p class="text-2xl font-bold">${{ number_format($thisMonthTotal, 0) }}</p>
+                    @php
+                        $percentChange = $lastMonthTotal > 0 ? (($thisMonthTotal - $lastMonthTotal) / $lastMonthTotal) * 100 : 0;
+                    @endphp
+                    @if($percentChange != 0)
+                    <p class="text-xs {{ $percentChange > 0 ? 'text-error' : 'text-success' }}">
+                        <span class="icon-[tabler--trending-{{ $percentChange > 0 ? 'up' : 'down' }}] size-3"></span>
+                        {{ abs(round($percentChange)) }}% vs last month
+                    </p>
+                    @endif
                 </div>
             </div>
+            @if(count($expenseCategoryLabels) > 0)
+            <div id="expense-category-chart" class="h-48"></div>
+            @else
+            <div class="flex flex-col items-center justify-center h-48 text-base-content/50">
+                <span class="icon-[tabler--receipt] size-12 opacity-30"></span>
+                <p class="mt-2 text-sm">No expenses this month</p>
+            </div>
+            @endif
         </div>
+    </div>
 
+    <!-- Upcoming Tasks -->
+    <div class="card bg-base-100 shadow-sm lg:col-span-2">
+        <div class="card-body">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h2 class="card-title text-lg">Upcoming Tasks</h2>
+                    <p class="text-sm text-base-content/60">Due in the next 7 days</p>
+                </div>
+                <a href="{{ route('goals-todo.index') }}" class="btn btn-ghost btn-sm">View All</a>
+            </div>
+            @if($upcomingTasks->count() > 0)
+            <div class="space-y-3">
+                @foreach($upcomingTasks as $task)
+                <div class="flex items-center gap-3 p-3 rounded-lg bg-base-200/50 hover:bg-base-200 transition-colors">
+                    <div class="flex-shrink-0">
+                        @php
+                            $priorityColors = [
+                                'high' => 'text-error',
+                                'medium' => 'text-warning',
+                                'low' => 'text-success',
+                            ];
+                        @endphp
+                        <span class="icon-[tabler--circle-filled] size-3 {{ $priorityColors[$task->priority] ?? 'text-base-content/30' }}"></span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-medium truncate">{{ $task->title }}</p>
+                        <p class="text-xs text-base-content/60">
+                            Due {{ $task->due_date?->format('M j') }}
+                            @if($task->due_date?->isToday()) <span class="badge badge-warning badge-xs">Today</span> @endif
+                            @if($task->due_date?->isTomorrow()) <span class="badge badge-info badge-xs">Tomorrow</span> @endif
+                        </p>
+                    </div>
+                    <a href="{{ route('goals-todo.index') }}" class="btn btn-ghost btn-xs btn-circle">
+                        <span class="icon-[tabler--chevron-right] size-4"></span>
+                    </a>
+                </div>
+                @endforeach
+            </div>
+            @else
+            <div class="flex flex-col items-center justify-center py-8 text-base-content/50">
+                <span class="icon-[tabler--checklist] size-12 opacity-30"></span>
+                <p class="mt-2">No upcoming tasks</p>
+                <a href="{{ route('goals-todo.tasks.create') }}" class="btn btn-primary btn-sm mt-3">Add Task</a>
+            </div>
+            @endif
+        </div>
+    </div>
+</div>
+
+<!-- Bottom Row -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Family Members Overview -->
+    <div class="card bg-base-100 shadow-sm">
+        <div class="card-body">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="card-title text-lg">Family Members</h2>
+                <a href="{{ route('family-circle.index') }}" class="btn btn-ghost btn-sm">View All</a>
+            </div>
+            @if($familyMembers->count() > 0)
+            <div class="space-y-3">
+                @foreach($familyMembers->take(5) as $member)
+                <div class="flex items-center gap-3">
+                    <div class="avatar placeholder">
+                        <div class="w-10 h-10 rounded-full {{ $member->profile_photo_url ? '' : 'bg-gradient-to-br from-primary to-secondary text-white' }}">
+                            @if($member->profile_photo_url)
+                            <img src="{{ $member->profile_photo_url }}" alt="{{ $member->full_name }}" class="rounded-full">
+                            @else
+                            <span class="text-sm font-medium">{{ strtoupper(substr($member->first_name, 0, 1)) }}</span>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-medium truncate">{{ $member->full_name }}</p>
+                        <p class="text-xs text-base-content/60 capitalize">{{ str_replace('_', ' ', $member->relationship ?? 'Member') }}</p>
+                    </div>
+                    @if($member->date_of_birth)
+                    <span class="badge badge-ghost badge-sm">{{ $member->date_of_birth->age }}y</span>
+                    @endif
+                </div>
+                @endforeach
+            </div>
+            @if($familyMembers->count() > 5)
+            <p class="text-center text-sm text-base-content/60 mt-3">+{{ $familyMembers->count() - 5 }} more members</p>
+            @endif
+            @else
+            <div class="flex flex-col items-center justify-center py-6 text-base-content/50">
+                <span class="icon-[tabler--users] size-12 opacity-30"></span>
+                <p class="mt-2">No family members yet</p>
+                <a href="{{ route('family-circle.index') }}" class="btn btn-primary btn-sm mt-3">Add Member</a>
+            </div>
+            @endif
+        </div>
+    </div>
+
+    <!-- Upcoming Birthdays & Alerts -->
+    <div class="card bg-base-100 shadow-sm">
+        <div class="card-body">
+            <h2 class="card-title text-lg mb-4">
+                <span class="icon-[tabler--cake] size-5 text-pink-500"></span>
+                Upcoming Birthdays
+            </h2>
+            @if($upcomingBirthdays->count() > 0)
+            <div class="space-y-3">
+                @foreach($upcomingBirthdays as $member)
+                <div class="flex items-center gap-3 p-2 rounded-lg bg-pink-50">
+                    <div class="avatar placeholder">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 text-white">
+                            <span class="text-xs font-medium">{{ strtoupper(substr($member->first_name, 0, 1)) }}</span>
+                        </div>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-medium text-sm">{{ $member->first_name }}</p>
+                        <p class="text-xs text-base-content/60">{{ $member->next_birthday->format('M j') }}</p>
+                    </div>
+                    <span class="badge badge-pink badge-sm">
+                        @if($member->days_until == 0) Today!
+                        @elseif($member->days_until == 1) Tomorrow
+                        @else {{ $member->days_until }}d
+                        @endif
+                    </span>
+                </div>
+                @endforeach
+            </div>
+            @else
+            <div class="text-center py-4 text-base-content/50">
+                <span class="icon-[tabler--cake] size-10 opacity-30"></span>
+                <p class="mt-2 text-sm">No upcoming birthdays</p>
+            </div>
+            @endif
+
+            <!-- Expiring Documents Alert -->
+            @if($expiringDocuments->count() > 0)
+            <div class="divider my-4"></div>
+            <h3 class="font-semibold text-sm flex items-center gap-2 mb-3">
+                <span class="icon-[tabler--alert-triangle] size-4 text-warning"></span>
+                Expiring Documents
+            </h3>
+            <div class="space-y-2">
+                @foreach($expiringDocuments->take(3) as $doc)
+                <div class="flex items-center gap-2 text-sm p-2 rounded bg-warning/10">
+                    <span class="icon-[tabler--file-alert] size-4 text-warning"></span>
+                    <div class="flex-1 min-w-0">
+                        <p class="truncate">{{ $doc->familyMember->first_name }}'s {{ ucfirst(str_replace('_', ' ', $doc->document_type)) }}</p>
+                        <p class="text-xs text-base-content/60">Expires {{ $doc->expiry_date->format('M j, Y') }}</p>
+                    </div>
+                </div>
+                @endforeach
+            </div>
+            @endif
+        </div>
+    </div>
+
+    <!-- Quick Actions & Recent Activity -->
+    <div class="space-y-6">
         <!-- Quick Actions -->
         <div class="card bg-base-100 shadow-sm">
             <div class="card-body">
                 <h2 class="card-title text-lg mb-4">Quick Actions</h2>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <a href="#" class="flex flex-col items-center p-4 rounded-lg bg-base-200/50 hover:bg-base-200 transition-colors text-center group">
-                        <div class="p-3 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors mb-2">
-                            <span class="icon-[tabler--file-plus] size-6 text-primary"></span>
-                        </div>
-                        <span class="text-sm font-medium">Add Document</span>
+                <div class="grid grid-cols-2 gap-2">
+                    <a href="{{ route('family-circle.index') }}" class="btn btn-ghost btn-sm justify-start gap-2">
+                        <span class="icon-[tabler--user-plus] size-4 text-primary"></span>
+                        Add Member
                     </a>
-                    <a href="#" class="flex flex-col items-center p-4 rounded-lg bg-base-200/50 hover:bg-base-200 transition-colors text-center group">
-                        <div class="p-3 rounded-full bg-secondary/10 group-hover:bg-secondary/20 transition-colors mb-2">
-                            <span class="icon-[tabler--user-plus] size-6 text-secondary"></span>
-                        </div>
-                        <span class="text-sm font-medium">Invite Member</span>
+                    <a href="{{ route('goals-todo.tasks.create') }}" class="btn btn-ghost btn-sm justify-start gap-2">
+                        <span class="icon-[tabler--plus] size-4 text-warning"></span>
+                        New Task
                     </a>
-                    <a href="#" class="flex flex-col items-center p-4 rounded-lg bg-base-200/50 hover:bg-base-200 transition-colors text-center group">
-                        <div class="p-3 rounded-full bg-accent/10 group-hover:bg-accent/20 transition-colors mb-2">
-                            <span class="icon-[tabler--calendar-plus] size-6 text-accent"></span>
-                        </div>
-                        <span class="text-sm font-medium">Add Reminder</span>
+                    <a href="{{ route('legal.create') }}" class="btn btn-ghost btn-sm justify-start gap-2">
+                        <span class="icon-[tabler--file-plus] size-4 text-info"></span>
+                        Add Document
                     </a>
-                    <a href="#" class="flex flex-col items-center p-4 rounded-lg bg-base-200/50 hover:bg-base-200 transition-colors text-center group">
-                        <div class="p-3 rounded-full bg-warning/10 group-hover:bg-warning/20 transition-colors mb-2">
-                            <span class="icon-[tabler--receipt] size-6 text-warning"></span>
-                        </div>
-                        <span class="text-sm font-medium">Track Expense</span>
+                    <a href="{{ route('expenses.index') }}" class="btn btn-ghost btn-sm justify-start gap-2">
+                        <span class="icon-[tabler--receipt] size-4 text-success"></span>
+                        Track Expense
                     </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sidebar Column -->
-    <div class="space-y-6">
-        <!-- Family Overview -->
-        <div class="card bg-base-100 shadow-sm">
-            <div class="card-body">
-                <h2 class="card-title text-lg mb-4">Family Circle</h2>
-                <div class="flex flex-wrap gap-2 mb-4">
-                    <div class="avatar placeholder">
-                        <div class="w-10 rounded-full bg-primary text-primary-content">
-                            <span class="text-sm">{{ substr(auth()->user()->name ?? 'U', 0, 1) }}</span>
-                        </div>
-                    </div>
-                    <button class="avatar placeholder">
-                        <div class="w-10 rounded-full border-2 border-dashed border-base-content/20 hover:border-primary transition-colors">
-                            <span class="icon-[tabler--plus] size-4 text-base-content/40"></span>
-                        </div>
-                    </button>
-                </div>
-                <a href="#" class="btn btn-outline btn-sm btn-block">
-                    <span class="icon-[tabler--user-plus] size-4"></span>
-                    Invite Family Member
-                </a>
-            </div>
-        </div>
-
-        <!-- Upcoming Reminders -->
-        <div class="card bg-base-100 shadow-sm">
-            <div class="card-body">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="card-title text-lg">Upcoming</h2>
-                    <a href="#" class="btn btn-ghost btn-xs">View All</a>
-                </div>
-                <div class="text-center py-6 text-base-content/60">
-                    <span class="icon-[tabler--calendar] size-10 opacity-30"></span>
-                    <p class="mt-2 text-sm">No upcoming reminders</p>
-                    <a href="#" class="btn btn-primary btn-sm mt-3">
-                        <span class="icon-[tabler--plus] size-4"></span>
-                        Add Reminder
+                    <a href="{{ route('assets.create') }}" class="btn btn-ghost btn-sm justify-start gap-2">
+                        <span class="icon-[tabler--home-plus] size-4 text-secondary"></span>
+                        Add Asset
+                    </a>
+                    <a href="{{ route('goals-todo.goals.create') }}" class="btn btn-ghost btn-sm justify-start gap-2">
+                        <span class="icon-[tabler--target] size-4 text-pink-500"></span>
+                        New Goal
                     </a>
                 </div>
             </div>
         </div>
 
-        <!-- Storage Usage -->
+        <!-- Other Stats -->
         <div class="card bg-base-100 shadow-sm">
             <div class="card-body">
-                <h2 class="card-title text-lg mb-4">Storage</h2>
-                <div class="space-y-2">
-                    <div class="flex justify-between text-sm">
-                        <span>Used</span>
-                        <span class="font-medium">0 MB / 5 GB</span>
-                    </div>
-                    <progress class="progress progress-primary w-full" value="0" max="100"></progress>
-                    <p class="text-xs text-base-content/60">5 GB free storage available</p>
+                <h2 class="card-title text-lg mb-4">At a Glance</h2>
+                <div class="space-y-3">
+                    <a href="{{ route('pets.index') }}" class="flex items-center justify-between p-2 rounded-lg hover:bg-base-200 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="icon-[tabler--paw] size-5 text-amber-500"></span>
+                            <span class="text-sm">Pets</span>
+                        </div>
+                        <span class="badge badge-ghost">{{ $pets }}</span>
+                    </a>
+                    <a href="{{ route('people.index') }}" class="flex items-center justify-between p-2 rounded-lg hover:bg-base-200 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="icon-[tabler--address-book] size-5 text-blue-500"></span>
+                            <span class="text-sm">Contacts</span>
+                        </div>
+                        <span class="badge badge-ghost">{{ $contacts }}</span>
+                    </a>
+                    <a href="{{ route('shopping.index') }}" class="flex items-center justify-between p-2 rounded-lg hover:bg-base-200 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="icon-[tabler--shopping-cart] size-5 text-green-500"></span>
+                            <span class="text-sm">Shopping Items</span>
+                        </div>
+                        <span class="badge badge-ghost">{{ $pendingShoppingItems }}</span>
+                    </a>
+                    <a href="{{ route('journal.index') }}" class="flex items-center justify-between p-2 rounded-lg hover:bg-base-200 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="icon-[tabler--notebook] size-5 text-purple-500"></span>
+                            <span class="text-sm">Journal Entries</span>
+                        </div>
+                        <span class="badge badge-ghost">{{ $recentJournalEntries->count() }}</span>
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Income vs Expense Chart
+    const incomeExpenseOptions = {
+        series: [{
+            name: 'Income',
+            data: @json($incomeData)
+        }, {
+            name: 'Expenses',
+            data: @json($expenseData)
+        }],
+        chart: {
+            type: 'bar',
+            height: 256,
+            toolbar: { show: false },
+            fontFamily: 'inherit',
+        },
+        colors: ['#22c55e', '#ef4444'],
+        plotOptions: {
+            bar: {
+                horizontal: false,
+                columnWidth: '55%',
+                borderRadius: 4,
+            },
+        },
+        dataLabels: { enabled: false },
+        stroke: {
+            show: true,
+            width: 2,
+            colors: ['transparent']
+        },
+        xaxis: {
+            categories: @json($chartLabels),
+            labels: {
+                style: {
+                    fontSize: '12px',
+                }
+            }
+        },
+        yaxis: {
+            labels: {
+                formatter: function (value) {
+                    return '$' + value.toLocaleString();
+                }
+            }
+        },
+        fill: { opacity: 1 },
+        tooltip: {
+            y: {
+                formatter: function (val) {
+                    return "$" + val.toLocaleString()
+                }
+            }
+        },
+        legend: {
+            position: 'top',
+            horizontalAlign: 'right',
+        },
+        grid: {
+            borderColor: '#e5e7eb',
+            strokeDashArray: 4,
+        }
+    };
+
+    new ApexCharts(document.querySelector("#income-expense-chart"), incomeExpenseOptions).render();
+
+    // Asset Allocation Chart
+    @if($assets->count() > 0)
+    const assetAllocationOptions = {
+        series: @json($assetChartData),
+        chart: {
+            type: 'donut',
+            height: 256,
+            fontFamily: 'inherit',
+        },
+        labels: @json($assetChartLabels),
+        colors: ['#6366f1', '#22c55e', '#f59e0b', '#ec4899'],
+        plotOptions: {
+            pie: {
+                donut: {
+                    size: '65%',
+                    labels: {
+                        show: true,
+                        total: {
+                            show: true,
+                            label: 'Total Value',
+                            formatter: function (w) {
+                                return '$' + w.globals.seriesTotals.reduce((a, b) => a + b, 0).toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        dataLabels: { enabled: false },
+        legend: {
+            position: 'bottom',
+            horizontalAlign: 'center',
+        },
+        tooltip: {
+            y: {
+                formatter: function (val) {
+                    return "$" + val.toLocaleString()
+                }
+            }
+        }
+    };
+
+    new ApexCharts(document.querySelector("#asset-allocation-chart"), assetAllocationOptions).render();
+    @endif
+
+    // Expense Category Chart
+    @if(count($expenseCategoryLabels) > 0)
+    const expenseCategoryOptions = {
+        series: @json($expenseCategoryData),
+        chart: {
+            type: 'pie',
+            height: 192,
+            fontFamily: 'inherit',
+        },
+        labels: @json($expenseCategoryLabels),
+        colors: ['#6366f1', '#22c55e', '#f59e0b', '#ec4899', '#06b6d4', '#8b5cf6'],
+        dataLabels: { enabled: false },
+        legend: {
+            position: 'right',
+            fontSize: '12px',
+        },
+        tooltip: {
+            y: {
+                formatter: function (val) {
+                    return "$" + val.toLocaleString()
+                }
+            }
+        }
+    };
+
+    new ApexCharts(document.querySelector("#expense-category-chart"), expenseCategoryOptions).render();
+    @endif
+});
+</script>
+@endpush

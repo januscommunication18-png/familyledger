@@ -6,6 +6,7 @@ use App\Models\JournalEntry;
 use App\Models\JournalTag;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class JournalController extends Controller
 {
@@ -131,7 +132,7 @@ class JournalController extends Controller
                     'type' => $a->type,
                     'file_path' => $a->file_path,
                     'file_name' => $a->file_name,
-                    'url' => $a->file_path ? url('storage/' . $a->file_path) : null,
+                    'url' => $a->file_path ? Storage::disk('do_spaces')->url($a->file_path) : null,
                 ]),
                 'author' => [
                     'id' => $entry->user->id,

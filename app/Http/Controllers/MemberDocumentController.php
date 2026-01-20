@@ -109,7 +109,7 @@ class MemberDocumentController extends Controller
         if ($request->hasFile('front_image')) {
             $path = $request->file('front_image')->store(
                 "documents/{$member->id}/front",
-                'private'
+                'do_spaces'
             );
             $data['front_image'] = $path;
         }
@@ -117,7 +117,7 @@ class MemberDocumentController extends Controller
         if ($request->hasFile('back_image')) {
             $path = $request->file('back_image')->store(
                 "documents/{$member->id}/back",
-                'private'
+                'do_spaces'
             );
             $data['back_image'] = $path;
         }
@@ -198,22 +198,22 @@ class MemberDocumentController extends Controller
         // Handle file uploads
         if ($request->hasFile('front_image')) {
             if ($document->front_image) {
-                Storage::disk('private')->delete($document->front_image);
+                Storage::disk('do_spaces')->delete($document->front_image);
             }
             $path = $request->file('front_image')->store(
                 "documents/{$member->id}/front",
-                'private'
+                'do_spaces'
             );
             $data['front_image'] = $path;
         }
 
         if ($request->hasFile('back_image')) {
             if ($document->back_image) {
-                Storage::disk('private')->delete($document->back_image);
+                Storage::disk('do_spaces')->delete($document->back_image);
             }
             $path = $request->file('back_image')->store(
                 "documents/{$member->id}/back",
-                'private'
+                'do_spaces'
             );
             $data['back_image'] = $path;
         }
@@ -248,10 +248,10 @@ class MemberDocumentController extends Controller
 
         // Delete uploaded files
         if ($document->front_image) {
-            Storage::disk('private')->delete($document->front_image);
+            Storage::disk('do_spaces')->delete($document->front_image);
         }
         if ($document->back_image) {
-            Storage::disk('private')->delete($document->back_image);
+            Storage::disk('do_spaces')->delete($document->back_image);
         }
 
         $document->delete();
@@ -283,11 +283,11 @@ class MemberDocumentController extends Controller
 
         $path = $type === 'front' ? $document->front_image : $document->back_image;
 
-        if (!$path || !Storage::disk('private')->exists($path)) {
+        if (!$path || !Storage::disk('do_spaces')->exists($path)) {
             abort(404);
         }
 
-        return Storage::disk('private')->response($path);
+        return Storage::disk('do_spaces')->response($path);
     }
 
     /**

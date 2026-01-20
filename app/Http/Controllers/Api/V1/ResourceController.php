@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Models\FamilyResource;
+use App\Models\FamilyResourceFile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class ResourceController extends Controller
 {
@@ -86,17 +88,23 @@ class ResourceController extends Controller
 
         // Transform files for mobile
         $files = $resource->files->map(function ($file) use ($resource) {
+            $isImage = str_starts_with($file->mime_type ?? '', 'image/');
+            $isPdf = $file->mime_type === 'application/pdf';
+
+            // Generate DO Spaces URL
+            $fileUrl = $file->file_path ? Storage::disk('do_spaces')->url($file->file_path) : null;
+
             return [
                 'id' => $file->id,
-                'name' => $file->original_name,
+                'name' => $file->original_name ?? $file->file_name ?? 'File',
                 'file_path' => $file->file_path,
                 'mime_type' => $file->mime_type,
                 'file_size' => $file->file_size,
                 'formatted_size' => $this->formatFileSize($file->file_size),
-                'is_image' => str_starts_with($file->mime_type ?? '', 'image/'),
-                'is_pdf' => $file->mime_type === 'application/pdf',
-                'download_url' => route('family-resources.download', [$resource->id, $file->id]),
-                'view_url' => route('family-resources.view', [$resource->id, $file->id]),
+                'is_image' => $isImage,
+                'is_pdf' => $isPdf,
+                'download_url' => $fileUrl,
+                'view_url' => ($isImage || $isPdf) ? $fileUrl : null,
                 'created_at' => $file->created_at?->format('M d, Y'),
             ];
         });

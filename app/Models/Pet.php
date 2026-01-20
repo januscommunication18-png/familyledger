@@ -184,7 +184,20 @@ class Pet extends Model
             }
             return $months . ' ' . ($months === 1 ? 'month' : 'months');
         }
-        return $this->approx_age;
+
+        // Format approx_age as readable string
+        if ($this->approx_age) {
+            $years = (int) floor($this->approx_age);
+            $months = (int) round(($this->approx_age - $years) * 12);
+
+            if ($years > 0) {
+                return $years . ' ' . ($years === 1 ? 'year' : 'years') .
+                    ($months > 0 ? ', ' . $months . ' ' . ($months === 1 ? 'month' : 'months') : '');
+            }
+            return $months . ' ' . ($months === 1 ? 'month' : 'months');
+        }
+
+        return null;
     }
 
     /**

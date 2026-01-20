@@ -6,6 +6,7 @@ use App\Http\Resources\V1\AssetResource;
 use App\Models\Asset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * API Controller for Assets (read-only for Phase 1).
@@ -87,8 +88,32 @@ class AssetController extends Controller
         ]);
         $asset->loadCount('documents');
 
+        // Transform documents with DO Spaces URLs
+        $files = $asset->documents->map(function ($doc) {
+            $isImage = $doc->isImage();
+            $isPdf = $doc->isPdf();
+            $fileUrl = $doc->file_path ? Storage::disk('do_spaces')->url($doc->file_path) : null;
+
+            return [
+                'id' => $doc->id,
+                'name' => $doc->original_filename ?? 'File',
+                'document_type' => $doc->document_type,
+                'document_type_name' => $doc->document_type_name,
+                'file_path' => $doc->file_path,
+                'mime_type' => $doc->mime_type,
+                'file_size' => $doc->file_size,
+                'formatted_size' => $doc->formatted_file_size,
+                'is_image' => $isImage,
+                'is_pdf' => $isPdf,
+                'download_url' => $fileUrl,
+                'view_url' => ($isImage || $isPdf) ? $fileUrl : null,
+                'created_at' => $doc->created_at?->toISOString(),
+            ];
+        });
+
         return $this->success([
             'asset' => new AssetResource($asset),
+            'files' => $files,
         ]);
     }
 }
