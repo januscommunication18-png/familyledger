@@ -11,31 +11,40 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700" rel="stylesheet" />
 
-    <!-- Tailwind CSS via jsDelivr (CSP-allowed) -->
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            50: '#faf5ff',
-                            100: '#f3e8ff',
-                            200: '#e9d5ff',
-                            300: '#d8b4fe',
-                            400: '#c084fc',
-                            500: '#a855f7',
-                            600: '#9333ea',
-                            700: '#7e22ce',
-                            800: '#6b21a8',
-                            900: '#581c87',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <!-- Tailwind CSS (pre-built) via jsDelivr -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+    <!-- Custom primary colors & dark mode -->
+    <style>
+        .bg-primary-50 { background-color: #faf5ff; }
+        .bg-primary-100 { background-color: #f3e8ff; }
+        .bg-primary-600 { background-color: #9333ea; }
+        .bg-primary-900 { background-color: #581c87; }
+        .bg-primary-900\/20, .dark .bg-primary-900\/20 { background-color: rgba(88, 28, 135, 0.2); }
+        .text-primary-300 { color: #d8b4fe; }
+        .text-primary-700 { color: #7e22ce; }
+        .hover\:bg-primary-700:hover { background-color: #7e22ce; }
+
+        /* Dark mode support */
+        .dark .dark\:bg-gray-800 { background-color: #1f2937; }
+        .dark .dark\:bg-gray-900 { background-color: #111827; }
+        .dark .dark\:bg-gray-700 { background-color: #374151; }
+        .dark .dark\:bg-gray-600 { background-color: #4b5563; }
+        .dark .dark\:text-gray-100 { color: #f3f4f6; }
+        .dark .dark\:text-gray-300 { color: #d1d5db; }
+        .dark .dark\:text-gray-400 { color: #9ca3af; }
+        .dark .dark\:text-primary-300 { color: #d8b4fe; }
+        .dark .dark\:border-gray-700 { border-color: #374151; }
+        .dark .dark\:border-gray-800 { border-color: #1f2937; }
+        .dark .dark\:hover\:bg-gray-700:hover { background-color: #374151; }
+        .dark .dark\:bg-primary-900 { background-color: #581c87; }
+        .dark .dark\:bg-green-900\/20 { background-color: rgba(20, 83, 45, 0.2); }
+        .dark .dark\:bg-red-900\/20 { background-color: rgba(127, 29, 29, 0.2); }
+        .dark .dark\:border-green-800 { border-color: #166534; }
+        .dark .dark\:border-red-800 { border-color: #991b1b; }
+        .dark .dark\:text-green-300 { color: #86efac; }
+        .dark .dark\:text-red-300 { color: #fca5a5; }
+    </style>
 
     <style>
         [x-cloak] { display: none !important; }
