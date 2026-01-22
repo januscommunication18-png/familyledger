@@ -41,6 +41,9 @@ Route::prefix('v1')->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::prefix('auth')->group(function () {
+        // Registration
+        Route::post('/register', [AuthController::class, 'register']);
+
         // Password Login
         Route::post('/login', [AuthController::class, 'login']);
 
@@ -87,6 +90,7 @@ Route::prefix('v1')->group(function () {
 
         // Family Circles
         Route::get('/family-circles', [FamilyCircleController::class, 'index']);
+        Route::post('/family-circles', [FamilyCircleController::class, 'store']);
         Route::get('/family-circles/{familyCircle}', [FamilyCircleController::class, 'show']);
 
         // Family Members (nested under family circles)

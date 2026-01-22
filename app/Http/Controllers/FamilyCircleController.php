@@ -72,7 +72,7 @@ class FamilyCircleController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
-            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'include_me' => 'nullable|boolean',
         ]);
 
@@ -238,7 +238,7 @@ class FamilyCircleController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
-            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'include_me' => 'nullable|boolean',
         ]);
 

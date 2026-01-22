@@ -64,9 +64,10 @@
                                 <label for="profile_image" class="absolute -bottom-1 -right-1 w-8 h-8 bg-violet-600 hover:bg-violet-700 rounded-full flex items-center justify-center cursor-pointer shadow-md transition-colors">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
                                 </label>
-                                <input type="file" name="profile_image" id="profile_image" accept="image/*" class="hidden" onchange="previewImage(this)">
+                                <input type="file" name="profile_image" id="profile_image" accept=".jpg,.jpeg,.png,.gif,.webp" class="hidden" onchange="previewImage(this)">
                             </div>
                             <p class="text-xs text-slate-500 text-center mt-2">Profile Photo</p>
+                            <p id="profileImageError" class="text-xs text-red-500 text-center mt-1 hidden">Invalid format. Use JPG, PNG, GIF or WebP.</p>
                         </div>
                         <!-- Basic Info Header -->
                         <div class="flex-1 pt-2">
@@ -272,7 +273,7 @@
             <!-- Form Footer -->
             <div class="card-body pt-0">
                 <div class="flex items-center justify-start gap-3 pt-6 border-t border-slate-200">
-                    <button type="submit" class="btn btn-primary gap-2">
+                    <button type="submit" id="memberSubmitBtn" class="btn btn-primary gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                         Save Changes
                     </button>
@@ -288,13 +289,42 @@
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-// Profile image preview
+// Profile image preview with validation
+const allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
 function previewImage(input) {
     const preview = document.getElementById('profilePreview');
     const container = document.getElementById('profilePreviewContainer');
     const defaultIcon = container.querySelector('svg');
+    const errorEl = document.getElementById('profileImageError');
+    const submitBtn = document.getElementById('memberSubmitBtn');
 
     if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const extension = file.name.split('.').pop().toLowerCase();
+
+        // Validate file type
+        if (!allowedImageTypes.includes(file.type) && !allowedExtensions.includes(extension)) {
+            // Show error
+            errorEl.classList.remove('hidden');
+            submitBtn.disabled = true;
+            submitBtn.classList.add('btn-disabled');
+            // Reset file input
+            input.value = '';
+            // Reset preview
+            preview.classList.add('hidden');
+            if (defaultIcon) {
+                defaultIcon.classList.remove('hidden');
+            }
+            return;
+        }
+
+        // Hide error if valid
+        errorEl.classList.add('hidden');
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('btn-disabled');
+
         const reader = new FileReader();
         reader.onload = function(e) {
             preview.src = e.target.result;
@@ -303,7 +333,7 @@ function previewImage(input) {
                 defaultIcon.classList.add('hidden');
             }
         };
-        reader.readAsDataURL(input.files[0]);
+        reader.readAsDataURL(file);
     }
 }
 

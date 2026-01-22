@@ -6,13 +6,15 @@ use App\Http\Resources\V1\FamilyCircleResource;
 use App\Http\Resources\V1\FamilyResourceResource;
 use App\Http\Resources\V1\LegalDocumentResource;
 use App\Models\FamilyCircle;
+use App\Models\FamilyMember;
 use App\Models\FamilyResource;
 use App\Models\LegalDocument;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 /**
- * API Controller for Family Circles (read-only for Phase 1).
+ * API Controller for Family Circles.
  */
 class FamilyCircleController extends Controller
 {
@@ -32,6 +34,72 @@ class FamilyCircleController extends Controller
             'family_circles' => FamilyCircleResource::collection($circles),
             'total' => $circles->count(),
         ]);
+    }
+
+    /**
+     * Create a new family circle.
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string|max:1000',
+            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'include_me' => 'nullable|boolean',
+        ]);
+
+        $user = $request->user();
+
+        // Ensure user has a tenant
+        if (!$user->tenant_id) {
+            $tenant = \App\Models\Tenant::create([
+                'name' => $user->name . "'s Family",
+                'is_active' => true,
+            ]);
+            $user->tenant_id = $tenant->id;
+            $user->save();
+        }
+
+        $data = [
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+            'created_by' => $user->id,
+            'tenant_id' => $user->tenant_id,
+        ];
+
+        if ($request->hasFile('cover_image')) {
+            $path = $request->file('cover_image')->store('family-ledger/circles/covers', 'do_spaces');
+            $data['cover_image'] = $path;
+        }
+
+        $circle = FamilyCircle::create($data);
+
+        // Add creator as a family member if "Include Me" is checked
+        if ($request->boolean('include_me')) {
+            $nameParts = explode(' ', $user->name, 2);
+            $firstName = $nameParts[0];
+            $lastName = $nameParts[1] ?? '';
+
+            FamilyMember::create([
+                'tenant_id' => $user->tenant_id,
+                'family_circle_id' => $circle->id,
+                'created_by' => $user->id,
+                'linked_user_id' => $user->id,
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'email' => $user->email,
+                'relationship' => 'self',
+            ]);
+        }
+
+        // Reload with relationships
+        $circle->load(['familyMembers']);
+        $circle->loadCount('familyMembers');
+
+        return $this->success([
+            'family_circle' => new FamilyCircleResource($circle),
+            'message' => 'Family circle created successfully',
+        ], 201);
     }
 
     /**

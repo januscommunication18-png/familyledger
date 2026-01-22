@@ -225,8 +225,9 @@
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
                                         Choose Photo
                                     </label>
-                                    <input type="file" name="cover_image" id="create_cover_image" accept="image/*" class="hidden" onchange="previewCreateCircleImage(this)">
-                                    <p class="text-xs text-slate-500 mt-1">JPG, PNG or GIF. Max 2MB.</p>
+                                    <input type="file" name="cover_image" id="create_cover_image" accept=".jpg,.jpeg,.png,.gif,.webp" class="hidden" onchange="previewCreateCircleImage(this)">
+                                    <p class="text-xs text-slate-500 mt-1">JPG, PNG, GIF or WebP. Max 2MB.</p>
+                                    <p id="createCircleImageError" class="text-xs text-red-500 mt-1 hidden">Please upload a valid image (JPG, PNG, GIF, or WebP).</p>
                                 </div>
                             </div>
                         </div>
@@ -254,7 +255,7 @@
                     </div>
                     <!-- Footer -->
                     <div style="display: flex; justify-content: flex-start; gap: 0.75rem; border-top: 1px solid #f1f5f9; padding: 1rem 1.5rem; background: #f8fafc; border-radius: 0 0 1rem 1rem;">
-                        <button type="submit" style="padding: 0.5rem 1.25rem; font-size: 0.875rem; font-weight: 500; color: white; background: #7c3aed; border: none; border-radius: 0.5rem; cursor: pointer;">Create Family Circle</button>
+                        <button type="submit" id="createCircleSubmitBtn" style="padding: 0.5rem 1.25rem; font-size: 0.875rem; font-weight: 500; color: white; background: #7c3aed; border: none; border-radius: 0.5rem; cursor: pointer;">Create Family Circle</button>
                         <button type="button" onclick="closeCreateModal()" style="padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: #334155; background: white; border: 1px solid #e2e8f0; border-radius: 0.5rem; cursor: pointer;">Cancel</button>
                     </div>
                 </form>
@@ -264,12 +265,43 @@
 </div>
 
 <script>
+const allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
 function previewCreateCircleImage(input) {
     const preview = document.getElementById('createCircleImageImg');
     const container = document.getElementById('createCircleImagePreview');
     const defaultIcon = container.querySelector('svg');
+    const errorEl = document.getElementById('createCircleImageError');
+    const submitBtn = document.getElementById('createCircleSubmitBtn');
 
     if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const extension = file.name.split('.').pop().toLowerCase();
+
+        // Validate file type
+        if (!allowedImageTypes.includes(file.type) && !allowedExtensions.includes(extension)) {
+            // Show error
+            errorEl.classList.remove('hidden');
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.5';
+            submitBtn.style.cursor = 'not-allowed';
+            // Reset file input
+            input.value = '';
+            // Reset preview
+            preview.classList.add('hidden');
+            if (defaultIcon) {
+                defaultIcon.classList.remove('hidden');
+            }
+            return;
+        }
+
+        // Hide error if valid
+        errorEl.classList.add('hidden');
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
+        submitBtn.style.cursor = 'pointer';
+
         const reader = new FileReader();
         reader.onload = function(e) {
             preview.src = e.target.result;
@@ -278,7 +310,7 @@ function previewCreateCircleImage(input) {
                 defaultIcon.classList.add('hidden');
             }
         };
-        reader.readAsDataURL(input.files[0]);
+        reader.readAsDataURL(file);
     }
 }
 

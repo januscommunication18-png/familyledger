@@ -5,18 +5,102 @@ namespace App\Http\Controllers\Api\V1\Auth;
 use App\Http\Controllers\Api\V1\Controller;
 use App\Http\Resources\V1\UserResource;
 use App\Http\Resources\V1\TenantResource;
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password;
 
 /**
  * API Controller for authenticated user management.
  */
 class AuthController extends Controller
 {
+    /**
+     * Register a new user.
+     */
+    public function register(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'name' => ['required', 'string', 'max:255', 'regex:/^[a-zA-Z\s]+$/'],
+                'email' => 'required|email|max:255',
+                'password' => ['required', 'confirmed', Password::min(12)
+                    ->mixedCase()
+                    ->numbers()
+                    ->symbols()
+                ],
+                'device_name' => 'required|string|max:255',
+            ], [
+                'name.regex' => 'Please enter a valid name (e.g., John Snow). Only letters and spaces are allowed.',
+            ]);
+
+            $email = strtolower(trim($request->email));
+
+            // Check if email already exists
+            $emailHash = hash('sha256', $email);
+            if (User::where('email_hash', $emailHash)->exists()) {
+                return $this->error('This email is already registered.', 422);
+            }
+
+            // Rate limiting
+            $key = 'api_register:' . $request->ip();
+            if (RateLimiter::tooManyAttempts($key, 5)) {
+                $seconds = RateLimiter::availableIn($key);
+                return $this->error("Too many registration attempts. Please try again in {$seconds} seconds.", 429);
+            }
+
+            RateLimiter::hit($key, 3600);
+
+            $user = DB::transaction(function () use ($request, $email) {
+                // Create tenant
+                $tenant = Tenant::create([
+                    'name' => explode(' ', $request->name)[0] . "'s Family",
+                    'slug' => Str::slug($email) . '-' . Str::random(6),
+                ]);
+
+                // Create user
+                return User::create([
+                    'tenant_id' => $tenant->id,
+                    'name' => $request->name,
+                    'email' => $email,
+                    'password' => $request->password,
+                    'auth_provider' => User::PROVIDER_EMAIL,
+                    'role' => User::ROLE_PARENT,
+                    'email_verified_at' => now(), // Auto-verify for mobile
+                ]);
+            });
+
+            // Create API token
+            $token = $user->createToken($request->device_name)->plainTextToken;
+
+            $user->recordLogin();
+
+            Log::info('API: New user registered', ['user_id' => $user->id]);
+
+            return $this->success([
+                'token' => $token,
+                'token_type' => 'Bearer',
+                'is_new_user' => true,
+                'requires_onboarding' => true,
+                'user' => new UserResource($user),
+                'tenant' => new TenantResource($user->tenant),
+            ], 'Registration successful', 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $errors = $e->errors();
+            $firstError = collect($errors)->flatten()->first();
+            return $this->error($firstError, 422);
+        } catch (\Exception $e) {
+            Log::error('API: Registration failed', ['error' => $e->getMessage()]);
+            return $this->error('Registration failed. Please try again.', 500);
+        }
+    }
+
     /**
      * Login with email and password.
      */

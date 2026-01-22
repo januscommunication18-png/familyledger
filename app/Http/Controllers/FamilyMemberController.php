@@ -79,7 +79,9 @@ class FamilyMemberController extends Controller
             'is_minor' => 'boolean',
             'co_parenting_enabled' => 'boolean',
             'immigration_status' => 'nullable|string|in:' . implode(',', array_keys(FamilyMember::IMMIGRATION_STATUSES)),
-            'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+        ], [
+            'profile_image.mimes' => 'Please upload a valid image (JPG, PNG, GIF, or WebP).',
         ]);
 
         $data = [
@@ -269,8 +271,10 @@ class FamilyMemberController extends Controller
             'is_minor' => 'boolean',
             'co_parenting_enabled' => 'boolean',
             'immigration_status' => 'nullable|string|in:' . implode(',', array_keys(FamilyMember::IMMIGRATION_STATUSES)),
-            'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'profile_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'family_circle_id' => 'nullable|exists:family_circles,id',
+        ], [
+            'profile_image.mimes' => 'Please upload a valid image (JPG, PNG, GIF, or WebP).',
         ]);
 
         // Check if moving to a different circle
