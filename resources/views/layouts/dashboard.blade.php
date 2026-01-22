@@ -359,13 +359,13 @@
 
                     <!-- Right Side Actions -->
                     <div class="flex items-center gap-2 flex-shrink-0">
-                        <!-- Theme Toggle -->
+                        <!-- Theme Toggle (Hidden - Light mode only for now) -->
+                        {{--
                         <button id="theme-toggle" class="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800" title="Toggle theme">
-                            <!-- Sun icon (shown in dark mode) -->
                             <svg id="theme-icon-light" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
-                            <!-- Moon icon (shown in light mode) -->
                             <svg id="theme-icon-dark" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
                         </button>
+                        --}}
 
                         <!-- Help -->
                         <button class="w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800">
@@ -506,47 +506,10 @@
             }
         });
 
-        // Theme toggle functionality
+        // Theme - Force light mode only for now
         function initTheme() {
-            const themeToggle = document.getElementById('theme-toggle');
-            const lightIcon = document.getElementById('theme-icon-light');
-            const darkIcon = document.getElementById('theme-icon-dark');
             const html = document.documentElement;
-
-            // Get saved theme or detect system preference
-            const savedTheme = localStorage.getItem('theme');
-            const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            const currentTheme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
-
-            // Apply theme
-            function setTheme(theme) {
-                html.setAttribute('data-theme', theme);
-                localStorage.setItem('theme', theme);
-
-                if (theme === 'dark') {
-                    lightIcon.classList.remove('hidden');
-                    darkIcon.classList.add('hidden');
-                } else {
-                    lightIcon.classList.add('hidden');
-                    darkIcon.classList.remove('hidden');
-                }
-            }
-
-            // Initialize
-            setTheme(currentTheme);
-
-            // Toggle on click
-            themeToggle.addEventListener('click', function() {
-                const newTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-                setTheme(newTheme);
-            });
-
-            // Listen for system preference changes
-            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
-                if (!localStorage.getItem('theme')) {
-                    setTheme(e.matches ? 'dark' : 'light');
-                }
-            });
+            html.setAttribute('data-theme', 'light');
         }
 
         document.addEventListener('DOMContentLoaded', initTheme);
