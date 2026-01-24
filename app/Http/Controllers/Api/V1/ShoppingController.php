@@ -157,7 +157,7 @@ class ShoppingController extends Controller
         $list = ShoppingList::create([
             'tenant_id' => $user->tenant_id,
             'name' => $validated['name'],
-            'store_name' => $validated['store_name'] ?? null,
+            'store' => $validated['store_name'] ?? null,  // Map store_name to store column
             'color' => $validated['color'] ?? 'emerald',
             'icon' => $validated['icon'] ?? '🛒',
             'is_default' => false,
@@ -167,7 +167,7 @@ class ShoppingController extends Controller
             'list' => [
                 'id' => $list->id,
                 'name' => $list->name,
-                'store_name' => $list->store_name,
+                'store_name' => $list->store,  // Map store column to store_name for API response
                 'color' => $list->color,
                 'icon' => $list->icon,
                 'is_default' => $list->is_default,

@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\V1\ResourceController;
 use App\Http\Controllers\Api\V1\BudgetController;
 use App\Http\Controllers\Api\V1\CoparentingController;
 use App\Http\Controllers\Api\V1\LegalDocumentApiController;
+use App\Http\Controllers\Api\V1\SyncController;
 
 /*
 |--------------------------------------------------------------------------
@@ -252,6 +253,14 @@ Route::prefix('v1')->group(function () {
             Route::post('/conversations', [CoparentingController::class, 'createConversation']);
             Route::get('/conversations/{conversation}', [CoparentingController::class, 'showConversation']);
             Route::post('/conversations/{conversation}/messages', [CoparentingController::class, 'sendMessage']);
+        });
+
+        // Sync (Offline Mode)
+        Route::prefix('sync')->group(function () {
+            Route::get('/pull', [SyncController::class, 'pull']);
+            Route::post('/push', [SyncController::class, 'push']);
+            Route::post('/resolve', [SyncController::class, 'resolve']);
+            Route::get('/conflicts', [SyncController::class, 'conflicts']);
         });
     });
 });

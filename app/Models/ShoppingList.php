@@ -15,11 +15,14 @@ class ShoppingList extends Model
 
     protected $fillable = [
         'tenant_id',
+        'user_id',
         'name',
         'store',
         'color',
         'is_default',
         'recurring',
+        'version',
+        'last_modified_device',
     ];
 
     protected $casts = [
