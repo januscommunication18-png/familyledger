@@ -36,7 +36,21 @@ class FamilyMemberResource extends JsonResource
             // Include related data when loaded
             'documents_count' => $this->whenCounted('documents'),
             'medical_info' => $this->whenLoaded('medicalInfo'),
-            'contacts' => $this->whenLoaded('contacts'),
+            'contacts' => $this->when(
+                $this->relationLoaded('contacts'),
+                fn () => $this->contacts->map(fn ($c) => [
+                    'id' => $c->id,
+                    'name' => $c->name,
+                    'email' => $c->email,
+                    'phone' => $c->phone,
+                    'relationship' => $c->relationship,
+                    'relationship_name' => $c->relationship_name,
+                    'address' => $c->address,
+                    'notes' => $c->notes,
+                    'is_emergency_contact' => $c->is_emergency_contact,
+                    'priority' => $c->priority,
+                ])
+            ),
             'allergies' => $this->when(
                 $this->relationLoaded('allergies'),
                 fn () => $this->allergies->map(fn ($a) => [
@@ -92,11 +106,16 @@ class FamilyMemberResource extends JsonResource
                 $this->relationLoaded('vaccinations'),
                 fn () => $this->vaccinations->map(fn ($v) => [
                     'id' => $v->id,
+                    'vaccine_type' => $v->vaccine_type,
                     'vaccine_name' => $v->vaccine_name,
-                    'date_administered' => $v->date_administered?->format('Y-m-d'),
+                    'custom_vaccine_name' => $v->custom_vaccine_name,
+                    'vaccination_date' => $v->vaccination_date?->format('Y-m-d'),
+                    'next_vaccination_date' => $v->next_vaccination_date?->format('Y-m-d'),
                     'administered_by' => $v->administered_by,
-                    'next_due_date' => $v->next_due_date?->format('Y-m-d'),
+                    'lot_number' => $v->lot_number,
                     'notes' => $v->notes,
+                    'is_due' => $v->is_due,
+                    'is_coming_soon' => $v->is_coming_soon,
                 ])
             ),
             // Include specific document types when documents are loaded
@@ -140,6 +159,8 @@ class FamilyMemberResource extends JsonResource
             'is_expired' => $document->isExpired(),
             'days_until_expiry' => $document->expiry_date ? now()->diffInDays($document->expiry_date, false) : null,
             'status' => $document->isExpired() ? 'expired' : 'valid',
+            'front_image_url' => $document->front_image ? Storage::disk('do_spaces')->url($document->front_image) : null,
+            'back_image_url' => $document->back_image ? Storage::disk('do_spaces')->url($document->back_image) : null,
         ];
     }
 

@@ -656,13 +656,19 @@ class ExpensesController extends Controller
             'payment_note' => 'nullable|string|max:500',
         ]);
 
-        // Handle receipt upload
+        // Handle receipt upload to Digital Ocean Spaces
         $receiptPath = null;
         $receiptOriginalFilename = null;
         if ($request->hasFile('receipt')) {
             $file = $request->file('receipt');
-            $receiptPath = $file->store('receipts/' . Auth::user()->tenant_id, 'public');
             $receiptOriginalFilename = $file->getClientOriginalName();
+            $filename = 'receipt_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            $receiptPath = 'receipts/' . Auth::user()->tenant_id . '/' . $filename;
+
+            // Store to Digital Ocean Spaces with public access
+            $disk = \Storage::disk('do_spaces');
+            $disk->put($receiptPath, file_get_contents($file->getRealPath()));
+            $disk->setVisibility($receiptPath, 'public');
         }
 
         $transaction = BudgetTransaction::create([
@@ -768,14 +774,21 @@ class ExpensesController extends Controller
             'shared_for_child_id' => $request->boolean('is_shared') ? ($validated['shared_for_child_id'] ?? null) : null,
         ];
 
-        // Handle receipt upload
+        // Handle receipt upload to Digital Ocean Spaces
         if ($request->hasFile('receipt')) {
             // Delete old receipt if exists
             if ($transaction->receipt_path) {
-                Storage::disk('public')->delete($transaction->receipt_path);
+                \Storage::disk('do_spaces')->delete($transaction->receipt_path);
             }
             $file = $request->file('receipt');
-            $updateData['receipt_path'] = $file->store('receipts/' . Auth::user()->tenant_id, 'public');
+            $filename = 'receipt_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            $receiptPath = 'receipts/' . Auth::user()->tenant_id . '/' . $filename;
+
+            $disk = \Storage::disk('do_spaces');
+            $disk->put($receiptPath, file_get_contents($file->getRealPath()));
+            $disk->setVisibility($receiptPath, 'public');
+
+            $updateData['receipt_path'] = $receiptPath;
             $updateData['receipt_original_filename'] = $file->getClientOriginalName();
         }
 
@@ -816,7 +829,7 @@ class ExpensesController extends Controller
         $this->authorizeBudgetAccess($transaction->budget, 'edit');
 
         if ($transaction->receipt_path) {
-            Storage::disk('public')->delete($transaction->receipt_path);
+            \Storage::disk('do_spaces')->delete($transaction->receipt_path);
             $transaction->update([
                 'receipt_path' => null,
                 'receipt_original_filename' => null,

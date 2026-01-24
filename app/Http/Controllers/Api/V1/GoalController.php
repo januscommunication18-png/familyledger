@@ -18,7 +18,9 @@ class GoalController extends Controller
         $user = $request->user();
         $tenant = $user->tenant;
 
+        // Filter goals by tenant and created by the logged-in user
         $rawGoals = Goal::where('tenant_id', $tenant->id)
+            ->where('created_by', $user->id)
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -44,9 +46,10 @@ class GoalController extends Controller
             ];
         });
 
-        // Get all tasks for the combined view
+        // Get all tasks for the combined view (filtered by user)
         $rawTasks = TodoItem::where('tenant_id', $tenant->id)
-            ->orderByRaw('CASE WHEN status IN ("pending", "in_progress") THEN 0 ELSE 1 END')
+            ->where('created_by', $user->id)
+            ->orderByRaw('CASE WHEN status IN ("open", "in_progress") THEN 0 ELSE 1 END')
             ->orderByRaw('due_date IS NULL')
             ->orderBy('due_date', 'asc')
             ->orderBy('created_at', 'desc')
@@ -70,7 +73,7 @@ class GoalController extends Controller
         });
 
         $activeGoals = $rawGoals->where('status', 'active')->count();
-        $openTasks = $rawTasks->whereIn('status', ['pending', 'in_progress'])->count();
+        $openTasks = $rawTasks->whereIn('status', ['open', 'in_progress'])->count();
 
         return $this->success([
             'goals' => $goals,
@@ -106,10 +109,17 @@ class GoalController extends Controller
                     'title' => $task->title,
                     'description' => $task->description,
                     'due_date' => $task->due_date?->format('Y-m-d'),
+                    'due_time' => $task->due_time,
                     'priority' => $task->priority ?? 'medium',
                     'status' => $task->status,
+                    'is_recurring' => $task->is_recurring,
+                    'count_toward_goal' => $task->count_toward_goal ?? false,
                 ];
             });
+
+        // Count task stats
+        $activeTasks = $tasks->whereIn('status', ['open', 'in_progress'])->count();
+        $completedTasks = $tasks->where('status', 'completed')->count();
 
         return $this->success([
             'goal' => [
@@ -121,6 +131,29 @@ class GoalController extends Controller
                 'status' => $goal->status,
                 'priority' => $goal->priority ?? 'medium',
                 'category' => $goal->category,
+                'category_emoji' => $goal->category_emoji ?? '🎯',
+                'category_color' => $goal->category_color ?? 'blue',
+                // Goal type info
+                'goal_type' => $goal->goal_type ?? 'one_time',
+                'habit_frequency' => $goal->habit_frequency,
+                'milestone_target' => $goal->milestone_target,
+                'milestone_current' => $goal->milestone_current ?? 0,
+                'milestone_unit' => $goal->milestone_unit,
+                'milestone_progress' => $goal->milestone_target ? round(($goal->milestone_current ?? 0) / $goal->milestone_target * 100, 1) : 0,
+                // Assignment
+                'assignment_type' => $goal->assignment_type ?? 'family',
+                'is_kid_goal' => $goal->is_kid_goal ?? false,
+                // Check-in & Rewards
+                'check_in_frequency' => $goal->check_in_frequency,
+                'rewards_enabled' => $goal->rewards_enabled ?? false,
+                'reward_type' => $goal->reward_type,
+                'reward_custom' => $goal->reward_custom,
+                'reward_claimed' => $goal->reward_claimed ?? false,
+                // Stats
+                'active_tasks_count' => $activeTasks,
+                'completed_tasks_count' => $completedTasks,
+                'total_tasks_count' => $tasks->count(),
+                // Dates
                 'created_at' => $goal->created_at?->format('M d, Y'),
                 'updated_at' => $goal->updated_at?->format('M d, Y'),
             ],
@@ -319,7 +352,7 @@ class GoalController extends Controller
             return $this->forbidden();
         }
 
-        $newStatus = $task->status === 'completed' ? 'pending' : 'completed';
+        $newStatus = $task->status === 'completed' ? 'open' : 'completed';
         $task->update(['status' => $newStatus]);
 
         return $this->success([
@@ -336,7 +369,9 @@ class GoalController extends Controller
         $user = $request->user();
         $tenant = $user->tenant;
 
+        // Filter tasks by tenant and created by the logged-in user
         $rawTasks = TodoItem::where('tenant_id', $tenant->id)
+            ->where('created_by', $user->id)
             ->with(['todoList', 'assignedTo'])
             ->orderBy('due_date', 'asc')
             ->get();
@@ -361,10 +396,10 @@ class GoalController extends Controller
             ];
         });
 
-        $pendingTasks = $rawTasks->whereIn('status', ['pending', 'in_progress'])->count();
+        $pendingTasks = $rawTasks->whereIn('status', ['open', 'in_progress'])->count();
         $completedTasks = $rawTasks->where('status', 'completed')->count();
         $overdueTasks = $rawTasks->filter(function ($task) {
-            return $task->due_date && $task->due_date < now() && in_array($task->status, ['pending', 'in_progress']);
+            return $task->due_date && $task->due_date < now() && in_array($task->status, ['open', 'in_progress']);
         })->count();
 
         return $this->success([
@@ -403,12 +438,12 @@ class GoalController extends Controller
             'created_by' => $user->id,
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
-            'category' => $validated['category'] ?? 'other',
+            'category' => $validated['category'] ?? 'home_chores',
             'due_date' => $validated['due_date'] ?? null,
             'due_time' => $validated['due_time'] ?? null,
             'priority' => $validated['priority'] ?? 'medium',
             'goal_id' => $validated['goal_id'] ?? null,
-            'status' => 'pending',
+            'status' => 'open',
             'is_recurring' => $validated['is_recurring'] ?? false,
         ];
 

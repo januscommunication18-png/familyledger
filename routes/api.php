@@ -96,9 +96,59 @@ Route::prefix('v1')->group(function () {
         // Family Members (nested under family circles)
         Route::prefix('family-circles/{familyCircle}')->group(function () {
             Route::get('/members', [FamilyMemberController::class, 'index']);
+            Route::post('/members', [FamilyMemberController::class, 'store']);
             Route::get('/members/{member}', [FamilyMemberController::class, 'show']);
+            Route::put('/members/{member}', [FamilyMemberController::class, 'update']);
+            Route::delete('/members/{member}', [FamilyMemberController::class, 'destroy']);
             Route::get('/resources', [FamilyCircleController::class, 'resources']);
             Route::get('/legal-documents', [FamilyCircleController::class, 'legalDocuments']);
+        });
+
+        // Family Member Lookup Data
+        Route::get('/family-members', [FamilyMemberController::class, 'allMembers']);
+        Route::get('/family-members/relationships', [FamilyMemberController::class, 'relationships']);
+        Route::get('/family-members/immigration-statuses', [FamilyMemberController::class, 'immigrationStatuses']);
+        Route::get('/family-members/blood-types', [FamilyMemberController::class, 'bloodTypes']);
+
+        // Member Documents (nested under family-circles)
+        Route::prefix('family-circles/{familyCircle}/members/{member}')->group(function () {
+            // Documents
+            Route::post('/documents', [FamilyMemberController::class, 'storeDocument']);
+            Route::put('/documents/{document}', [FamilyMemberController::class, 'updateDocument']);
+            Route::delete('/documents/{document}', [FamilyMemberController::class, 'deleteDocument']);
+
+            // Medical Info
+            Route::put('/medical-info', [FamilyMemberController::class, 'updateMedicalInfo']);
+
+            // Allergies
+            Route::post('/allergies', [FamilyMemberController::class, 'storeAllergy']);
+            Route::put('/allergies/{allergy}', [FamilyMemberController::class, 'updateAllergy']);
+            Route::delete('/allergies/{allergy}', [FamilyMemberController::class, 'deleteAllergy']);
+
+            // Medications
+            Route::post('/medications', [FamilyMemberController::class, 'storeMedication']);
+            Route::put('/medications/{medication}', [FamilyMemberController::class, 'updateMedication']);
+            Route::delete('/medications/{medication}', [FamilyMemberController::class, 'deleteMedication']);
+
+            // Medical Conditions
+            Route::post('/conditions', [FamilyMemberController::class, 'storeCondition']);
+            Route::put('/conditions/{condition}', [FamilyMemberController::class, 'updateCondition']);
+            Route::delete('/conditions/{condition}', [FamilyMemberController::class, 'deleteCondition']);
+
+            // Healthcare Providers
+            Route::post('/providers', [FamilyMemberController::class, 'storeProvider']);
+            Route::put('/providers/{provider}', [FamilyMemberController::class, 'updateProvider']);
+            Route::delete('/providers/{provider}', [FamilyMemberController::class, 'deleteProvider']);
+
+            // Vaccinations
+            Route::post('/vaccinations', [FamilyMemberController::class, 'storeVaccination']);
+            Route::put('/vaccinations/{vaccination}', [FamilyMemberController::class, 'updateVaccination']);
+            Route::delete('/vaccinations/{vaccination}', [FamilyMemberController::class, 'deleteVaccination']);
+
+            // Emergency Contacts
+            Route::post('/emergency-contacts', [FamilyMemberController::class, 'storeEmergencyContact']);
+            Route::put('/emergency-contacts/{contact}', [FamilyMemberController::class, 'updateEmergencyContact']);
+            Route::delete('/emergency-contacts/{contact}', [FamilyMemberController::class, 'deleteEmergencyContact']);
         });
 
         // Assets
@@ -110,8 +160,10 @@ Route::prefix('v1')->group(function () {
         // Documents (Insurance, Tax Returns)
         Route::get('/documents', [DocumentController::class, 'index']);
         Route::get('/documents/insurance', [DocumentController::class, 'insurancePolicies']);
+        Route::post('/documents/insurance', [DocumentController::class, 'storeInsurancePolicy']);
         Route::get('/documents/insurance/{policy}', [DocumentController::class, 'showInsurancePolicy']);
         Route::get('/documents/tax-returns', [DocumentController::class, 'taxReturns']);
+        Route::post('/documents/tax-returns', [DocumentController::class, 'storeTaxReturn']);
         Route::get('/documents/tax-returns/{taxReturn}', [DocumentController::class, 'showTaxReturn']);
 
         // Expenses
@@ -123,6 +175,7 @@ Route::prefix('v1')->group(function () {
 
         // Budgets
         Route::get('/budgets', [BudgetController::class, 'index']);
+        Route::post('/budgets', [BudgetController::class, 'store']);
         Route::get('/budgets/{budget}', [BudgetController::class, 'show']);
 
         // Goals & Tasks

@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Models\Budget;
+use App\Models\BudgetCategory;
+use App\Models\BudgetGoal;
 use App\Models\BudgetTransaction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class BudgetController extends Controller
 {
@@ -185,5 +189,78 @@ class BudgetController extends Controller
                 'total_categories' => $categories->count(),
             ],
         ]);
+    }
+
+    /**
+     * Store a new budget.
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:100',
+            'type' => 'required|in:envelope,traditional',
+            'period' => 'required|in:weekly,biweekly,monthly,yearly',
+            'total_amount' => 'required|numeric|min:0',
+            'start_date' => 'required|date',
+            'categories' => 'nullable|array',
+            'categories.*.name' => 'required_with:categories|string|max:50',
+            'categories.*.allocated_amount' => 'required_with:categories|numeric|min:0',
+            'categories.*.icon' => 'nullable|string|max:10',
+            'categories.*.color' => 'nullable|string|max:20',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationError($validator->errors());
+        }
+
+        DB::beginTransaction();
+
+        try {
+            // Create budget
+            $budget = Budget::create([
+                'tenant_id' => $user->tenant_id,
+                'created_by' => $user->id,
+                'name' => $request->name,
+                'type' => $request->type,
+                'total_amount' => $request->total_amount,
+                'period' => $request->period,
+                'start_date' => $request->start_date,
+                'is_active' => true,
+            ]);
+
+            // Create categories for envelope budgets
+            if ($request->type === 'envelope' && !empty($request->categories)) {
+                $sortOrder = 0;
+                foreach ($request->categories as $categoryData) {
+                    BudgetCategory::create([
+                        'budget_id' => $budget->id,
+                        'name' => $categoryData['name'],
+                        'icon' => $categoryData['icon'] ?? null,
+                        'color' => $categoryData['color'] ?? null,
+                        'allocated_amount' => $categoryData['allocated_amount'],
+                        'sort_order' => $sortOrder++,
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return $this->success([
+                'budget' => [
+                    'id' => $budget->id,
+                    'name' => $budget->name,
+                    'type' => $budget->type,
+                    'period' => $budget->period,
+                    'total_amount' => $budget->total_amount,
+                    'start_date' => $budget->start_date?->format('Y-m-d'),
+                ],
+                'message' => 'Budget created successfully!',
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->error('Failed to create budget: ' . $e->getMessage(), 500);
+        }
     }
 }

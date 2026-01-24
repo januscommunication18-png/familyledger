@@ -45,6 +45,7 @@ class FamilyCircleController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
             'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'photo' => 'nullable|string', // Base64 encoded image from mobile
             'include_me' => 'nullable|boolean',
         ]);
 
@@ -67,9 +68,35 @@ class FamilyCircleController extends Controller
             'tenant_id' => $user->tenant_id,
         ];
 
+        // Handle file upload (web)
         if ($request->hasFile('cover_image')) {
             $path = $request->file('cover_image')->store('family-ledger/circles/covers', 'do_spaces');
+            Storage::disk('do_spaces')->setVisibility($path, 'public');
             $data['cover_image'] = $path;
+        }
+        // Handle base64 image (mobile)
+        elseif (!empty($validated['photo'])) {
+            $imageData = $validated['photo'];
+
+            // Remove data URL prefix if present
+            if (preg_match('/^data:image\/(\w+);base64,/', $imageData, $matches)) {
+                $extension = $matches[1];
+                $imageData = substr($imageData, strpos($imageData, ',') + 1);
+            } else {
+                $extension = 'jpg';
+            }
+
+            $decodedImage = base64_decode($imageData);
+            if ($decodedImage !== false) {
+                $filename = 'circle_' . time() . '_' . uniqid() . '.' . $extension;
+                $path = 'family-ledger/circles/covers/' . $filename;
+
+                $disk = Storage::disk('do_spaces');
+                $disk->put($path, $decodedImage);
+                $disk->setVisibility($path, 'public');
+
+                $data['cover_image'] = $path;
+            }
         }
 
         $circle = FamilyCircle::create($data);
@@ -89,6 +116,7 @@ class FamilyCircleController extends Controller
                 'last_name' => $lastName,
                 'email' => $user->email,
                 'relationship' => 'self',
+                'date_of_birth' => $user->date_of_birth ?? now()->subYears(30)->format('Y-m-d'), // Default to 30 years ago if unknown
             ]);
         }
 

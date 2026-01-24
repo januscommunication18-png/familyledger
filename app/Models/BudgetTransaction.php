@@ -41,6 +41,10 @@ class BudgetTransaction extends Model
         'is_shared' => 'boolean',
     ];
 
+    protected $appends = [
+        'receipt_url',
+    ];
+
     // Transaction types
     public const TYPE_EXPENSE = 'expense';
     public const TYPE_INCOME = 'income';
@@ -324,7 +328,7 @@ class BudgetTransaction extends Model
             return null;
         }
 
-        return \Storage::url($this->receipt_path);
+        return \Storage::disk('do_spaces')->url($this->receipt_path);
     }
 
     /**
