@@ -453,7 +453,72 @@
     @endif
 
     <!-- Additional Info Section -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        <!-- Education -->
+        @if($access->canView('school'))
+        <a href="{{ route('family-circle.member.education-info', [$circle, $member]) }}" class="card bg-base-100 shadow-sm hover:shadow-md transition-all group cursor-pointer">
+            <div class="card-body p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                        </div>
+                        <h3 class="font-bold text-slate-800 text-sm">Education</h3>
+                    </div>
+                    @if($access->canCreate('school'))
+                        <span class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                        </span>
+                    @elseif($access->canEdit('school'))
+                        <span class="badge badge-success badge-xs">Can Edit</span>
+                    @elseif($access->isCollaborator)
+                        <span class="badge badge-ghost badge-xs">View Only</span>
+                    @endif
+                </div>
+
+                @if($member->schoolRecords && $member->schoolRecords->count() > 0)
+                    <div class="space-y-2 text-xs">
+                        @foreach($member->schoolRecords->take(3) as $record)
+                            <div class="flex items-center justify-between gap-2 {{ !$loop->first ? 'pt-2 border-t border-slate-100' : '' }}">
+                                <div class="min-w-0 flex-1">
+                                    <p class="font-medium text-slate-700 truncate">{{ $record->school_name }}</p>
+                                    <div class="flex items-center gap-1 mt-0.5">
+                                        @if($record->grade_level_name)
+                                            <span class="text-slate-400">{{ $record->grade_level_name }}</span>
+                                        @endif
+                                        @if($record->school_year)
+                                            <span class="text-slate-300">&bull;</span>
+                                            <span class="text-slate-400">{{ $record->school_year }}</span>
+                                        @endif
+                                    </div>
+                                </div>
+                                @if($record->is_current)
+                                    <span class="badge badge-primary badge-xs flex-shrink-0">Current</span>
+                                @endif
+                            </div>
+                        @endforeach
+                        @if($member->schoolRecords->count() > 3)
+                            <div class="text-center pt-1">
+                                <span class="text-slate-400">+{{ $member->schoolRecords->count() - 3 }} more</span>
+                            </div>
+                        @endif
+                    </div>
+                @else
+                    <div class="mt-1">
+                        @if($access->canCreate('school'))
+                            <span class="btn btn-xs btn-primary w-full gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                                Add
+                            </span>
+                        @else
+                            <span class="text-xs text-slate-400">No data</span>
+                        @endif
+                    </div>
+                @endif
+            </div>
+        </a>
+        @endif
+
         <!-- Health & Medical -->
         @if($access->canView('medical'))
         <a href="{{ route('family-circle.member.medical-info', [$circle, $member]) }}" class="card bg-base-100 shadow-sm hover:shadow-md transition-all group cursor-pointer">

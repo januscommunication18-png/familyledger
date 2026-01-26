@@ -172,6 +172,22 @@ Route::middleware(['security.code', 'auth'])->group(function () {
 
         // Emergency Contacts Page
         Route::get('/{familyCircle}/members/{member}/emergency-contacts', [MemberEmergencyContactController::class, 'show'])->name('member.emergency-contacts');
+
+        // Education Info Page
+        Route::get('/{familyCircle}/members/{member}/education', [FamilyMemberController::class, 'educationInfo'])->name('member.education-info');
+
+        // School Records (multiple)
+        Route::get('/{familyCircle}/members/{member}/education/school/create', [FamilyMemberController::class, 'createSchoolRecord'])->name('member.education.school.create');
+        Route::post('/{familyCircle}/members/{member}/education/school', [FamilyMemberController::class, 'storeSchoolRecord'])->name('member.education.school.store');
+        Route::get('/{familyCircle}/members/{member}/education/school/{schoolRecord}', [FamilyMemberController::class, 'showSchoolRecord'])->name('member.education.school.show');
+        Route::get('/{familyCircle}/members/{member}/education/school/{schoolRecord}/edit', [FamilyMemberController::class, 'editSchoolRecord'])->name('member.education.school.edit');
+        Route::put('/{familyCircle}/members/{member}/education/school/{schoolRecord}', [FamilyMemberController::class, 'updateSchoolRecord'])->name('member.education.school.update');
+        Route::delete('/{familyCircle}/members/{member}/education/school/{schoolRecord}', [FamilyMemberController::class, 'destroySchoolRecord'])->name('member.education.school.destroy');
+
+        // Education Documents
+        Route::post('/{familyCircle}/members/{member}/education/documents', [FamilyMemberController::class, 'storeEducationDocument'])->name('member.education.document.store');
+        Route::get('/{familyCircle}/members/{member}/education/documents/{document}/download', [FamilyMemberController::class, 'downloadEducationDocument'])->name('member.education.document.download');
+        Route::delete('/{familyCircle}/members/{member}/education/documents/{document}', [FamilyMemberController::class, 'destroyEducationDocument'])->name('member.education.document.destroy');
     });
 
     // Member Documents (accessible directly via member ID)

@@ -143,11 +143,30 @@ class FamilyMember extends Model
     }
 
     /**
-     * Get the school info for this member.
+     * Get all school records for this member.
+     */
+    public function schoolRecords(): HasMany
+    {
+        return $this->hasMany(MemberSchoolInfo::class)
+            ->orderBy('is_current', 'desc')
+            ->orderBy('school_year', 'desc')
+            ->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * Get the current/latest school info for this member (for backward compatibility).
      */
     public function schoolInfo(): HasOne
     {
-        return $this->hasOne(MemberSchoolInfo::class);
+        return $this->hasOne(MemberSchoolInfo::class)->latestOfMany();
+    }
+
+    /**
+     * Get the education documents for this family member.
+     */
+    public function educationDocuments(): HasMany
+    {
+        return $this->hasMany(MemberEducationDocument::class);
     }
 
     /**

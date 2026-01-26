@@ -115,6 +115,10 @@ class CollaboratorInvite extends Model
         'insurance' => ['label' => 'Insurance Policies', 'group' => 'Financial'],
         'tax_returns' => ['label' => 'Tax Returns', 'group' => 'Financial'],
         'assets' => ['label' => 'Assets', 'group' => 'Financial'],
+        // Legal Documents
+        'legal_documents' => ['label' => 'Legal Documents', 'group' => 'Legal'],
+        // Family Resources
+        'family_resources' => ['label' => 'Family Resources', 'group' => 'Resources'],
     ];
 
     public const PERMISSION_LEVELS = [

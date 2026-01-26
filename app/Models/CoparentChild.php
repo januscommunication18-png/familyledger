@@ -28,10 +28,12 @@ class CoparentChild extends Pivot
         'emergency_contacts' => ['label' => 'Emergency Contacts', 'description' => 'Emergency contact list'],
         'school_info' => ['label' => 'School Info', 'description' => 'School, grades, teachers'],
         'documents' => ['label' => 'Documents', 'description' => "Driver's license, passport, SSN, birth certificate"],
-        'insurance' => ['label' => 'Insurance', 'description' => 'Insurance policies'],
+        'insurance' => ['label' => 'Insurance Policies', 'description' => 'Insurance policies and coverage information'],
         'tax_returns' => ['label' => 'Tax Returns', 'description' => 'Tax return information'],
         'assets' => ['label' => 'Assets', 'description' => 'Asset and property information'],
         'healthcare_providers' => ['label' => 'Healthcare Providers', 'description' => 'Doctors, specialists'],
+        'legal_documents' => ['label' => 'Legal Documents', 'description' => 'Wills, trusts, power of attorney, medical directives'],
+        'family_resources' => ['label' => 'Family Resources', 'description' => 'Emergency plans, rental agreements, home warranty'],
     ];
 
     public const PERMISSION_LEVELS = [

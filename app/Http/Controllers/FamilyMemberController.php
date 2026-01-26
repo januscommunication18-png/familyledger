@@ -8,6 +8,7 @@ use App\Models\FamilyMember;
 use App\Services\CollaboratorPermissionService;
 use App\Models\MemberContact;
 use App\Models\MemberDocument;
+use App\Models\MemberEducationDocument;
 use App\Models\MemberMedicalInfo;
 use App\Models\MemberSchoolInfo;
 use Illuminate\Http\Request;
@@ -641,5 +642,468 @@ class FamilyMemberController extends Controller
         }
 
         return back()->with('success', 'Updated successfully');
+    }
+
+    /**
+     * Display the education info page for a family member.
+     */
+    public function educationInfo(FamilyCircle $familyCircle, FamilyMember $member)
+    {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canView('school')) {
+            abort(403);
+        }
+
+        // For linked members (Self), load data from all linked member records
+        if ($member->linked_user_id) {
+            $linkedMemberIds = FamilyMember::where('linked_user_id', $member->linked_user_id)
+                ->pluck('id')
+                ->toArray();
+
+            $member->setRelation('schoolRecords', MemberSchoolInfo::whereIn('family_member_id', $linkedMemberIds)->orderBy('is_current', 'desc')->orderBy('school_year', 'desc')->orderBy('created_at', 'desc')->get());
+            $member->setRelation('educationDocuments', MemberEducationDocument::whereIn('family_member_id', $linkedMemberIds)->latest()->get());
+        } else {
+            $member->load(['schoolRecords', 'educationDocuments']);
+        }
+
+        return view('family-circle.member.education-info', [
+            'circle' => $familyCircle,
+            'member' => $member,
+            'gradeLevels' => MemberSchoolInfo::GRADE_LEVELS,
+            'documentTypes' => MemberEducationDocument::DOCUMENT_TYPES,
+            'access' => $permissionService->forView(),
+        ]);
+    }
+
+    /**
+     * Show create school record form.
+     */
+    public function createSchoolRecord(FamilyCircle $familyCircle, FamilyMember $member)
+    {
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canEdit('school')) {
+            abort(403);
+        }
+
+        return view('family-circle.member.education.form', [
+            'circle' => $familyCircle,
+            'member' => $member,
+            'schoolRecord' => null,
+            'gradeLevels' => MemberSchoolInfo::GRADE_LEVELS,
+            'documentTypes' => MemberEducationDocument::DOCUMENT_TYPES,
+            'access' => $permissionService->forView(),
+        ]);
+    }
+
+    /**
+     * Show a single school record.
+     */
+    public function showSchoolRecord(FamilyCircle $familyCircle, FamilyMember $member, MemberSchoolInfo $schoolRecord)
+    {
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canView('school')) {
+            abort(403);
+        }
+
+        if ($schoolRecord->family_member_id !== $member->id) {
+            abort(404);
+        }
+
+        // Load documents for this school record
+        $schoolRecord->load('documents');
+
+        return view('family-circle.member.education.show', [
+            'circle' => $familyCircle,
+            'member' => $member,
+            'schoolRecord' => $schoolRecord,
+            'access' => $permissionService->forView(),
+        ]);
+    }
+
+    /**
+     * Show edit school record form.
+     */
+    public function editSchoolRecord(FamilyCircle $familyCircle, FamilyMember $member, MemberSchoolInfo $schoolRecord)
+    {
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canEdit('school')) {
+            abort(403);
+        }
+
+        if ($schoolRecord->family_member_id !== $member->id) {
+            abort(404);
+        }
+
+        // Load documents for this school record
+        $schoolRecord->load('documents');
+
+        return view('family-circle.member.education.form', [
+            'circle' => $familyCircle,
+            'member' => $member,
+            'schoolRecord' => $schoolRecord,
+            'gradeLevels' => MemberSchoolInfo::GRADE_LEVELS,
+            'documentTypes' => MemberEducationDocument::DOCUMENT_TYPES,
+            'access' => $permissionService->forView(),
+        ]);
+    }
+
+    /**
+     * Store a new school record.
+     */
+    public function storeSchoolRecord(Request $request, FamilyCircle $familyCircle, FamilyMember $member)
+    {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canEdit('school')) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'school_name' => 'required|string|max:255',
+            'grade_level' => 'nullable|string|in:' . implode(',', array_keys(MemberSchoolInfo::GRADE_LEVELS)),
+            'school_year' => 'nullable|string|max:20',
+            'is_current' => 'boolean',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'student_id' => 'nullable|string|max:100',
+            'school_address' => 'nullable|string|max:500',
+            'school_phone' => 'nullable|string|max:20',
+            'school_email' => 'nullable|email|max:255',
+            'teacher_name' => 'nullable|string|max:255',
+            'teacher_email' => 'nullable|email|max:255',
+            'counselor_name' => 'nullable|string|max:255',
+            'counselor_email' => 'nullable|email|max:255',
+            'bus_number' => 'nullable|string|max:50',
+            'bus_pickup_time' => 'nullable|string|max:10',
+            'bus_dropoff_time' => 'nullable|string|max:10',
+            'notes' => 'nullable|string',
+            // Document upload fields
+            'document_type' => 'nullable|string|in:' . implode(',', array_keys(MemberEducationDocument::DOCUMENT_TYPES)),
+            'document_title' => 'nullable|string|max:255',
+            'document_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:10240',
+        ]);
+
+        $validated['tenant_id'] = Auth::user()->tenant_id;
+        $validated['family_member_id'] = $member->id;
+        $validated['is_current'] = $request->has('is_current');
+
+        // If this is set as current, unset other current records
+        if ($validated['is_current']) {
+            MemberSchoolInfo::where('family_member_id', $member->id)
+                ->update(['is_current' => false]);
+        }
+
+        $schoolRecord = MemberSchoolInfo::create($validated);
+
+        // Handle document upload if provided
+        if ($request->hasFile('document_file')) {
+            $file = $request->file('document_file');
+            $tenantId = Auth::user()->tenant_id;
+            $path = "tenants/{$tenantId}/members/{$member->id}/education";
+            $filename = time() . '_' . $file->getClientOriginalName();
+
+            // Upload to DigitalOcean Spaces
+            $storedPath = Storage::disk('do_spaces')->putFileAs($path, $file, $filename);
+
+            MemberEducationDocument::create([
+                'tenant_id' => $tenantId,
+                'family_member_id' => $member->id,
+                'school_record_id' => $schoolRecord->id,
+                'uploaded_by' => Auth::id(),
+                'document_type' => $validated['document_type'] ?? 'other',
+                'title' => $validated['document_title'] ?? $file->getClientOriginalName(),
+                'file_path' => $storedPath,
+                'file_name' => $file->getClientOriginalName(),
+                'file_size' => $file->getSize(),
+                'mime_type' => $file->getMimeType(),
+                'school_year' => $validated['school_year'] ?? null,
+                'grade_level' => $validated['grade_level'] ?? null,
+            ]);
+        }
+
+        return redirect()->route('family-circle.member.education-info', [$familyCircle, $member])
+            ->with('success', 'School record added successfully');
+    }
+
+    /**
+     * Update a school record.
+     */
+    public function updateSchoolRecord(Request $request, FamilyCircle $familyCircle, FamilyMember $member, MemberSchoolInfo $schoolRecord)
+    {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canEdit('school')) {
+            abort(403);
+        }
+
+        // Verify school record belongs to this member
+        if ($schoolRecord->family_member_id !== $member->id) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'school_name' => 'required|string|max:255',
+            'grade_level' => 'nullable|string|in:' . implode(',', array_keys(MemberSchoolInfo::GRADE_LEVELS)),
+            'school_year' => 'nullable|string|max:20',
+            'is_current' => 'boolean',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'student_id' => 'nullable|string|max:100',
+            'school_address' => 'nullable|string|max:500',
+            'school_phone' => 'nullable|string|max:20',
+            'school_email' => 'nullable|email|max:255',
+            'teacher_name' => 'nullable|string|max:255',
+            'teacher_email' => 'nullable|email|max:255',
+            'counselor_name' => 'nullable|string|max:255',
+            'counselor_email' => 'nullable|email|max:255',
+            'bus_number' => 'nullable|string|max:50',
+            'bus_pickup_time' => 'nullable|string|max:10',
+            'bus_dropoff_time' => 'nullable|string|max:10',
+            'notes' => 'nullable|string',
+            // Document upload fields
+            'document_type' => 'nullable|string|in:' . implode(',', array_keys(MemberEducationDocument::DOCUMENT_TYPES)),
+            'document_title' => 'nullable|string|max:255',
+            'document_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:10240',
+        ]);
+
+        $validated['is_current'] = $request->has('is_current');
+
+        // If this is set as current, unset other current records
+        if ($validated['is_current']) {
+            MemberSchoolInfo::where('family_member_id', $member->id)
+                ->where('id', '!=', $schoolRecord->id)
+                ->update(['is_current' => false]);
+        }
+
+        $schoolRecord->update($validated);
+
+        // Handle document upload if provided
+        if ($request->hasFile('document_file')) {
+            $file = $request->file('document_file');
+            $tenantId = Auth::user()->tenant_id;
+            $path = "tenants/{$tenantId}/members/{$member->id}/education";
+            $filename = time() . '_' . $file->getClientOriginalName();
+
+            // Upload to DigitalOcean Spaces
+            $storedPath = Storage::disk('do_spaces')->putFileAs($path, $file, $filename);
+
+            MemberEducationDocument::create([
+                'tenant_id' => $tenantId,
+                'family_member_id' => $member->id,
+                'school_record_id' => $schoolRecord->id,
+                'uploaded_by' => Auth::id(),
+                'document_type' => $validated['document_type'] ?? 'other',
+                'title' => $validated['document_title'] ?? $file->getClientOriginalName(),
+                'file_path' => $storedPath,
+                'file_name' => $file->getClientOriginalName(),
+                'file_size' => $file->getSize(),
+                'mime_type' => $file->getMimeType(),
+                'school_year' => $validated['school_year'] ?? null,
+                'grade_level' => $validated['grade_level'] ?? null,
+            ]);
+        }
+
+        return redirect()->route('family-circle.member.education.school.show', [$familyCircle, $member, $schoolRecord])
+            ->with('success', 'School record updated successfully');
+    }
+
+    /**
+     * Delete a school record.
+     */
+    public function destroySchoolRecord(FamilyCircle $familyCircle, FamilyMember $member, MemberSchoolInfo $schoolRecord)
+    {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canEdit('school')) {
+            abort(403);
+        }
+
+        // Verify school record belongs to this member
+        if ($schoolRecord->family_member_id !== $member->id) {
+            abort(404);
+        }
+
+        $schoolRecord->delete();
+
+        return redirect()->route('family-circle.member.education-info', [$familyCircle, $member])
+            ->with('success', 'School record deleted successfully');
+    }
+
+    /**
+     * Update teacher and counselor contacts (deprecated - kept for backward compatibility).
+     */
+    public function updateEducationContacts(Request $request, FamilyCircle $familyCircle, FamilyMember $member)
+    {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canEdit('school')) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'teacher_name' => 'nullable|string|max:255',
+            'teacher_email' => 'nullable|email|max:255',
+            'counselor_name' => 'nullable|string|max:255',
+            'counselor_email' => 'nullable|email|max:255',
+        ]);
+
+        $validated['tenant_id'] = Auth::user()->tenant_id;
+        $validated['family_member_id'] = $member->id;
+
+        MemberSchoolInfo::updateOrCreate(
+            ['family_member_id' => $member->id],
+            $validated
+        );
+
+        return redirect()->route('family-circle.member.education-info', [$familyCircle, $member])
+            ->with('success', 'Teacher and counselor information updated successfully');
+    }
+
+    /**
+     * Update bus information.
+     */
+    public function updateEducationBus(Request $request, FamilyCircle $familyCircle, FamilyMember $member)
+    {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canEdit('school')) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'bus_number' => 'nullable|string|max:50',
+            'bus_pickup_time' => 'nullable|string|max:10',
+            'bus_dropoff_time' => 'nullable|string|max:10',
+        ]);
+
+        $validated['tenant_id'] = Auth::user()->tenant_id;
+        $validated['family_member_id'] = $member->id;
+
+        MemberSchoolInfo::updateOrCreate(
+            ['family_member_id' => $member->id],
+            $validated
+        );
+
+        return redirect()->route('family-circle.member.education-info', [$familyCircle, $member])
+            ->with('success', 'Bus information updated successfully');
+    }
+
+    /**
+     * Store an education document.
+     */
+    public function storeEducationDocument(Request $request, FamilyCircle $familyCircle, FamilyMember $member)
+    {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canEdit('school')) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'document_type' => 'required|string|in:' . implode(',', array_keys(MemberEducationDocument::DOCUMENT_TYPES)),
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string|max:1000',
+            'school_year' => 'nullable|string|max:20',
+            'grade_level' => 'nullable|string|max:50',
+            'file' => 'required|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:10240', // 10MB max
+        ]);
+
+        // Upload file to DigitalOcean Spaces
+        $file = $request->file('file');
+        $tenantId = Auth::user()->tenant_id;
+        $fileName = $file->getClientOriginalName();
+        $path = "tenants/{$tenantId}/education-documents/{$member->id}/" . uniqid() . '_' . $fileName;
+
+        Storage::disk('do_spaces')->put($path, file_get_contents($file), 'private');
+
+        MemberEducationDocument::create([
+            'tenant_id' => $tenantId,
+            'family_member_id' => $member->id,
+            'uploaded_by' => Auth::id(),
+            'document_type' => $validated['document_type'],
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'school_year' => $validated['school_year'] ?? null,
+            'grade_level' => $validated['grade_level'] ?? null,
+            'file_path' => $path,
+            'file_name' => $fileName,
+            'file_size' => $file->getSize(),
+            'mime_type' => $file->getMimeType(),
+        ]);
+
+        return redirect()->route('family-circle.member.education-info', [$familyCircle, $member])
+            ->with('success', 'Education document uploaded successfully');
+    }
+
+    /**
+     * Download an education document.
+     */
+    public function downloadEducationDocument(FamilyCircle $familyCircle, FamilyMember $member, MemberEducationDocument $document)
+    {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canView('school')) {
+            abort(403);
+        }
+
+        // Verify document belongs to this member
+        if ($document->family_member_id !== $member->id) {
+            abort(404);
+        }
+
+        // Generate temporary URL for download
+        $url = Storage::disk('do_spaces')->temporaryUrl(
+            $document->file_path,
+            now()->addMinutes(5)
+        );
+
+        return redirect($url);
+    }
+
+    /**
+     * Delete an education document.
+     */
+    public function destroyEducationDocument(FamilyCircle $familyCircle, FamilyMember $member, MemberEducationDocument $document)
+    {
+        // Use centralized permission service
+        $permissionService = CollaboratorPermissionService::forMember($member);
+
+        if (!$permissionService->canEdit('school')) {
+            abort(403);
+        }
+
+        // Verify document belongs to this member
+        if ($document->family_member_id !== $member->id) {
+            abort(404);
+        }
+
+        // Delete file from DigitalOcean Spaces
+        Storage::disk('do_spaces')->delete($document->file_path);
+
+        // Store school record id before deleting
+        $schoolRecordId = $document->school_record_id;
+
+        // Delete record
+        $document->delete();
+
+        // Redirect back to where they came from
+        if ($schoolRecordId) {
+            return redirect()->back()->with('success', 'Document deleted successfully');
+        }
+
+        return redirect()->route('family-circle.member.education-info', [$familyCircle, $member])
+            ->with('success', 'Document deleted successfully');
     }
 }
