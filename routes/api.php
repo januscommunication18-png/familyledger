@@ -150,6 +150,15 @@ Route::prefix('v1')->group(function () {
             Route::post('/emergency-contacts', [FamilyMemberController::class, 'storeEmergencyContact']);
             Route::put('/emergency-contacts/{contact}', [FamilyMemberController::class, 'updateEmergencyContact']);
             Route::delete('/emergency-contacts/{contact}', [FamilyMemberController::class, 'deleteEmergencyContact']);
+
+            // School Records
+            Route::post('/school-records', [FamilyMemberController::class, 'storeSchoolRecord']);
+            Route::put('/school-records/{schoolRecord}', [FamilyMemberController::class, 'updateSchoolRecord']);
+            Route::delete('/school-records/{schoolRecord}', [FamilyMemberController::class, 'deleteSchoolRecord']);
+
+            // Education Documents
+            Route::post('/education-documents', [FamilyMemberController::class, 'storeEducationDocument']);
+            Route::delete('/education-documents/{document}', [FamilyMemberController::class, 'deleteEducationDocument']);
         });
 
         // Assets

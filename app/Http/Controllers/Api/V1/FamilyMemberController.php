@@ -69,6 +69,8 @@ class FamilyMemberController extends Controller
             'medicalConditions',
             'vaccinations',
             'healthcareProviders',
+            'schoolInfo',
+            'schoolRecords.documents',
         ]);
         $member->loadCount('documents');
 
@@ -1013,6 +1015,227 @@ class FamilyMemberController extends Controller
         $vaccination->delete();
 
         return $this->success(null, 'Vaccination record deleted successfully');
+    }
+
+    // ==================== SCHOOL RECORDS ====================
+
+    /**
+     * Store a new school record.
+     */
+    public function storeSchoolRecord(Request $request, FamilyCircle $familyCircle, FamilyMember $member): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($familyCircle->tenant_id !== $user->tenant_id || $member->family_circle_id !== $familyCircle->id) {
+            return $this->notFound('Member not found');
+        }
+
+        $validated = $request->validate([
+            'school_name' => 'required|string|max:255',
+            'school_year' => 'nullable|string|max:20',
+            'grade_level' => 'nullable|string|max:50',
+            'student_id' => 'nullable|string|max:50',
+            'is_current' => 'nullable|boolean',
+            'school_address' => 'nullable|string|max:500',
+            'school_phone' => 'nullable|string|max:20',
+            'school_email' => 'nullable|email|max:255',
+            'teacher_name' => 'nullable|string|max:255',
+            'teacher_email' => 'nullable|email|max:255',
+            'counselor_name' => 'nullable|string|max:255',
+            'counselor_email' => 'nullable|email|max:255',
+            'bus_number' => 'nullable|string|max:20',
+            'bus_pickup_time' => 'nullable|string|max:10',
+            'bus_dropoff_time' => 'nullable|string|max:10',
+            'notes' => 'nullable|string',
+        ]);
+
+        $schoolRecord = \App\Models\MemberSchoolInfo::create([
+            'family_member_id' => $member->id,
+            'tenant_id' => $user->tenant_id,
+            'school_name' => $validated['school_name'],
+            'school_year' => $validated['school_year'] ?? null,
+            'grade_level' => $validated['grade_level'] ?? null,
+            'student_id' => $validated['student_id'] ?? null,
+            'is_current' => $validated['is_current'] ?? true,
+            'school_address' => $validated['school_address'] ?? null,
+            'school_phone' => $validated['school_phone'] ?? null,
+            'school_email' => $validated['school_email'] ?? null,
+            'teacher_name' => $validated['teacher_name'] ?? null,
+            'teacher_email' => $validated['teacher_email'] ?? null,
+            'counselor_name' => $validated['counselor_name'] ?? null,
+            'counselor_email' => $validated['counselor_email'] ?? null,
+            'bus_number' => $validated['bus_number'] ?? null,
+            'bus_pickup_time' => $validated['bus_pickup_time'] ?? null,
+            'bus_dropoff_time' => $validated['bus_dropoff_time'] ?? null,
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        return $this->success([
+            'school_record' => [
+                'id' => $schoolRecord->id,
+                'school_name' => $schoolRecord->school_name,
+                'grade_level' => $schoolRecord->grade_level,
+                'grade_level_name' => $schoolRecord->grade_level_name,
+                'school_year' => $schoolRecord->school_year,
+                'is_current' => (bool) $schoolRecord->is_current,
+            ],
+        ], 'School record added successfully', 201);
+    }
+
+    /**
+     * Update a school record.
+     */
+    public function updateSchoolRecord(Request $request, FamilyCircle $familyCircle, FamilyMember $member, \App\Models\MemberSchoolInfo $schoolRecord): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($familyCircle->tenant_id !== $user->tenant_id || $member->family_circle_id !== $familyCircle->id) {
+            return $this->notFound('Member not found');
+        }
+
+        if ($schoolRecord->family_member_id !== $member->id) {
+            return $this->notFound('School record not found');
+        }
+
+        $validated = $request->validate([
+            'school_name' => 'sometimes|required|string|max:255',
+            'school_year' => 'nullable|string|max:20',
+            'grade_level' => 'nullable|string|max:50',
+            'student_id' => 'nullable|string|max:50',
+            'is_current' => 'nullable|boolean',
+            'school_address' => 'nullable|string|max:500',
+            'school_phone' => 'nullable|string|max:20',
+            'school_email' => 'nullable|email|max:255',
+            'teacher_name' => 'nullable|string|max:255',
+            'teacher_email' => 'nullable|email|max:255',
+            'counselor_name' => 'nullable|string|max:255',
+            'counselor_email' => 'nullable|email|max:255',
+            'bus_number' => 'nullable|string|max:20',
+            'bus_pickup_time' => 'nullable|string|max:10',
+            'bus_dropoff_time' => 'nullable|string|max:10',
+            'notes' => 'nullable|string',
+        ]);
+
+        $schoolRecord->update($validated);
+
+        return $this->success([
+            'school_record' => $schoolRecord->fresh(),
+        ], 'School record updated successfully');
+    }
+
+    /**
+     * Delete a school record.
+     */
+    public function deleteSchoolRecord(Request $request, FamilyCircle $familyCircle, FamilyMember $member, \App\Models\MemberSchoolInfo $schoolRecord): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($familyCircle->tenant_id !== $user->tenant_id || $member->family_circle_id !== $familyCircle->id) {
+            return $this->notFound('Member not found');
+        }
+
+        if ($schoolRecord->family_member_id !== $member->id) {
+            return $this->notFound('School record not found');
+        }
+
+        $schoolRecord->delete();
+
+        return $this->success(null, 'School record deleted successfully');
+    }
+
+    // ==================== EDUCATION DOCUMENTS ====================
+
+    /**
+     * Store an education document via API.
+     */
+    public function storeEducationDocument(Request $request, FamilyCircle $familyCircle, FamilyMember $member): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($familyCircle->tenant_id !== $user->tenant_id || $member->family_circle_id !== $familyCircle->id) {
+            return $this->notFound('Member not found');
+        }
+
+        $validated = $request->validate([
+            'document_type' => 'required|string|in:report_card,transcript,diploma,certificate,award,iep,504_plan,enrollment,immunization,other',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string|max:1000',
+            'school_year' => 'nullable|string|max:20',
+            'grade_level' => 'nullable|string|max:50',
+            'school_record_id' => 'nullable|integer|exists:member_school_infos,id',
+            'file' => 'required|string', // Base64 encoded file
+            'file_name' => 'required|string|max:255',
+            'mime_type' => 'required|string|max:100',
+        ]);
+
+        // Decode base64 file
+        $fileData = base64_decode($validated['file']);
+        if ($fileData === false) {
+            return $this->error('Invalid file data', 422);
+        }
+
+        // Validate file size (10MB max)
+        if (strlen($fileData) > 10 * 1024 * 1024) {
+            return $this->error('File size exceeds 10MB limit', 422);
+        }
+
+        // Upload file to DigitalOcean Spaces
+        $tenantId = $user->tenant_id;
+        $fileName = $validated['file_name'];
+        $path = "tenants/{$tenantId}/education-documents/{$member->id}/" . uniqid() . '_' . $fileName;
+
+        \Illuminate\Support\Facades\Storage::disk('do_spaces')->put($path, $fileData, 'private');
+
+        $document = \App\Models\MemberEducationDocument::create([
+            'tenant_id' => $tenantId,
+            'family_member_id' => $member->id,
+            'school_record_id' => $validated['school_record_id'] ?? null,
+            'uploaded_by' => $user->id,
+            'document_type' => $validated['document_type'],
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'school_year' => $validated['school_year'] ?? null,
+            'grade_level' => $validated['grade_level'] ?? null,
+            'file_path' => $path,
+            'file_name' => $fileName,
+            'file_size' => strlen($fileData),
+            'mime_type' => $validated['mime_type'],
+        ]);
+
+        return $this->success([
+            'document' => [
+                'id' => $document->id,
+                'document_type' => $document->document_type,
+                'document_type_name' => $document->document_type_name,
+                'title' => $document->title,
+                'file_name' => $document->file_name,
+            ],
+        ], 'Education document uploaded successfully', 201);
+    }
+
+    /**
+     * Delete an education document via API.
+     */
+    public function deleteEducationDocument(Request $request, FamilyCircle $familyCircle, FamilyMember $member, \App\Models\MemberEducationDocument $document): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($familyCircle->tenant_id !== $user->tenant_id || $member->family_circle_id !== $familyCircle->id) {
+            return $this->notFound('Member not found');
+        }
+
+        if ($document->family_member_id !== $member->id) {
+            return $this->notFound('Document not found');
+        }
+
+        // Delete file from storage
+        if ($document->file_path) {
+            \Illuminate\Support\Facades\Storage::disk('do_spaces')->delete($document->file_path);
+        }
+
+        $document->delete();
+
+        return $this->success(null, 'Education document deleted successfully');
     }
 
     /**
