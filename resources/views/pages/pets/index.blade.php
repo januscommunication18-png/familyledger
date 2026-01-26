@@ -71,30 +71,57 @@
     </div>
 
     <!-- Filters -->
+    @php
+        $baseParams = request('species') ? ['species' => request('species')] : [];
+        $toggleOnUrl = route('pets.index', array_merge($baseParams, ['include_passed_away' => 1]));
+        $toggleOffUrl = route('pets.index', $baseParams);
+    @endphp
     <div class="card bg-base-100 shadow-sm">
         <div class="card-body p-4">
-            <form method="GET" class="flex flex-wrap items-center gap-4">
-                <div class="form-control">
-                    <select name="species" class="select select-bordered select-sm" onchange="this.form.submit()">
-                        <option value="">All Species</option>
-                        @foreach($species as $key => $info)
-                            <option value="{{ $key }}" {{ request('species') === $key ? 'selected' : '' }}>
-                                {{ $info['emoji'] }} {{ $info['label'] }}
-                            </option>
-                        @endforeach
-                    </select>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+                <!-- Filter Label -->
+                <div class="flex items-center gap-2 text-slate-500">
+                    <span class="icon-[tabler--filter] size-5"></span>
+                    <span class="text-sm font-medium">Filter by:</span>
                 </div>
 
-                <label class="label cursor-pointer gap-2">
-                    <input type="checkbox" name="include_passed_away" value="1" class="checkbox checkbox-sm"
-                           {{ request('include_passed_away') ? 'checked' : '' }} onchange="this.form.submit()">
-                    <span class="label-text text-sm">Include pets who passed away</span>
+                <!-- Species Filter Pills -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <a href="{{ route('pets.index', request('include_passed_away') ? ['include_passed_away' => 1] : []) }}"
+                       class="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 {{ !request('species') ? 'bg-primary text-white shadow-md shadow-primary/25' : 'bg-base-200 text-slate-600 hover:bg-base-300' }}">
+                        All
+                    </a>
+                    @foreach($species as $key => $info)
+                        <a href="{{ route('pets.index', array_merge(['species' => $key], request('include_passed_away') ? ['include_passed_away' => 1] : [])) }}"
+                           class="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-1.5 {{ request('species') === $key ? 'bg-primary text-white shadow-md shadow-primary/25' : 'bg-base-200 text-slate-600 hover:bg-base-300' }}">
+                            <span>{{ $info['emoji'] }}</span>
+                            <span>{{ $info['label'] }}</span>
+                        </a>
+                    @endforeach
+                </div>
+
+                <!-- Divider -->
+                <div class="hidden sm:block w-px h-8 bg-base-300"></div>
+
+                <!-- Include Passed Away Toggle -->
+                <label class="inline-flex items-center gap-3 cursor-pointer group flex-shrink-0 whitespace-nowrap">
+                    <input type="checkbox" class="toggle toggle-sm toggle-primary"
+                           {{ request('include_passed_away') ? 'checked' : '' }}
+                           onchange="window.location.href = this.checked ? '{{ $toggleOnUrl }}' : '{{ $toggleOffUrl }}'">
+                    <span class="text-sm text-slate-600 group-hover:text-slate-900 transition-colors inline-flex items-center gap-1.5">
+                        <span>🌈</span>
+                        <span>Include passed away</span>
+                    </span>
                 </label>
 
+                <!-- Clear Filters -->
                 @if(request()->hasAny(['species', 'include_passed_away']))
-                    <a href="{{ route('pets.index') }}" class="btn btn-ghost btn-sm">Clear Filters</a>
+                    <a href="{{ route('pets.index') }}" class="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-500 hover:text-error hover:bg-error/10 rounded-lg transition-all duration-200">
+                        <span class="icon-[tabler--x] size-4"></span>
+                        Clear
+                    </a>
                 @endif
-            </form>
+            </div>
         </div>
     </div>
     @endif

@@ -54,6 +54,10 @@
                             </p>
                         </div>
                         <div class="flex items-center gap-2">
+                            <a href="{{ route('pets.index') }}" class="btn btn-ghost btn-sm gap-1">
+                                <span class="icon-[tabler--arrow-left] size-4"></span>
+                                Back
+                            </a>
                             <a href="{{ route('pets.edit', $pet) }}" class="btn btn-outline btn-sm gap-1">
                                 <span class="icon-[tabler--edit] size-4"></span>
                                 Edit

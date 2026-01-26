@@ -54,8 +54,6 @@ class Pet extends Model
         'fish' => ['label' => 'Fish', 'emoji' => '🐠'],
         'reptile' => ['label' => 'Reptile', 'emoji' => '🦎'],
         'rabbit' => ['label' => 'Rabbit', 'emoji' => '🐰'],
-        'hamster' => ['label' => 'Hamster', 'emoji' => '🐹'],
-        'guinea_pig' => ['label' => 'Guinea Pig', 'emoji' => '🐹'],
         'other' => ['label' => 'Other', 'emoji' => '🐾'],
     ];
 
