@@ -847,14 +847,14 @@
                         </div>
                         <h3 class="font-bold text-slate-800 text-sm">Assets</h3>
                     </div>
-                    @if($access->canEdit('assets'))
-                        <a href="{{ route('assets.index') }}" class="btn btn-ghost btn-xs text-amber-600">
+                    @if($access->isCollaborator)
+                        <a href="{{ route('coparenting.assets.index') }}" class="btn btn-ghost btn-xs text-amber-600">
                             View All
                         </a>
                     @elseif($access->canEdit('assets'))
-                        <span class="badge badge-success badge-xs">Can Edit</span>
-                    @elseif($access->isCollaborator)
-                        <span class="badge badge-ghost badge-xs">View Only</span>
+                        <a href="{{ route('assets.index') }}" class="btn btn-ghost btn-xs text-amber-600">
+                            View All
+                        </a>
                     @endif
                 </div>
 
@@ -884,10 +884,17 @@
                     <div class="text-center py-4">
                         <p class="text-xs text-slate-400 mb-2">No assets linked</p>
                         @if($access->canEdit('assets'))
-                            <a href="{{ route('assets.create') }}" class="btn btn-xs btn-primary gap-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                                Add Asset
-                            </a>
+                            @if($access->isCollaborator)
+                                <a href="{{ route('coparenting.assets.create') }}?family_member_id={{ $member->id }}" class="btn btn-xs btn-primary gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                                    Request Asset
+                                </a>
+                            @else
+                                <a href="{{ route('assets.create') }}" class="btn btn-xs btn-primary gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                                    Add Asset
+                                </a>
+                            @endif
                         @endif
                     </div>
                 @endif

@@ -64,6 +64,9 @@ class PendingCoparentEdit extends Model
         'App\\Models\\MemberContact' => 'Emergency Contact',
         'App\\Models\\MemberSchoolInfo' => 'School Info',
         'App\\Models\\MemberVaccination' => 'Vaccination',
+        'App\\Models\\Asset' => 'Asset',
+        'App\\Models\\AssetOwner' => 'Asset Owner',
+        'App\\Models\\AssetDocument' => 'Asset Document',
     ];
 
     // ==================== RELATIONSHIPS ====================
@@ -279,6 +282,13 @@ class PendingCoparentEdit extends Model
         if ($this->is_create && $this->create_data) {
             // Create new record
             $modelClass = $this->editable_type;
+
+            // Special handling for Asset creation (needs owners created too)
+            if ($modelClass === 'App\\Models\\Asset') {
+                $this->applyAssetCreate();
+                return;
+            }
+
             $modelClass::create($this->create_data);
         } elseif ($this->is_delete) {
             // Delete the record
@@ -289,6 +299,30 @@ class PendingCoparentEdit extends Model
             if ($model) {
                 $model->update([$this->field_name => $this->new_value]);
             }
+        }
+    }
+
+    /**
+     * Apply asset creation with owners.
+     */
+    protected function applyAssetCreate(): void
+    {
+        $data = $this->create_data;
+        $owners = $data['_owners'] ?? [];
+        unset($data['_owners']);
+
+        // Create the asset
+        $asset = Asset::create($data);
+
+        // Create owners
+        foreach ($owners as $ownerData) {
+            AssetOwner::create([
+                'asset_id' => $asset->id,
+                'family_member_id' => $ownerData['family_member_id'] ?? null,
+                'external_owner_name' => $ownerData['external_owner_name'] ?? null,
+                'ownership_percentage' => $ownerData['ownership_percentage'] ?? 100,
+                'is_primary_owner' => $ownerData['is_primary_owner'] ?? false,
+            ]);
         }
     }
 

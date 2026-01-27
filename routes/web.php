@@ -32,6 +32,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\RemindersController;
 use App\Http\Controllers\CoparentMessagesController;
 use App\Http\Controllers\PendingCoparentEditController;
+use App\Http\Controllers\CoparentAssetController;
 use App\Http\Controllers\ExpensesController;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
@@ -431,6 +432,14 @@ Route::middleware(['security.code', 'auth'])->group(function () {
         Route::get('/child-info', [CoparentingController::class, 'childInfo'])->name('child-info');
         Route::get('/expenses', [CoparentingController::class, 'expenses'])->name('expenses');
         Route::get('/parenting-plan', [CoparentingController::class, 'parentingPlan'])->name('parenting-plan');
+
+        // Coparent Assets
+        Route::prefix('assets')->name('assets.')->group(function () {
+            Route::get('/', [CoparentAssetController::class, 'index'])->name('index');
+            Route::get('/create', [CoparentAssetController::class, 'create'])->name('create');
+            Route::post('/', [CoparentAssetController::class, 'store'])->name('store');
+            Route::get('/{asset}', [CoparentAssetController::class, 'show'])->name('show');
+        });
 
         // Secure Messages
         Route::prefix('messages')->name('messages.')->group(function () {
