@@ -99,8 +99,80 @@
                 </div>
 
                 {{-- Co-parents for this child --}}
+                @php
+                    $isChildOwner = $child->tenant_id === $currentUser->tenant_id;
+
+                    // For coparents, get their permission level for this child
+                    $myAccessLevel = null;
+                    if (!$isChildOwner) {
+                        $myCollaborator = \App\Models\Collaborator::where('user_id', $currentUser->id)
+                            ->where('tenant_id', $child->tenant_id)
+                            ->where('coparenting_enabled', true)
+                            ->first();
+                        if ($myCollaborator) {
+                            $myCoparentChild = \App\Models\CoparentChild::where('collaborator_id', $myCollaborator->id)
+                                ->where('family_member_id', $child->id)
+                                ->first();
+                            if ($myCoparentChild) {
+                                $myPermissions = $myCoparentChild->permissions ?? [];
+                                $editCount = collect($myPermissions)->filter(fn($p) => $p === 'edit')->count();
+                                $viewCount = collect($myPermissions)->filter(fn($p) => $p === 'view')->count();
+                                $totalCategories = count(\App\Models\CoparentChild::PERMISSION_CATEGORIES);
+
+                                if ($editCount == $totalCategories) {
+                                    $myAccessLevel = 'full_edit';
+                                } elseif ($editCount > 0) {
+                                    // Has edit access on some categories
+                                    $myAccessLevel = 'edit';
+                                } elseif ($viewCount == $totalCategories) {
+                                    $myAccessLevel = 'full_view';
+                                } elseif ($viewCount > 0) {
+                                    // Has view access on some categories
+                                    $myAccessLevel = 'view';
+                                } else {
+                                    $myAccessLevel = 'none';
+                                }
+                            }
+                        }
+                    }
+                @endphp
                 <div class="border-t border-slate-100 pt-3">
-                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Co-parents</p>
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Co-parents</p>
+                        @if($isChildOwner)
+                            <a href="{{ route('coparenting.children.access', $child) }}" class="text-xs text-primary hover:underline flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                Manage Permissions
+                            </a>
+                        @else
+                            @if($myAccessLevel === 'full_edit')
+                                <span class="badge badge-success badge-sm gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                                    Full Edit Access
+                                </span>
+                            @elseif($myAccessLevel === 'edit')
+                                <span class="badge badge-success badge-sm gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                                    Edit Access
+                                </span>
+                            @elseif($myAccessLevel === 'full_view')
+                                <span class="badge badge-info badge-sm gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    View Only
+                                </span>
+                            @elseif($myAccessLevel === 'view')
+                                <span class="badge badge-info badge-sm gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    View Access
+                                </span>
+                            @else
+                                <span class="badge badge-ghost badge-sm gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>
+                                    No Access
+                                </span>
+                            @endif
+                        @endif
+                    </div>
                     <div class="flex flex-wrap gap-2">
                         {{-- Current User as Owner/Parent --}}
                         <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-100 border border-violet-200">
@@ -152,6 +224,63 @@
                         <span class="text-sm text-slate-400 italic">No other co-parents yet</span>
                         @endforelse
                     </div>
+
+                    {{-- Permissions Summary (collapsible) - Only for owners --}}
+                    @if($isChildOwner && $child->coparents->count() > 0)
+                    <div class="mt-3 pt-3 border-t border-slate-100">
+                        <details class="group">
+                            <summary class="flex items-center justify-between cursor-pointer text-xs font-medium text-slate-500 uppercase tracking-wider">
+                                <span class="flex items-center gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                    Permission Summary
+                                </span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transform transition-transform group-open:rotate-180"><polyline points="6 9 12 15 18 9"/></svg>
+                            </summary>
+                            <div class="mt-3 space-y-3">
+                                @foreach($child->coparents as $coparent)
+                                @php
+                                    // Get coparent_child pivot record
+                                    $coparentChild = \App\Models\CoparentChild::where('collaborator_id', $coparent->id)
+                                        ->where('family_member_id', $child->id)
+                                        ->first();
+                                    $permissions = $coparentChild?->permissions ?? [];
+                                    $editCount = collect($permissions)->filter(fn($p) => $p === 'edit')->count();
+                                    $viewCount = collect($permissions)->filter(fn($p) => $p === 'view')->count();
+                                    $totalCategories = count(\App\Models\CoparentChild::PERMISSION_CATEGORIES);
+                                @endphp
+                                <div class="p-3 rounded-lg bg-slate-50">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-sm font-medium text-slate-700">{{ $coparent->display_name }}</span>
+                                        <div class="flex gap-1">
+                                            @if($editCount > 0)
+                                                <span class="badge badge-success badge-xs">{{ $editCount }} Edit</span>
+                                            @endif
+                                            @if($viewCount > 0)
+                                                <span class="badge badge-info badge-xs">{{ $viewCount }} View</span>
+                                            @endif
+                                            @if($editCount == 0 && $viewCount == 0)
+                                                <span class="badge badge-ghost badge-xs">No Access</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    {{-- Permission bars --}}
+                                    <div class="flex gap-0.5 h-1.5 rounded-full overflow-hidden bg-slate-200">
+                                        @if($editCount > 0)
+                                            <div class="bg-emerald-500" style="width: {{ ($editCount / $totalCategories) * 100 }}%"></div>
+                                        @endif
+                                        @if($viewCount > 0)
+                                            <div class="bg-sky-500" style="width: {{ ($viewCount / $totalCategories) * 100 }}%"></div>
+                                        @endif
+                                    </div>
+                                    <div class="flex justify-between mt-1">
+                                        <span class="text-[10px] text-slate-400">{{ $editCount + $viewCount }}/{{ $totalCategories }} categories accessible</span>
+                                    </div>
+                                </div>
+                                @endforeach
+                            </div>
+                        </details>
+                    </div>
+                    @endif
                 </div>
             </div>
             @empty

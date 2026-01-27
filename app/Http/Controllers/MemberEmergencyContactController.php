@@ -6,6 +6,7 @@ use App\Models\FamilyCircle;
 use App\Models\FamilyMember;
 use App\Models\MemberContact;
 use App\Services\CollaboratorPermissionService;
+use App\Services\CoparentEditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -56,8 +57,10 @@ class MemberEmergencyContactController extends Controller
     {
         // Use centralized permission service
         $permissionService = CollaboratorPermissionService::forMember($member);
+        $editService = CoparentEditService::forMember($member);
 
-        if (!$permissionService->canCreate('emergency_contacts')) {
+        // Allow if can create OR is coparent needing approval
+        if (!$permissionService->canCreate('emergency_contacts') && !$editService->needsApproval()) {
             abort(403);
         }
 
@@ -72,10 +75,20 @@ class MemberEmergencyContactController extends Controller
             'priority' => 'nullable|integer|min:1|max:10',
         ]);
 
-        $validated['tenant_id'] = Auth::user()->tenant_id;
+        $validated['tenant_id'] = $member->tenant_id;
         $validated['family_member_id'] = $member->id;
         $validated['is_emergency_contact'] = true;
         $validated['priority'] = $validated['priority'] ?? ($member->contacts()->where('is_emergency_contact', true)->max('priority') ?? 0) + 1;
+
+        // If coparent, create pending edit
+        if ($editService->needsApproval()) {
+            $editService->handleCreate(MemberContact::class, $validated);
+
+            return redirect()->route('family-circle.member.emergency-contacts', [
+                $member->familyCircle,
+                $member
+            ])->with('info', 'Emergency contact submitted for owner approval.');
+        }
 
         MemberContact::create($validated);
 
@@ -92,8 +105,10 @@ class MemberEmergencyContactController extends Controller
     {
         // Use centralized permission service
         $permissionService = CollaboratorPermissionService::forMember($member);
+        $editService = CoparentEditService::forMember($member);
 
-        if (!$permissionService->canEdit('emergency_contacts')) {
+        // Allow if can edit OR is coparent needing approval
+        if (!$permissionService->canEdit('emergency_contacts') && !$editService->needsApproval()) {
             abort(403);
         }
 
@@ -107,6 +122,33 @@ class MemberEmergencyContactController extends Controller
             'notes' => 'nullable|string',
             'priority' => 'nullable|integer|min:1|max:10',
         ]);
+
+        // If coparent, create pending edits for changed fields
+        if ($editService->needsApproval()) {
+            $pendingCount = 0;
+            foreach ($validated as $field => $newValue) {
+                $oldValue = $contact->$field;
+                $oldNormalized = is_null($oldValue) ? '' : (string) $oldValue;
+                $newNormalized = is_null($newValue) ? '' : (string) $newValue;
+
+                if ($oldNormalized !== $newNormalized) {
+                    $editService->handleUpdate($contact, $field, $newValue);
+                    $pendingCount++;
+                }
+            }
+
+            if ($pendingCount === 0) {
+                return redirect()->route('family-circle.member.emergency-contacts', [
+                    $member->familyCircle,
+                    $member
+                ])->with('info', 'No changes detected.');
+            }
+
+            return redirect()->route('family-circle.member.emergency-contacts', [
+                $member->familyCircle,
+                $member
+            ])->with('info', "{$pendingCount} edit(s) submitted for owner approval.");
+        }
 
         $contact->update($validated);
 
@@ -123,9 +165,21 @@ class MemberEmergencyContactController extends Controller
     {
         // Use centralized permission service
         $permissionService = CollaboratorPermissionService::forMember($member);
+        $editService = CoparentEditService::forMember($member);
 
-        if (!$permissionService->canDelete('emergency_contacts')) {
+        // Allow if can delete OR is coparent needing approval
+        if (!$permissionService->canDelete('emergency_contacts') && !$editService->needsApproval()) {
             abort(403);
+        }
+
+        // If coparent, create pending delete
+        if ($editService->needsApproval()) {
+            $editService->handleDelete($contact);
+
+            return redirect()->route('family-circle.member.emergency-contacts', [
+                $member->familyCircle,
+                $member
+            ])->with('info', 'Delete request submitted for owner approval.');
         }
 
         $contact->delete();

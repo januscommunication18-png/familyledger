@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\FamilyMember;
 use App\Models\MemberDocument;
 use App\Services\CollaboratorPermissionService;
+use App\Services\CoparentEditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -68,9 +69,11 @@ class MemberDocumentController extends Controller
     {
         // Use centralized permission service - check create permission for this document type
         $permissionService = CollaboratorPermissionService::forMember($member);
+        $editService = CoparentEditService::forMember($member);
         $category = $this->getPermissionCategory($request->input('document_type', ''));
 
-        if (!$permissionService->canCreate($category)) {
+        // Allow if can create OR is coparent needing approval
+        if (!$permissionService->canCreate($category) && !$editService->needsApproval()) {
             abort(403);
         }
 
@@ -88,7 +91,7 @@ class MemberDocumentController extends Controller
         ]);
 
         $data = [
-            'tenant_id' => Auth::user()->tenant_id,
+            'tenant_id' => $member->tenant_id,
             'family_member_id' => $member->id,
             'uploaded_by' => Auth::id(),
             'document_type' => $validated['document_type'],
@@ -122,6 +125,25 @@ class MemberDocumentController extends Controller
             $data['back_image'] = $path;
         }
 
+        // If coparent, create pending edit for new document
+        if ($editService->needsApproval()) {
+            $result = $editService->handleCreate(MemberDocument::class, $data);
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'pending' => true,
+                    'message' => 'Document creation submitted for owner approval',
+                ], 202);
+            }
+
+            return redirect()->route('family-circle.member.show', [
+                $member->familyCircle,
+                $member
+            ])->with('info', 'Document creation submitted for owner approval.');
+        }
+
+        // Owner can create directly
         $document = MemberDocument::create($data);
 
         if ($request->wantsJson()) {
@@ -163,9 +185,11 @@ class MemberDocumentController extends Controller
     {
         // Use centralized permission service
         $permissionService = CollaboratorPermissionService::forMember($member);
+        $editService = CoparentEditService::forMember($member);
         $category = $this->getPermissionCategory($document->document_type);
 
-        if (!$permissionService->canEdit($category)) {
+        // Allow if can edit OR is coparent needing approval
+        if (!$permissionService->canEdit($category) && !$editService->needsApproval()) {
             abort(403);
         }
 
@@ -196,26 +220,87 @@ class MemberDocumentController extends Controller
         }
 
         // Handle file uploads
+        $newFrontImage = null;
+        $newBackImage = null;
         if ($request->hasFile('front_image')) {
-            if ($document->front_image) {
-                Storage::disk('do_spaces')->delete($document->front_image);
-            }
             $path = $request->file('front_image')->store(
                 "documents/{$member->id}/front",
                 'do_spaces'
             );
+            $newFrontImage = $path;
             $data['front_image'] = $path;
         }
 
         if ($request->hasFile('back_image')) {
-            if ($document->back_image) {
-                Storage::disk('do_spaces')->delete($document->back_image);
-            }
             $path = $request->file('back_image')->store(
                 "documents/{$member->id}/back",
                 'do_spaces'
             );
+            $newBackImage = $path;
             $data['back_image'] = $path;
+        }
+
+        // If coparent, create pending edits for each changed field
+        if ($editService->needsApproval()) {
+            $pendingCount = 0;
+            $fieldsToCheck = ['document_number', 'state_of_issue', 'country_of_issue', 'issue_date', 'expiry_date', 'details'];
+
+            foreach ($fieldsToCheck as $field) {
+                $oldValue = $document->$field;
+                $newValue = $data[$field] ?? null;
+
+                $oldNormalized = is_null($oldValue) ? '' : (string) $oldValue;
+                $newNormalized = is_null($newValue) ? '' : (string) $newValue;
+
+                if ($oldNormalized !== $newNormalized) {
+                    $editService->handleUpdate($document, $field, $newValue);
+                    $pendingCount++;
+                }
+            }
+
+            // Handle SSN separately
+            if ($document->document_type === 'social_security' && !empty($validated['ssn_number'])) {
+                $editService->handleUpdate($document, 'encrypted_number', $validated['ssn_number']);
+                $pendingCount++;
+            }
+
+            // Handle images
+            if ($newFrontImage) {
+                $editService->handleUpdate($document, 'front_image', $newFrontImage);
+                $pendingCount++;
+            }
+            if ($newBackImage) {
+                $editService->handleUpdate($document, 'back_image', $newBackImage);
+                $pendingCount++;
+            }
+
+            if ($pendingCount === 0) {
+                return redirect()->route('family-circle.member.show', [
+                    $member->familyCircle,
+                    $member
+                ])->with('info', 'No changes detected.');
+            }
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'pending' => true,
+                    'message' => "{$pendingCount} edit(s) submitted for owner approval",
+                ], 202);
+            }
+
+            return redirect()->route('family-circle.member.show', [
+                $member->familyCircle,
+                $member
+            ])->with('info', "{$pendingCount} edit(s) submitted for owner approval.");
+        }
+
+        // Owner can update directly - delete old files if new ones uploaded
+        if ($newFrontImage && $document->front_image) {
+            Storage::disk('do_spaces')->delete($document->front_image);
+        }
+        if ($newBackImage && $document->back_image) {
+            Storage::disk('do_spaces')->delete($document->back_image);
         }
 
         $document->update($data);
@@ -240,10 +325,29 @@ class MemberDocumentController extends Controller
     {
         // Use centralized permission service
         $permissionService = CollaboratorPermissionService::forMember($member);
+        $editService = CoparentEditService::forMember($member);
         $category = $this->getPermissionCategory($document->document_type);
 
-        if (!$permissionService->canDelete($category)) {
+        // Allow if can delete OR is coparent needing approval
+        if (!$permissionService->canDelete($category) && !$editService->needsApproval()) {
             abort(403);
+        }
+
+        // If coparent, create pending delete
+        if ($editService->needsApproval()) {
+            $editService->handleDelete($document);
+
+            if (request()->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'pending' => true,
+                    'message' => 'Delete request submitted for owner approval',
+                ], 202);
+            }
+            return redirect()->route('family-circle.member.show', [
+                $member->familyCircle,
+                $member
+            ])->with('info', 'Delete request submitted for owner approval.');
         }
 
         // Delete uploaded files

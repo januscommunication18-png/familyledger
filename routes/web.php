@@ -31,6 +31,7 @@ use App\Http\Controllers\CoparentingController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\RemindersController;
 use App\Http\Controllers\CoparentMessagesController;
+use App\Http\Controllers\PendingCoparentEditController;
 use App\Http\Controllers\ExpensesController;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
@@ -450,6 +451,18 @@ Route::middleware(['security.code', 'auth'])->group(function () {
             Route::get('/{conversation}/export-pdf', [CoparentMessagesController::class, 'exportPdf'])->name('exportPdf');
             Route::get('/{conversation}/export-csv', [CoparentMessagesController::class, 'exportCsv'])->name('exportCsv');
             Route::post('/{conversation}/attachments', [CoparentMessagesController::class, 'uploadAttachment'])->name('uploadAttachment');
+        });
+
+        // Pending Edits (Owner review of coparent edit requests)
+        Route::prefix('pending-edits')->name('pending-edits.')->group(function () {
+            Route::get('/', [PendingCoparentEditController::class, 'index'])->name('index');
+            Route::get('/count', [PendingCoparentEditController::class, 'count'])->name('count');
+            Route::get('/history', [PendingCoparentEditController::class, 'history'])->name('history');
+            Route::get('/{pendingEdit}', [PendingCoparentEditController::class, 'show'])->name('show');
+            Route::post('/{pendingEdit}/approve', [PendingCoparentEditController::class, 'approve'])->name('approve');
+            Route::post('/{pendingEdit}/reject', [PendingCoparentEditController::class, 'reject'])->name('reject');
+            Route::post('/bulk-approve', [PendingCoparentEditController::class, 'bulkApprove'])->name('bulk-approve');
+            Route::post('/bulk-reject', [PendingCoparentEditController::class, 'bulkReject'])->name('bulk-reject');
         });
     });
 

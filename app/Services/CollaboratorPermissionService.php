@@ -45,15 +45,34 @@ class CollaboratorPermissionService
             $this->collaborator = Collaborator::where('user_id', $this->user->id)
                 ->where('tenant_id', $member->tenant_id)
                 ->where('is_active', true)
-                ->whereHas('familyMembers', function ($query) use ($member) {
-                    $query->where('family_member_id', $member->id);
+                ->where(function ($query) use ($member) {
+                    // Check regular collaborator access
+                    $query->whereHas('familyMembers', function ($q) use ($member) {
+                        $q->where('family_member_id', $member->id);
+                    })
+                    // OR check co-parent access
+                    ->orWhere(function ($q) use ($member) {
+                        $q->where('coparenting_enabled', true)
+                          ->whereHas('coparentChildren', function ($cq) use ($member) {
+                              $cq->where('family_member_id', $member->id);
+                          });
+                    });
                 })
                 ->first();
 
             if ($this->collaborator) {
                 $this->isCollaborator = true;
                 $this->isOwner = false;
-                $this->permissions = $this->collaborator->getPermissionsForMember($member->id);
+
+                // Check if this is co-parent access
+                if ($this->collaborator->coparenting_enabled &&
+                    $this->collaborator->hasCoparentAccessToChild($member->id)) {
+                    // Load co-parent permissions from coparent_children table
+                    $this->permissions = $this->loadCoparentPermissions($member->id);
+                } else {
+                    // Load regular collaborator permissions
+                    $this->permissions = $this->collaborator->getPermissionsForMember($member->id);
+                }
             } else {
                 // No access
                 $this->permissions = array_fill_keys(
@@ -64,6 +83,48 @@ class CollaboratorPermissionService
         }
 
         return $this;
+    }
+
+    /**
+     * Load co-parent permissions and map them to the standard permission categories.
+     */
+    protected function loadCoparentPermissions(int $memberId): array
+    {
+        $coparentPerms = $this->collaborator->getCoparentPermissionsForChild($memberId);
+
+        // Map CoparentChild permission categories to CollaboratorInvite categories
+        // CoparentChild uses: basic_info, medical_records, emergency_contacts, school_info,
+        //                     documents, insurance, tax_returns, assets, healthcare_providers,
+        //                     legal_documents, family_resources
+        // CollaboratorInvite uses: date_of_birth, immigration_status, drivers_license, passport,
+        //                          ssn, birth_certificate, medical, emergency_contacts, school,
+        //                          insurance, tax_returns, assets
+
+        $mapped = [];
+
+        // Map basic_info -> date_of_birth, immigration_status
+        $basicInfo = $coparentPerms['basic_info'] ?? 'none';
+        $mapped['date_of_birth'] = $basicInfo;
+        $mapped['immigration_status'] = $basicInfo;
+
+        // Map documents -> drivers_license, passport, ssn, birth_certificate
+        $documents = $coparentPerms['documents'] ?? 'none';
+        $mapped['drivers_license'] = $documents;
+        $mapped['passport'] = $documents;
+        $mapped['ssn'] = $documents;
+        $mapped['birth_certificate'] = $documents;
+
+        // Map medical_records -> medical
+        $mapped['medical'] = $coparentPerms['medical_records'] ?? 'none';
+
+        // Direct mappings
+        $mapped['emergency_contacts'] = $coparentPerms['emergency_contacts'] ?? 'none';
+        $mapped['school'] = $coparentPerms['school_info'] ?? 'none';
+        $mapped['insurance'] = $coparentPerms['insurance'] ?? 'none';
+        $mapped['tax_returns'] = $coparentPerms['tax_returns'] ?? 'none';
+        $mapped['assets'] = $coparentPerms['assets'] ?? 'none';
+
+        return $mapped;
     }
 
     /**
@@ -156,6 +217,8 @@ class CollaboratorPermissionService
 
     /**
      * Check if user has full access to ALL categories.
+     * For owners: always true (they have 'full' level on everything)
+     * For collaborators/co-parents: true if ALL categories have at least 'edit' level
      */
     public function hasFullAccess(): bool
     {
@@ -163,7 +226,25 @@ class CollaboratorPermissionService
             return true;
         }
 
-        return collect($this->permissions)->every(fn($level) => $level === 'full');
+        // For collaborators, check if they have 'edit' or 'full' access on all categories
+        $hierarchy = ['none' => 0, 'view' => 1, 'edit' => 2, 'full' => 3];
+        $editLevel = $hierarchy['edit'];
+
+        return collect($this->permissions)->every(function($level) use ($hierarchy, $editLevel) {
+            return ($hierarchy[$level] ?? 0) >= $editLevel;
+        });
+    }
+
+    /**
+     * Check if user can edit ALL categories (has 'edit' or 'full' on everything).
+     */
+    public function canEditAll(): bool
+    {
+        if ($this->isOwner) {
+            return true;
+        }
+
+        return collect($this->permissions)->every(fn($level) => in_array($level, ['edit', 'full']));
     }
 
     /**

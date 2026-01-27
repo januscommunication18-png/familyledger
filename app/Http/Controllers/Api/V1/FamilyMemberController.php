@@ -10,6 +10,8 @@ use App\Models\MemberMedicalInfo;
 use App\Models\MemberAllergy;
 use App\Models\MemberMedication;
 use App\Models\MemberContact;
+use App\Services\CoparentEditService;
+use App\Services\CollaboratorPermissionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -184,14 +186,16 @@ class FamilyMemberController extends Controller
     {
         $user = $request->user();
 
-        // Ensure the family circle belongs to the user's tenant
-        if ($familyCircle->tenant_id !== $user->tenant_id) {
-            return $this->notFound('Family circle not found');
-        }
+        // Use permission services
+        $permissionService = CollaboratorPermissionService::forMember($member, $user);
+        $editService = CoparentEditService::forMember($member, $user);
 
-        // Ensure the member belongs to this family circle
-        if ($member->family_circle_id !== $familyCircle->id) {
-            return $this->notFound('Member not found in this family circle');
+        // Allow access if owner OR coparent with edit permission
+        $isOwner = $familyCircle->tenant_id === $user->tenant_id && $member->family_circle_id === $familyCircle->id;
+        $isCoparent = $editService->needsApproval();
+
+        if (!$isOwner && !$isCoparent) {
+            return $this->forbidden('You do not have permission to edit this member');
         }
 
         $validated = $request->validate([
@@ -226,6 +230,7 @@ class FamilyMemberController extends Controller
         ];
 
         // Handle base64 profile image
+        $newProfileImage = null;
         if (!empty($validated['profile_image'])) {
             $imageData = $validated['profile_image'];
 
@@ -239,11 +244,6 @@ class FamilyMemberController extends Controller
 
             $decodedImage = base64_decode($imageData);
             if ($decodedImage !== false) {
-                // Delete old profile image if exists
-                if ($member->profile_image) {
-                    Storage::disk('do_spaces')->delete($member->profile_image);
-                }
-
                 $filename = 'profile_' . time() . '_' . uniqid() . '.' . $extension;
                 $path = 'family-ledger/members/profiles/' . $filename;
 
@@ -251,8 +251,57 @@ class FamilyMemberController extends Controller
                 $disk->put($path, $decodedImage);
                 $disk->setVisibility($path, 'public');
 
+                $newProfileImage = $path;
                 $data['profile_image'] = $path;
             }
+        }
+
+        // If coparent, create pending edits for each changed field
+        if ($isCoparent) {
+            $pendingCount = 0;
+            $fieldsToCheck = [
+                'first_name', 'last_name', 'email', 'phone', 'phone_country_code',
+                'date_of_birth', 'relationship', 'father_name', 'mother_name',
+                'immigration_status'
+            ];
+
+            foreach ($fieldsToCheck as $field) {
+                $oldValue = $member->$field;
+                $newValue = $data[$field] ?? null;
+
+                // Normalize for comparison
+                $oldNormalized = is_null($oldValue) ? '' : (string) $oldValue;
+                $newNormalized = is_null($newValue) ? '' : (string) $newValue;
+
+                if ($oldNormalized !== $newNormalized) {
+                    $editService->handleUpdate($member, $field, $newValue);
+                    $pendingCount++;
+                }
+            }
+
+            // Handle profile image separately
+            if ($newProfileImage) {
+                $editService->handleUpdate($member, 'profile_image', $newProfileImage);
+                $pendingCount++;
+            }
+
+            if ($pendingCount === 0) {
+                return $this->success([
+                    'member' => new FamilyMemberResource($member),
+                ], 'No changes detected');
+            }
+
+            return $this->success([
+                'member' => new FamilyMemberResource($member),
+                'pending' => true,
+                'pending_count' => $pendingCount,
+            ], "{$pendingCount} edit(s) submitted for approval", 202);
+        }
+
+        // Owner can update directly
+        if ($newProfileImage && $member->profile_image) {
+            // Delete old profile image
+            Storage::disk('do_spaces')->delete($member->profile_image);
         }
 
         $member->update($data);

@@ -113,7 +113,7 @@
                         <p class="text-xs text-slate-400">Track medications and dosages</p>
                     </div>
                 </div>
-                @if($access->canCreate('medical'))
+                @if($access->canEdit('medical'))
                     <button type="button" onclick="toggleMedicationForm()" class="btn btn-primary btn-sm gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                         Add
@@ -122,7 +122,7 @@
             </div>
 
             <!-- Add Medication Form (Hidden by default) -->
-            @if($access->canCreate('medical'))
+            @if($access->canEdit('medical'))
             <div id="medicationForm" class="hidden mb-4 p-4 bg-violet-50 rounded-xl border border-violet-200">
                 <form action="{{ route('member.medication.store', $member) }}" method="POST">
                     @csrf
@@ -255,7 +255,7 @@
                         <p class="text-xs text-slate-400">Ongoing health conditions</p>
                     </div>
                 </div>
-                @if($access->canCreate('medical'))
+                @if($access->canEdit('medical'))
                     <button type="button" onclick="toggleConditionForm()" class="btn btn-primary btn-sm gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                         Add
@@ -396,7 +396,7 @@
                         <p class="text-xs text-slate-400">Track immunization records</p>
                     </div>
                 </div>
-                @if($access->canCreate('medical'))
+                @if($access->canEdit('medical'))
                     <button type="button" onclick="toggleVaccinationForm()" class="btn btn-primary btn-sm gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                         Add
@@ -683,7 +683,7 @@
                         <p class="text-xs text-slate-400">Track allergies and reactions</p>
                     </div>
                 </div>
-                @if($access->canCreate('medical'))
+                @if($access->canEdit('medical'))
                     <button type="button" onclick="toggleAllergyForm()" class="btn btn-primary btn-sm gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                         Add
@@ -859,7 +859,7 @@
                         <p class="text-xs text-slate-400">Doctors and care providers</p>
                     </div>
                 </div>
-                @if($access->canCreate('medical'))
+                @if($access->canEdit('medical'))
                     <button type="button" onclick="toggleProviderForm()" class="btn btn-primary btn-sm gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                         Add
