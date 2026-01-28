@@ -4,6 +4,8 @@ use App\Http\Controllers\Backoffice\AuthController;
 use App\Http\Controllers\Backoffice\DashboardController;
 use App\Http\Controllers\Backoffice\ClientsController;
 use App\Http\Controllers\Backoffice\SettingsController;
+use App\Http\Controllers\Backoffice\PackagePlanController;
+use App\Http\Controllers\Backoffice\DiscountCodeController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -59,6 +61,31 @@ Route::middleware('auth:backoffice')->group(function () {
         Route::post('/{client}/verify-view-code', [ClientsController::class, 'verifyViewCode'])->name('verifyViewCode');
         Route::get('/{client}/data', [ClientsController::class, 'showData'])->name('data');
         Route::post('/{client}/revoke-access', [ClientsController::class, 'revokeViewAccess'])->name('revokeAccess');
+    });
+
+    // Package Plans
+    Route::prefix('package-plans')->name('backoffice.package-plans.')->group(function () {
+        Route::get('/', [PackagePlanController::class, 'index'])->name('index');
+        Route::get('/create', [PackagePlanController::class, 'create'])->name('create');
+        Route::post('/', [PackagePlanController::class, 'store'])->name('store');
+        Route::get('/{packagePlan}', [PackagePlanController::class, 'show'])->name('show');
+        Route::get('/{packagePlan}/edit', [PackagePlanController::class, 'edit'])->name('edit');
+        Route::put('/{packagePlan}', [PackagePlanController::class, 'update'])->name('update');
+        Route::delete('/{packagePlan}', [PackagePlanController::class, 'destroy'])->name('destroy');
+        Route::post('/{packagePlan}/toggle-status', [PackagePlanController::class, 'toggleStatus'])->name('toggleStatus');
+    });
+
+    // Discount Codes
+    Route::prefix('discount-codes')->name('backoffice.discount-codes.')->group(function () {
+        Route::get('/', [DiscountCodeController::class, 'index'])->name('index');
+        Route::get('/create', [DiscountCodeController::class, 'create'])->name('create');
+        Route::get('/generate-code', [DiscountCodeController::class, 'generateCode'])->name('generateCode');
+        Route::post('/', [DiscountCodeController::class, 'store'])->name('store');
+        Route::get('/{discountCode}', [DiscountCodeController::class, 'show'])->name('show');
+        Route::get('/{discountCode}/edit', [DiscountCodeController::class, 'edit'])->name('edit');
+        Route::put('/{discountCode}', [DiscountCodeController::class, 'update'])->name('update');
+        Route::delete('/{discountCode}', [DiscountCodeController::class, 'destroy'])->name('destroy');
+        Route::post('/{discountCode}/toggle-status', [DiscountCodeController::class, 'toggleStatus'])->name('toggleStatus');
     });
 
     // Settings

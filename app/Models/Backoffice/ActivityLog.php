@@ -46,4 +46,14 @@ class ActivityLog extends Model
     public const ACTION_TOGGLE_CLIENT_STATUS = 'toggle_client_status';
     public const ACTION_UPDATE_PROFILE = 'update_profile';
     public const ACTION_CHANGE_PASSWORD = 'change_password';
+
+    // Package Plan actions
+    public const ACTION_CREATE_PLAN = 'create_package_plan';
+    public const ACTION_UPDATE_PLAN = 'update_package_plan';
+    public const ACTION_DELETE_PLAN = 'delete_package_plan';
+
+    // Discount Code actions
+    public const ACTION_CREATE_DISCOUNT = 'create_discount_code';
+    public const ACTION_UPDATE_DISCOUNT = 'update_discount_code';
+    public const ACTION_DELETE_DISCOUNT = 'delete_discount_code';
 }
