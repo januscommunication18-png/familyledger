@@ -18,6 +18,9 @@
     @stack('styles')
 
     <style>
+        /* Hide elements with x-cloak until Alpine initializes */
+        [x-cloak] { display: none !important; }
+
         /* Sidebar collapsed/expanded states */
         .sidebar {
             width: 72px;
@@ -405,6 +408,7 @@
 
                             <!-- Search Results Dropdown -->
                             <div x-show="showResults"
+                                 x-cloak
                                  x-transition:enter="transition ease-out duration-200"
                                  x-transition:enter-start="opacity-0 translate-y-1"
                                  x-transition:enter-end="opacity-100 translate-y-0"
