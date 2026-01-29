@@ -69,7 +69,15 @@ class DripEmail extends Mailable
 
     protected function parseVariables(string $content): string
     {
+        // Extract first name from full name
+        $firstName = 'there';
+        if ($this->user?->name) {
+            $nameParts = explode(' ', $this->user->name);
+            $firstName = $nameParts[0];
+        }
+
         $variables = [
+            '{{first_name}}' => $firstName,
             '{{user_name}}' => $this->user?->name ?? 'Valued Customer',
             '{{user_email}}' => $this->user?->email ?? '',
             '{{tenant_name}}' => $this->tenant?->name ?? 'Your Family',
@@ -78,9 +86,34 @@ class DripEmail extends Mailable
             '{{app_url}}' => config('app.url'),
             '{{app_name}}' => config('app.name'),
             '{{unsubscribe_url}}' => $this->getUnsubscribeUrl(),
+            // Usage stats for upgrade emails
+            '{{member_count}}' => $this->tenant ? \App\Models\FamilyMember::where('tenant_id', $this->tenant->id)->count() : 0,
+            '{{member_limit}}' => $this->tenant?->getCurrentPlan()?->max_family_members ?? 5,
+            '{{document_count}}' => $this->tenant ? \App\Models\FamilyResource::where('tenant_id', $this->tenant->id)->count() : 0,
+            '{{document_limit}}' => $this->tenant?->getCurrentPlan()?->max_documents ?? 10,
+            '{{storage_used}}' => $this->getStorageUsed(),
+            '{{storage_limit}}' => $this->tenant?->getCurrentPlan()?->max_storage_mb ?? 100 . ' MB',
         ];
 
         return str_replace(array_keys($variables), array_values($variables), $content);
+    }
+
+    protected function getStorageUsed(): string
+    {
+        if (!$this->tenant) {
+            return '0 MB';
+        }
+
+        // Calculate storage used (simplified)
+        $bytes = \App\Models\FamilyResource::where('tenant_id', $this->tenant->id)
+            ->withSum('files', 'file_size')
+            ->get()
+            ->sum('files_sum_file_size') ?? 0;
+
+        if ($bytes < 1024 * 1024) {
+            return round($bytes / 1024, 1) . ' KB';
+        }
+        return round($bytes / (1024 * 1024), 1) . ' MB';
     }
 
     protected function wrapLinksForTracking(string $content): string

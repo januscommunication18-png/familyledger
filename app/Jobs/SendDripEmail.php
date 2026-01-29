@@ -40,6 +40,31 @@ class SendDripEmail implements ShouldQueue
 
     public function handle(): void
     {
+        // Check if already sent or skipped (prevents duplicate sends)
+        $alreadyProcessed = DripEmailLog::where('drip_campaign_id', $this->step->drip_campaign_id)
+            ->where('drip_email_step_id', $this->step->id)
+            ->where('email', $this->email)
+            ->exists();
+
+        if ($alreadyProcessed) {
+            return;
+        }
+
+        // Check condition at send time (conditions may have changed since scheduling)
+        if ($this->step->hasCondition() && !$this->step->checkCondition($this->tenantId)) {
+            // Create a skipped log entry
+            DripEmailLog::create([
+                'drip_campaign_id' => $this->step->drip_campaign_id,
+                'drip_email_step_id' => $this->step->id,
+                'tenant_id' => $this->tenantId,
+                'user_id' => $this->userId,
+                'email' => $this->email,
+                'status' => 'skipped',
+                'error_message' => 'Condition not met: ' . $this->step->condition_type,
+            ]);
+            return;
+        }
+
         // Create log entry
         $log = DripEmailLog::create([
             'drip_campaign_id' => $this->step->drip_campaign_id,

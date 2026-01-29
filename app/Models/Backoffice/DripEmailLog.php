@@ -35,6 +35,7 @@ class DripEmailLog extends Model
     const STATUS_FAILED = 'failed';
     const STATUS_OPENED = 'opened';
     const STATUS_CLICKED = 'clicked';
+    const STATUS_SKIPPED = 'skipped';
 
     public static function getStatuses(): array
     {
@@ -44,6 +45,7 @@ class DripEmailLog extends Model
             self::STATUS_FAILED => 'Failed',
             self::STATUS_OPENED => 'Opened',
             self::STATUS_CLICKED => 'Clicked',
+            self::STATUS_SKIPPED => 'Skipped',
         ];
     }
 
@@ -103,6 +105,11 @@ class DripEmailLog extends Model
         return $query->where('status', self::STATUS_CLICKED);
     }
 
+    public function scopeSkipped($query)
+    {
+        return $query->where('status', self::STATUS_SKIPPED);
+    }
+
     public function markAsSent(): void
     {
         $this->update([
@@ -159,6 +166,7 @@ class DripEmailLog extends Model
             self::STATUS_FAILED => 'red',
             self::STATUS_OPENED => 'green',
             self::STATUS_CLICKED => 'purple',
+            self::STATUS_SKIPPED => 'gray',
             default => 'gray',
         };
     }

@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Backoffice\DripCampaign;
 use App\Models\Backoffice\DripEmailLog;
+use App\Models\Backoffice\DripEmailStep;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
@@ -117,13 +118,37 @@ class ProcessDripCampaigns implements ShouldQueue
             return;
         }
 
-        // Check if this email has already received this step
-        $alreadySent = DripEmailLog::where('drip_campaign_id', $campaign->id)
+        // Skip event-based steps - they are triggered by events, not cron
+        if ($firstStep->isEventBased()) {
+            // Find the next time-based step
+            $firstStep = $campaign->steps()
+                ->where('trigger_type', DripEmailStep::TRIGGER_TIME_BASED)
+                ->orderBy('sequence_order')
+                ->first();
+
+            if (!$firstStep) {
+                return;
+            }
+        }
+
+        // Check if this email has already received this step (or it was skipped)
+        $alreadyProcessed = DripEmailLog::where('drip_campaign_id', $campaign->id)
             ->where('drip_email_step_id', $firstStep->id)
             ->where('email', $email)
             ->exists();
 
-        if ($alreadySent) {
+        if ($alreadyProcessed) {
+            return;
+        }
+
+        // Check condition before sending
+        if ($firstStep->hasCondition() && !$firstStep->checkCondition($tenantId)) {
+            Log::info('Drip email condition not met, skipping', [
+                'campaign_id' => $campaign->id,
+                'step_id' => $firstStep->id,
+                'email' => $email,
+                'condition' => $firstStep->condition_type,
+            ]);
             return;
         }
 
@@ -152,15 +177,22 @@ class ProcessDripCampaigns implements ShouldQueue
         $nextStep = $campaign->getNextStep($currentStep->sequence_order);
 
         while ($nextStep) {
+            // Skip event-based steps - they are triggered by events, not scheduled
+            if ($nextStep->isEventBased()) {
+                $nextStep = $campaign->getNextStep($nextStep->sequence_order);
+                continue;
+            }
+
             $totalDelay += $nextStep->getDelayInMinutes();
 
-            // Check if this step has already been scheduled
-            $alreadyScheduled = DripEmailLog::where('drip_campaign_id', $campaign->id)
+            // Check if this step has already been processed (sent or skipped)
+            $alreadyProcessed = DripEmailLog::where('drip_campaign_id', $campaign->id)
                 ->where('drip_email_step_id', $nextStep->id)
                 ->where('email', $email)
                 ->exists();
 
-            if (!$alreadyScheduled) {
+            if (!$alreadyProcessed) {
+                // For conditional steps, we dispatch a job that will check the condition at send time
                 SendDripEmail::dispatch($nextStep, $email, $userId, $tenantId)
                     ->delay(now()->addMinutes($totalDelay));
             }

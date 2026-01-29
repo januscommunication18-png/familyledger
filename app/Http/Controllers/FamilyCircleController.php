@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\FamilyCircleCreated;
 use App\Models\Collaborator;
 use App\Models\CollaboratorInvite;
 use App\Models\FamilyCircle;
@@ -102,6 +103,9 @@ class FamilyCircleController extends Controller
         }
 
         $circle = FamilyCircle::create($data);
+
+        // Dispatch event for drip campaigns
+        FamilyCircleCreated::dispatch($circle, $user);
 
         // Add creator as a family member if "Include Me" is checked
         if ($request->boolean('include_me')) {

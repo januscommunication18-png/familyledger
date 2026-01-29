@@ -9,5 +9,5 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Process drip email campaigns every hour
-Schedule::job(new ProcessDripCampaigns)->hourly();
+// Process drip email campaigns daily at 9 AM
+Schedule::job(new ProcessDripCampaigns)->dailyAt('09:00');
