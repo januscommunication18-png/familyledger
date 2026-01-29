@@ -53,14 +53,15 @@ class SecurityHeaders
         // Content Security Policy - Production only
         $csp = implode('; ', [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://code.jquery.com https://*.smartystreets.com https://*.smarty.com",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://code.jquery.com https://*.smartystreets.com https://*.smarty.com https://cdn.paddle.com https://sandbox-cdn.paddle.com",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.bunny.net https://cdn.jsdelivr.net",
             "font-src 'self' https://fonts.gstatic.com https://fonts.bunny.net",
             "img-src 'self' data: https:",
-            "connect-src 'self' wss: ws: https://*.smartystreets.com https://*.smarty.com",
+            "connect-src 'self' wss: ws: https://*.smartystreets.com https://*.smarty.com https://*.paddle.com",
+            "frame-src 'self' https://*.paddle.com",
             "frame-ancestors 'self'",
             "base-uri 'self'",
-            "form-action 'self'",
+            "form-action 'self' https://*.paddle.com",
         ]);
         $response->headers->set('Content-Security-Policy', $csp);
 
