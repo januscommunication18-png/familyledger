@@ -385,9 +385,139 @@
 
                     <!-- Center - Search Bar -->
                     <div class="flex-1 flex justify-center px-4">
-                        <div class="relative w-full max-w-md">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                            <input type="text" placeholder="Search..." class="w-full h-10 pl-10 pr-4 rounded-xl bg-slate-100 border-0 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:bg-white">
+                        <div class="relative w-full max-w-md" x-data="globalSearch()" @click.outside="closeSearch()">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-10"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                            <input type="text"
+                                   x-model="query"
+                                   @input.debounce.300ms="search()"
+                                   @focus="showResults = query.length >= 2 && results.length > 0"
+                                   @keydown.escape="closeSearch()"
+                                   @keydown.arrow-down.prevent="navigateDown()"
+                                   @keydown.arrow-up.prevent="navigateUp()"
+                                   @keydown.enter.prevent="selectResult()"
+                                   placeholder="Search members, documents, goals..."
+                                   class="w-full h-10 pl-10 pr-4 rounded-xl bg-slate-100 border-0 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:bg-white">
+
+                            <!-- Loading indicator -->
+                            <div x-show="loading" class="absolute right-3 top-1/2 -translate-y-1/2">
+                                <svg class="animate-spin h-4 w-4 text-violet-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </div>
+
+                            <!-- Search Results Dropdown -->
+                            <div x-show="showResults"
+                                 x-transition:enter="transition ease-out duration-200"
+                                 x-transition:enter-start="opacity-0 translate-y-1"
+                                 x-transition:enter-end="opacity-100 translate-y-0"
+                                 x-transition:leave="transition ease-in duration-150"
+                                 x-transition:leave-start="opacity-100 translate-y-0"
+                                 x-transition:leave-end="opacity-0 translate-y-1"
+                                 class="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-slate-200 max-h-96 overflow-y-auto z-50">
+
+                                <!-- No results -->
+                                <div x-show="!loading && results.length === 0 && query.length >= 2" class="p-4 text-center text-slate-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-2 text-slate-300"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                                    <p class="text-sm">No results found for "<span x-text="query" class="font-medium"></span>"</p>
+                                </div>
+
+                                <!-- Results grouped by category -->
+                                <template x-for="(group, category) in groupedResults" :key="category">
+                                    <div class="border-b border-slate-100 last:border-0">
+                                        <div class="px-3 py-2 bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wider" x-text="category"></div>
+                                        <template x-for="(result, index) in group" :key="result.url">
+                                            <a :href="result.url"
+                                               @mouseenter="selectedIndex = getGlobalIndex(category, index)"
+                                               :class="{ 'bg-violet-50': selectedIndex === getGlobalIndex(category, index) }"
+                                               class="flex items-center gap-3 px-3 py-2.5 hover:bg-violet-50 transition-colors cursor-pointer">
+                                                <!-- Icon -->
+                                                <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                                                     :class="{
+                                                         'bg-violet-100 text-violet-600': result.type === 'member',
+                                                         'bg-blue-100 text-blue-600': result.type === 'circle',
+                                                         'bg-emerald-100 text-emerald-600': result.type === 'person',
+                                                         'bg-amber-100 text-amber-600': result.type === 'pet',
+                                                         'bg-rose-100 text-rose-600': result.type === 'goal',
+                                                         'bg-cyan-100 text-cyan-600': result.type === 'todo',
+                                                         'bg-purple-100 text-purple-600': result.type === 'legal',
+                                                         'bg-teal-100 text-teal-600': result.type === 'asset',
+                                                         'bg-orange-100 text-orange-600': result.type === 'resource',
+                                                         'bg-pink-100 text-pink-600': result.type === 'journal',
+                                                         'bg-indigo-100 text-indigo-600': result.type === 'insurance',
+                                                         'bg-lime-100 text-lime-600': result.type === 'tax',
+                                                         'bg-fuchsia-100 text-fuchsia-600': result.type === 'shopping',
+                                                         'bg-sky-100 text-sky-600': result.type === 'todolist',
+                                                         'bg-green-100 text-green-600': result.type === 'expense'
+                                                     }">
+                                                    <template x-if="result.icon === 'user'">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                                    </template>
+                                                    <template x-if="result.icon === 'users'">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                                    </template>
+                                                    <template x-if="result.icon === 'address-book'">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4z"/><path d="M4 10h4"/><path d="M4 14h4"/><path d="M12 10h4"/><path d="M12 14h4"/></svg>
+                                                    </template>
+                                                    <template x-if="result.icon === 'paw'">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="4" cy="8" r="2"/><path d="M9 14c0-2.5 2-4 3-4s3 1.5 3 4c0 3-3 5-3 5s-3-2-3-5Z"/></svg>
+                                                    </template>
+                                                    <template x-if="result.icon === 'target'">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                                                    </template>
+                                                    <template x-if="result.icon === 'checkbox'">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
+                                                    </template>
+                                                    <template x-if="result.icon === 'scale'">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>
+                                                    </template>
+                                                    <template x-if="result.icon === 'building-bank'">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M3 10h18"/><path d="M5 6l7-3 7 3"/><path d="M4 10v11"/><path d="M20 10v11"/><path d="M8 14v3"/><path d="M12 14v3"/><path d="M16 14v3"/></svg>
+                                                    </template>
+                                                    <template x-if="result.icon === 'folder'">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+                                                    </template>
+                                                    <template x-if="result.icon === 'notebook'">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/><rect width="16" height="20" x="4" y="2" rx="2"/><path d="M16 2v20"/></svg>
+                                                    </template>
+                                                    <template x-if="result.icon === 'shield'">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>
+                                                    </template>
+                                                    <template x-if="result.icon === 'receipt'">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/></svg>
+                                                    </template>
+                                                    <template x-if="result.icon === 'shopping-cart'">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+                                                    </template>
+                                                    <template x-if="result.icon === 'wallet'">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>
+                                                    </template>
+                                                    <template x-if="result.icon === 'list'">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
+                                                    </template>
+                                                </div>
+                                                <!-- Content -->
+                                                <div class="flex-1 min-w-0">
+                                                    <p class="text-sm font-medium text-slate-900 truncate" x-text="result.title"></p>
+                                                    <p class="text-xs text-slate-500 truncate" x-text="result.subtitle"></p>
+                                                </div>
+                                                <!-- Arrow -->
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-300"><path d="m9 18 6-6-6-6"/></svg>
+                                            </a>
+                                        </template>
+                                    </div>
+                                </template>
+
+                                <!-- Quick tip -->
+                                <div x-show="results.length > 0" class="px-3 py-2 bg-slate-50 text-xs text-slate-400 flex items-center gap-2">
+                                    <kbd class="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-slate-500">↑↓</kbd>
+                                    <span>Navigate</span>
+                                    <kbd class="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-slate-500 ml-2">Enter</kbd>
+                                    <span>Open</span>
+                                    <kbd class="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-slate-500 ml-2">Esc</kbd>
+                                    <span>Close</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -791,6 +921,92 @@
         animation: slideIn 0.3s ease-out forwards;
     }
     </style>
+
+    {{-- Global Search Component --}}
+    <script>
+    function globalSearch() {
+        return {
+            query: '',
+            results: [],
+            loading: false,
+            showResults: false,
+            selectedIndex: -1,
+
+            async search() {
+                if (this.query.length < 2) {
+                    this.results = [];
+                    this.showResults = false;
+                    return;
+                }
+
+                this.loading = true;
+                this.showResults = true;
+
+                try {
+                    const response = await fetch(`{{ route('search') }}?q=${encodeURIComponent(this.query)}`, {
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    const data = await response.json();
+                    this.results = data.results || [];
+                    this.selectedIndex = -1;
+                } catch (error) {
+                    console.error('Search error:', error);
+                    this.results = [];
+                } finally {
+                    this.loading = false;
+                }
+            },
+
+            get groupedResults() {
+                const groups = {};
+                this.results.forEach(result => {
+                    if (!groups[result.category]) {
+                        groups[result.category] = [];
+                    }
+                    groups[result.category].push(result);
+                });
+                return groups;
+            },
+
+            getGlobalIndex(category, localIndex) {
+                let globalIndex = 0;
+                for (const [cat, items] of Object.entries(this.groupedResults)) {
+                    if (cat === category) {
+                        return globalIndex + localIndex;
+                    }
+                    globalIndex += items.length;
+                }
+                return -1;
+            },
+
+            navigateDown() {
+                if (this.selectedIndex < this.results.length - 1) {
+                    this.selectedIndex++;
+                }
+            },
+
+            navigateUp() {
+                if (this.selectedIndex > 0) {
+                    this.selectedIndex--;
+                }
+            },
+
+            selectResult() {
+                if (this.selectedIndex >= 0 && this.selectedIndex < this.results.length) {
+                    window.location.href = this.results[this.selectedIndex].url;
+                }
+            },
+
+            closeSearch() {
+                this.showResults = false;
+                this.selectedIndex = -1;
+            }
+        }
+    }
+    </script>
 
     {{-- Form Double Submit Prevention --}}
     <script>

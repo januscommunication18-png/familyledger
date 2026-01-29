@@ -146,6 +146,11 @@ Route::middleware(['security.code', 'auth'])->group(function () {
         ->middleware(['verified', 'onboarding'])
         ->name('dashboard');
 
+    // Global Search
+    Route::get('/search', [\App\Http\Controllers\GlobalSearchController::class, 'search'])
+        ->middleware(['verified', 'onboarding'])
+        ->name('search');
+
     // Family Circle
     Route::middleware(['verified', 'onboarding'])->prefix('family-circle')->name('family-circle.')->group(function () {
         Route::get('/', [FamilyCircleController::class, 'index'])->name('index');

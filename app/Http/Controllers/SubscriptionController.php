@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 
 class SubscriptionController extends Controller
 {
@@ -219,8 +220,13 @@ class SubscriptionController extends Controller
      */
     public function handlePaddleWebhook(Request $request): JsonResponse
     {
-        // Verify Paddle signature here in production
-        // $signature = $request->header('Paddle-Signature');
+        // Verify Paddle signature
+        if (!$this->verifyPaddleWebhookSignature($request)) {
+            \Log::warning('Paddle webhook signature verification failed', [
+                'ip' => $request->ip(),
+            ]);
+            return response()->json(['error' => 'Invalid signature'], 401);
+        }
 
         $payload = $request->all();
 
@@ -397,5 +403,66 @@ class SubscriptionController extends Controller
 
         return redirect()->route('subscription.index')
             ->with('success', 'Your billing cycle has been updated.');
+    }
+
+    /**
+     * Verify Paddle webhook signature.
+     */
+    private function verifyPaddleWebhookSignature(Request $request): bool
+    {
+        $secret = config('paddle.webhook_secret');
+
+        // Skip verification if webhook secret is not configured (development mode)
+        if (empty($secret)) {
+            Log::info('Paddle webhook secret not configured, skipping verification');
+            return true;
+        }
+
+        $signature = $request->header('Paddle-Signature');
+
+        if (empty($signature)) {
+            return false;
+        }
+
+        // Parse the signature header
+        // Format: ts=timestamp;h1=hash
+        $parts = [];
+        foreach (explode(';', $signature) as $part) {
+            $keyValue = explode('=', $part, 2);
+            if (count($keyValue) === 2) {
+                $parts[$keyValue[0]] = $keyValue[1];
+            }
+        }
+
+        if (!isset($parts['ts']) || !isset($parts['h1'])) {
+            return false;
+        }
+
+        $timestamp = $parts['ts'];
+        $hash = $parts['h1'];
+
+        // Build the signed payload
+        $payload = $request->getContent();
+        $signedPayload = $timestamp . ':' . $payload;
+
+        // Calculate expected signature
+        $expectedHash = hash_hmac('sha256', $signedPayload, $secret);
+
+        // Timing-safe comparison
+        if (!hash_equals($expectedHash, $hash)) {
+            return false;
+        }
+
+        // Check timestamp to prevent replay attacks (5 minute tolerance)
+        $tolerance = 300;
+        if (abs(time() - (int) $timestamp) > $tolerance) {
+            Log::warning('Paddle webhook timestamp too old', [
+                'timestamp' => $timestamp,
+                'current_time' => time(),
+            ]);
+            return false;
+        }
+
+        return true;
     }
 }

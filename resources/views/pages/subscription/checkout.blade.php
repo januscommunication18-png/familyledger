@@ -114,9 +114,19 @@
                 <div class="card-body">
                     <h2 class="card-title mb-4">Payment Details</h2>
 
-                    <!-- Paddle Checkout will be loaded here -->
-                    <div id="paddle-checkout-container" class="min-h-[400px] flex items-center justify-center">
-                        <div class="text-center">
+                    <!-- Paddle Checkout Button -->
+                    <div id="paddle-checkout-container" class="min-h-[200px] flex flex-col items-center justify-center">
+                        <button type="button" id="paddle-checkout-btn" class="btn btn-primary btn-lg gap-2 hidden">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                            </svg>
+                            @if($plan->trial_period_days > 0)
+                                Start {{ $plan->trial_period_days }}-Day Free Trial
+                            @else
+                                Pay with Card
+                            @endif
+                        </button>
+                        <div id="paddle-loading" class="text-center">
                             <span class="loading loading-spinner loading-lg text-primary"></span>
                             <p class="text-sm text-base-content/60 mt-2">Loading secure checkout...</p>
                         </div>
@@ -233,32 +243,77 @@ function checkoutForm() {
     }
 }
 
-// Initialize Paddle checkout when available
+// Paddle configuration - All values from .env via config/paddle.php
+const PADDLE_CONFIG = {
+    clientToken: '{{ config('paddle.client_token') }}',
+    priceId: '{{ $billingCycle === 'yearly' ? $plan->paddle_yearly_price_id : $plan->paddle_monthly_price_id }}',
+    env: '{{ config('paddle.sandbox') ? 'sandbox' : 'production' }}',
+    jsUrl: '{{ config('paddle.sandbox') ? config('paddle.js_urls.sandbox') : config('paddle.js_urls.production') }}',
+    customerEmail: '{{ auth()->user()->email }}',
+    successUrl: '{{ route('subscription.index') }}?success=1'
+};
+
+function showFallbackForm() {
+    document.getElementById('paddle-checkout-container').classList.add('hidden');
+    document.getElementById('checkout-form').classList.remove('hidden');
+}
+
+function showCheckoutButton() {
+    document.getElementById('paddle-loading').classList.add('hidden');
+    document.getElementById('paddle-checkout-btn').classList.remove('hidden');
+}
+
+// Load Paddle.js and setup
 document.addEventListener('DOMContentLoaded', function() {
-    // Check if Paddle is configured
-    const paddlePriceId = '{{ $billingCycle === 'yearly' ? $plan->paddle_yearly_price_id : $plan->paddle_monthly_price_id }}';
-
-    if (!paddlePriceId) {
-        // Show fallback form if Paddle is not configured
-        document.getElementById('paddle-checkout-container').classList.add('hidden');
-        document.getElementById('checkout-form').classList.remove('hidden');
-    } else {
-        // Initialize Paddle checkout here when configured
-        // Paddle.Checkout.open({
-        //     items: [{ priceId: paddlePriceId, quantity: 1 }],
-        //     customer: {
-        //         email: '{{ auth()->user()->email }}'
-        //     },
-        //     customData: {
-        //         tenant_id: '{{ auth()->user()->tenant_id }}',
-        //         plan_id: '{{ $plan->id }}'
-        //     }
-        // });
-
-        // For now, show the fallback form
-        document.getElementById('paddle-checkout-container').classList.add('hidden');
-        document.getElementById('checkout-form').classList.remove('hidden');
+    if (!PADDLE_CONFIG.clientToken || !PADDLE_CONFIG.priceId) {
+        console.log('Paddle not configured');
+        showFallbackForm();
+        return;
     }
+
+    // Load Paddle.js from config URL (sandbox or production)
+    const script = document.createElement('script');
+    script.src = PADDLE_CONFIG.jsUrl;
+    script.async = true;
+
+    script.onload = function() {
+        console.log('Paddle.js loaded from:', PADDLE_CONFIG.jsUrl);
+
+        // Set environment (sandbox or production)
+        Paddle.Environment.set(PADDLE_CONFIG.env);
+
+        // Setup Paddle
+        Paddle.Setup({
+            token: PADDLE_CONFIG.clientToken
+        });
+
+        console.log('Paddle setup complete - Environment:', PADDLE_CONFIG.env);
+        showCheckoutButton();
+
+        // Add click handler
+        document.getElementById('paddle-checkout-btn').addEventListener('click', function() {
+            console.log('Opening checkout for price:', PADDLE_CONFIG.priceId);
+
+            Paddle.Checkout.open({
+                items: [
+                    {
+                        priceId: PADDLE_CONFIG.priceId,
+                        quantity: 1
+                    }
+                ],
+                customer: {
+                    email: PADDLE_CONFIG.customerEmail
+                }
+            });
+        });
+    };
+
+    script.onerror = function() {
+        console.error('Failed to load Paddle.js');
+        showFallbackForm();
+    };
+
+    document.head.appendChild(script);
 });
 </script>
 @endpush

@@ -16,6 +16,8 @@
         "laravel/socialite": "^5.24",
         "laravel/tinker": "^2.10.1",
         "league/flysystem-aws-s3-v3": "^3.0",
+        "paddlehq/paddle-php-sdk": "^1.15",
+        "php-http/guzzle7-adapter": "^1.1",
         "pragmarx/google2fa-laravel": "^2.3",
         "stancl/tenancy": "^3.9",
         "twilio/sdk": "^8.10"
