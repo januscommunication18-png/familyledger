@@ -134,7 +134,7 @@ class GlobalSearchController extends Controller
             ];
         }
 
-        // Search Todo Items
+        // Search Todo Items (Tasks)
         $todos = TodoItem::where('tenant_id', $tenantId)
             ->where('title', 'LIKE', "%{$query}%")
             ->limit($limit)
@@ -147,7 +147,7 @@ class GlobalSearchController extends Controller
                 'icon' => 'checkbox',
                 'title' => $todo->title,
                 'subtitle' => ucfirst($todo->status ?? 'pending'),
-                'url' => route('lists.todos.items.edit', $todo->id),
+                'url' => route('goals-todo.tasks.edit', $todo->id),
             ];
         }
 
@@ -189,11 +189,16 @@ class GlobalSearchController extends Controller
             ];
         }
 
-        // Search Family Resources
+        // Search Family Resources - name is encrypted, so filter in PHP
         $resources = FamilyResource::where('tenant_id', $tenantId)
-            ->where('name', 'LIKE', "%{$query}%")
-            ->limit($limit)
-            ->get();
+            ->limit(50)
+            ->get()
+            ->filter(function ($resource) use ($query) {
+                return stripos($resource->name ?? '', $query) !== false ||
+                       stripos($resource->document_type ?? '', $query) !== false ||
+                       stripos($resource->custom_document_type ?? '', $query) !== false;
+            })
+            ->take($limit);
 
         foreach ($resources as $resource) {
             $results[] = [
@@ -301,7 +306,7 @@ class GlobalSearchController extends Controller
                 'icon' => 'list',
                 'title' => $list->name,
                 'subtitle' => 'Todo List',
-                'url' => route('lists.index', ['tab' => 'todos', 'todo_list' => $list->id]),
+                'url' => route('goals-todo.index', ['tab' => 'todos', 'list' => $list->id]),
             ];
         }
 

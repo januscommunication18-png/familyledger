@@ -7,6 +7,7 @@ use App\Http\Controllers\Backoffice\ClientsController;
 use App\Http\Controllers\Backoffice\SettingsController;
 use App\Http\Controllers\Backoffice\PackagePlanController;
 use App\Http\Controllers\Backoffice\DiscountCodeController;
+use App\Http\Controllers\Backoffice\DripCampaignController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -100,6 +101,26 @@ Route::middleware('auth:backoffice')->group(function () {
         Route::put('/{discountCode}', [DiscountCodeController::class, 'update'])->name('update');
         Route::delete('/{discountCode}', [DiscountCodeController::class, 'destroy'])->name('destroy');
         Route::post('/{discountCode}/toggle-status', [DiscountCodeController::class, 'toggleStatus'])->name('toggleStatus');
+    });
+
+    // Drip Campaigns
+    Route::prefix('drip-campaigns')->name('backoffice.drip-campaigns.')->group(function () {
+        Route::get('/', [DripCampaignController::class, 'index'])->name('index');
+        Route::get('/create', [DripCampaignController::class, 'create'])->name('create');
+        Route::post('/', [DripCampaignController::class, 'store'])->name('store');
+        Route::get('/{campaign}', [DripCampaignController::class, 'show'])->name('show');
+        Route::get('/{campaign}/edit', [DripCampaignController::class, 'edit'])->name('edit');
+        Route::put('/{campaign}', [DripCampaignController::class, 'update'])->name('update');
+        Route::delete('/{campaign}', [DripCampaignController::class, 'destroy'])->name('destroy');
+        Route::post('/{campaign}/toggle-status', [DripCampaignController::class, 'toggleStatus'])->name('toggleStatus');
+        Route::get('/{campaign}/logs', [DripCampaignController::class, 'logs'])->name('logs');
+        Route::post('/{campaign}/send-test', [DripCampaignController::class, 'sendTest'])->name('sendTest');
+
+        // Email Steps
+        Route::post('/{campaign}/steps', [DripCampaignController::class, 'addStep'])->name('steps.store');
+        Route::put('/{campaign}/steps/{step}', [DripCampaignController::class, 'updateStep'])->name('steps.update');
+        Route::delete('/{campaign}/steps/{step}', [DripCampaignController::class, 'deleteStep'])->name('steps.destroy');
+        Route::post('/{campaign}/steps/reorder', [DripCampaignController::class, 'reorderSteps'])->name('steps.reorder');
     });
 
     // Settings

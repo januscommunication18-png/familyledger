@@ -684,6 +684,17 @@ Route::middleware(['security.code', 'auth'])->group(function () {
 
 /*
 |--------------------------------------------------------------------------
+| Email Tracking Routes (No authentication - accessed from email clients)
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/email/track/open/{token}', [\App\Http\Controllers\EmailTrackingController::class, 'trackOpen'])
+    ->name('email.track.open');
+Route::get('/email/track/click/{token}', [\App\Http\Controllers\EmailTrackingController::class, 'trackClick'])
+    ->name('email.track.click');
+
+/*
+|--------------------------------------------------------------------------
 | Webhook Routes (No authentication - called by external services)
 |--------------------------------------------------------------------------
 */

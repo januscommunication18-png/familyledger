@@ -65,4 +65,10 @@ class ActivityLog extends Model
     public const ACTION_RECOVERY_RESET_PASSWORD = 'recovery_reset_password';
     public const ACTION_RECOVERY_DISABLE_2FA = 'recovery_disable_2fa';
     public const ACTION_RECOVERY_RESET_PHONE = 'recovery_reset_phone';
+
+    // Drip Campaign actions
+    public const ACTION_CREATE_DRIP_CAMPAIGN = 'create_drip_campaign';
+    public const ACTION_UPDATE_DRIP_CAMPAIGN = 'update_drip_campaign';
+    public const ACTION_DELETE_DRIP_CAMPAIGN = 'delete_drip_campaign';
+    public const ACTION_SEND_TEST_DRIP_EMAIL = 'send_test_drip_email';
 }
