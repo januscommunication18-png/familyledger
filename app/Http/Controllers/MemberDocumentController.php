@@ -79,15 +79,18 @@ class MemberDocumentController extends Controller
 
         $validated = $request->validate([
             'document_type' => 'required|string|in:' . implode(',', array_keys(MemberDocument::DOCUMENT_TYPES)),
-            'document_number' => 'nullable|string|max:100',
+            'document_number' => $request->input('document_type') === 'birth_certificate' ? 'required|string|max:100' : 'nullable|string|max:100',
             'state_of_issue' => 'nullable|string|max:100',
             'country_of_issue' => 'nullable|string|max:100',
-            'issue_date' => 'nullable|date',
+            'issue_date' => $request->input('document_type') === 'birth_certificate' ? 'required|date' : 'nullable|date',
             'expiry_date' => 'nullable|date|after:issue_date',
             'details' => 'nullable|string',
             'front_image' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
             'back_image' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
             'ssn_number' => 'nullable|string|max:20', // For SSN only
+        ], [
+            'document_number.required' => 'Certificate Number is required.',
+            'issue_date.required' => 'Issue Date is required.',
         ]);
 
         $data = [
@@ -193,16 +196,21 @@ class MemberDocumentController extends Controller
             abort(403);
         }
 
+        $isBirthCertificate = $document->document_type === 'birth_certificate';
+
         $validated = $request->validate([
-            'document_number' => 'nullable|string|max:100',
+            'document_number' => $isBirthCertificate ? 'required|string|max:100' : 'nullable|string|max:100',
             'state_of_issue' => 'nullable|string|max:100',
             'country_of_issue' => 'nullable|string|max:100',
-            'issue_date' => 'nullable|date',
+            'issue_date' => $isBirthCertificate ? 'required|date' : 'nullable|date',
             'expiry_date' => 'nullable|date|after:issue_date',
             'details' => 'nullable|string',
             'front_image' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
             'back_image' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
             'ssn_number' => 'nullable|string|max:20',
+        ], [
+            'document_number.required' => 'Certificate Number is required.',
+            'issue_date.required' => 'Issue Date is required.',
         ]);
 
         $data = [

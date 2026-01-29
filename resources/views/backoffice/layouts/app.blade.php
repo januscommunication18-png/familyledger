@@ -49,6 +49,36 @@
     <style>
         [x-cloak] { display: none !important; }
         body { font-family: 'Inter', sans-serif; }
+
+        /* Alert Text Color Fixes for Better Visibility */
+        .alert-success, .bg-green-50 {
+            background-color: #dcfce7 !important;
+            border-color: #86efac !important;
+        }
+        .text-green-800, .text-green-700 {
+            color: #166534 !important;
+        }
+        .alert-error, .bg-red-50 {
+            background-color: #fee2e2 !important;
+            border-color: #fca5a5 !important;
+        }
+        .text-red-800, .text-red-700 {
+            color: #991b1b !important;
+        }
+        .alert-warning, .bg-amber-50, .bg-yellow-50 {
+            background-color: #fef3c7 !important;
+            border-color: #fcd34d !important;
+        }
+        .text-amber-800, .text-yellow-800, .text-amber-700 {
+            color: #92400e !important;
+        }
+        .alert-info, .bg-blue-50 {
+            background-color: #dbeafe !important;
+            border-color: #93c5fd !important;
+        }
+        .text-blue-800, .text-blue-700 {
+            color: #1e40af !important;
+        }
     </style>
 
     @stack('styles')
@@ -111,6 +141,14 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
                     </svg>
                     <span>Clients</span>
+                </a>
+
+                <a href="{{ route('backoffice.account-recovery.index') }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-lg {{ request()->routeIs('backoffice.account-recovery.*') ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }} transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                    </svg>
+                    <span>Account Recovery</span>
                 </a>
 
                 <a href="#"
@@ -236,6 +274,41 @@
 
     <!-- Alpine.js via jsDelivr (CSP-allowed) -->
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+
+    {{-- Form Double Submit Prevention --}}
+    <script>
+    (function() {
+        document.addEventListener('DOMContentLoaded', function() {
+            document.addEventListener('submit', function(e) {
+                const form = e.target;
+                if (form.tagName !== 'FORM') return;
+                if (form.hasAttribute('data-no-submit-protection')) return;
+                if (form.hasAttribute('data-submitting')) {
+                    e.preventDefault();
+                    return false;
+                }
+                form.setAttribute('data-submitting', 'true');
+                const submitButtons = form.querySelectorAll('button[type="submit"], input[type="submit"], button:not([type])');
+                submitButtons.forEach(function(btn) {
+                    btn.setAttribute('data-original-content', btn.innerHTML);
+                    btn.disabled = true;
+                    btn.classList.add('opacity-75', 'cursor-not-allowed');
+                    btn.innerHTML = '<span class="inline-flex items-center gap-2"><svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Processing...</span></span>';
+                });
+                setTimeout(function() {
+                    form.removeAttribute('data-submitting');
+                    submitButtons.forEach(function(btn) {
+                        btn.disabled = false;
+                        btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                        if (btn.hasAttribute('data-original-content')) {
+                            btn.innerHTML = btn.getAttribute('data-original-content');
+                        }
+                    });
+                }, 10000);
+            });
+        });
+    })();
+    </script>
 
     @stack('scripts')
 </body>

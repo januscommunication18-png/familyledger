@@ -56,4 +56,13 @@ class ActivityLog extends Model
     public const ACTION_CREATE_DISCOUNT = 'create_discount_code';
     public const ACTION_UPDATE_DISCOUNT = 'update_discount_code';
     public const ACTION_DELETE_DISCOUNT = 'delete_discount_code';
+
+    // Account Recovery actions
+    public const ACTION_VIEW_RECOVERY_PAGE = 'view_recovery_page';
+    public const ACTION_RECOVERY_VERIFICATION_SUCCESS = 'recovery_verification_success';
+    public const ACTION_RECOVERY_VERIFICATION_FAILED = 'recovery_verification_failed';
+    public const ACTION_RECOVERY_CHANGE_EMAIL = 'recovery_change_email';
+    public const ACTION_RECOVERY_RESET_PASSWORD = 'recovery_reset_password';
+    public const ACTION_RECOVERY_DISABLE_2FA = 'recovery_disable_2fa';
+    public const ACTION_RECOVERY_RESET_PHONE = 'recovery_reset_phone';
 }

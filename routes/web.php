@@ -637,6 +637,10 @@ Route::middleware(['security.code', 'auth'])->group(function () {
         Route::post('/privacy', [SettingsController::class, 'updatePrivacy'])->name('privacy.update');
         Route::get('/export-data', [SettingsController::class, 'exportData'])->name('export-data');
         Route::post('/delete-account', [SettingsController::class, 'requestAccountDeletion'])->name('delete-account');
+
+        // Account Recovery Code
+        Route::post('/recovery-code/generate', [SettingsController::class, 'generateRecoveryCode'])->name('recovery-code.generate');
+        Route::post('/recovery-code', [SettingsController::class, 'saveRecoveryCode'])->name('recovery-code.save');
     });
 
     // Subscription & Billing

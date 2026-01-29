@@ -61,10 +61,11 @@
 
                     <div class="space-y-5">
                         <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-2">Certificate Number</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Certificate Number <span class="text-rose-500">*</span></label>
                             <input type="text" name="document_number" value="{{ old('document_number', $document?->document_number) }}"
                                 class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
-                                placeholder="e.g., BC-123456">
+                                placeholder="e.g., BC-123456"
+                                required>
                             @error('document_number')
                                 <p class="mt-1 text-sm text-rose-500">{{ $message }}</p>
                             @enderror
@@ -81,6 +82,7 @@
                             name="issue_date"
                             label="Issue Date"
                             :value="$document?->issue_date"
+                            :required="true"
                         />
                     </div>
                 </div>

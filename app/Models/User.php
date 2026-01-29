@@ -70,6 +70,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'recovery_codes',
         'two_factor_secret',
         'two_factor_confirmed_at',
+        'account_recovery_code',
+        'account_recovery_code_set_at',
     ];
 
     /**
@@ -82,6 +84,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'remember_token',
         'two_factor_secret',
         'two_factor_recovery_codes',
+        'account_recovery_code',
     ];
 
     /**
@@ -107,6 +110,8 @@ class User extends Authenticatable implements MustVerifyEmail
             'backup_email' => 'encrypted',
             'phone' => 'encrypted',
             'country_code' => 'encrypted',
+            'account_recovery_code' => 'hashed',
+            'account_recovery_code_set_at' => 'datetime',
         ];
     }
 
@@ -252,5 +257,43 @@ class User extends Authenticatable implements MustVerifyEmail
     public function getRoleNameAttribute(): string
     {
         return self::ROLES[$this->role] ?? 'Unknown';
+    }
+
+    /**
+     * Check if user has set an account recovery code.
+     */
+    public function hasAccountRecoveryCode(): bool
+    {
+        return !is_null($this->account_recovery_code);
+    }
+
+    /**
+     * Set the account recovery code (will be auto-hashed via cast).
+     */
+    public function setAccountRecoveryCode(string $code): void
+    {
+        $this->update([
+            'account_recovery_code' => $code,
+            'account_recovery_code_set_at' => now(),
+        ]);
+    }
+
+    /**
+     * Verify a provided recovery code against the stored hash.
+     */
+    public function verifyAccountRecoveryCode(string $code): bool
+    {
+        if (!$this->account_recovery_code) {
+            return false;
+        }
+        return password_verify($code, $this->account_recovery_code);
+    }
+
+    /**
+     * Generate a random 16-digit recovery code.
+     */
+    public static function generateRecoveryCode(): string
+    {
+        return str_pad((string) random_int(0, 9999999999999999), 16, '0', STR_PAD_LEFT);
     }
 }

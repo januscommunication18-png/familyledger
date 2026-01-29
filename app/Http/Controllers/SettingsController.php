@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\RecoveryCodeSetMail;
 use App\Models\SocialAccount;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\Password;
 
@@ -302,6 +305,50 @@ class SettingsController extends Controller
 
         return redirect()->route('login')
             ->with('success', 'Your account deletion has been requested. Your data will be permanently deleted within 30 days.');
+    }
+
+    /**
+     * Generate a new account recovery code.
+     */
+    public function generateRecoveryCode(Request $request)
+    {
+        $code = User::generateRecoveryCode();
+
+        return response()->json([
+            'success' => true,
+            'code' => $code,
+        ]);
+    }
+
+    /**
+     * Save the account recovery code (auto-generated or user-provided).
+     */
+    public function saveRecoveryCode(Request $request)
+    {
+        $user = Auth::user();
+
+        $request->validate([
+            'recovery_code' => ['required', 'string', 'size:16', 'regex:/^[0-9]+$/'],
+            'current_password' => ['required', function ($attribute, $value, $fail) use ($user) {
+                if (!Hash::check($value, $user->password)) {
+                    $fail('The current password is incorrect.');
+                }
+            }],
+        ]);
+
+        $isUpdate = $user->hasAccountRecoveryCode();
+
+        $user->setAccountRecoveryCode($request->recovery_code);
+
+        // Send notification email with the recovery code for safekeeping
+        Mail::to($user->email)->send(new RecoveryCodeSetMail(
+            $user->name,
+            $request->recovery_code,
+            $isUpdate ? 'updated' : 'set'
+        ));
+
+        return redirect()->route('settings.index', ['tab' => 'security'])
+            ->with('success', 'Account recovery code has been ' . ($isUpdate ? 'updated' : 'set') . ' successfully. Please store it in a safe place.');
     }
 
     /**

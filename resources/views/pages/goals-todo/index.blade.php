@@ -16,9 +16,16 @@
 @section('content')
 <div class="space-y-6">
     @if(session('success'))
-        <div class="alert alert-success">
-            <span class="icon-[tabler--check] size-5"></span>
-            <span>{{ session('success') }}</span>
+        <div class="flex items-center gap-3 p-4 rounded-lg bg-green-100 border border-green-300">
+            <span class="icon-[tabler--check] size-5 text-green-700"></span>
+            <span class="text-green-800 font-medium">{{ session('success') }}</span>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="flex items-center gap-3 p-4 rounded-lg bg-red-100 border border-red-300">
+            <span class="icon-[tabler--x] size-5 text-red-700"></span>
+            <span class="text-red-800 font-medium">{{ session('error') }}</span>
         </div>
     @endif
 

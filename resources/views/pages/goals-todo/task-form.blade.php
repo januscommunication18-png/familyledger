@@ -28,10 +28,10 @@
                 @endif
 
                 @if($errors->any())
-                    <div class="alert alert-error mb-6">
-                        <span class="icon-[tabler--alert-circle] size-5"></span>
+                    <div class="flex items-start gap-3 p-4 rounded-lg bg-red-100 border border-red-300 mb-6">
+                        <span class="icon-[tabler--alert-circle] size-5 text-red-700 mt-0.5"></span>
                         <div>
-                            <ul class="list-disc list-inside">
+                            <ul class="list-disc list-inside text-red-800 font-medium">
                                 @foreach($errors->all() as $error)
                                     <li>{{ $error }}</li>
                                 @endforeach
@@ -87,14 +87,24 @@
                             <label class="label">
                                 <span class="label-text">Due Date</span>
                             </label>
-                            <input type="date" name="due_date" value="{{ old('due_date', $task?->due_date?->format('Y-m-d')) }}" class="input input-bordered">
+                            <div class="relative">
+                                <input type="text" name="due_date" id="dueDatePicker" value="{{ old('due_date', $task?->due_date?->format('Y-m-d')) }}" class="input input-bordered w-full pl-10" placeholder="Select date">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+                                </span>
+                            </div>
                         </div>
 
                         <div class="form-control">
                             <label class="label">
                                 <span class="label-text">Due Time</span>
                             </label>
-                            <input type="time" name="due_time" value="{{ old('due_time', $task?->due_time) }}" class="input input-bordered">
+                            <div class="relative">
+                                <input type="text" name="due_time" id="dueTimePicker" value="{{ old('due_time', $task?->due_time) }}" class="input input-bordered w-full pl-10" placeholder="Select time">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                </span>
+                            </div>
                         </div>
 
                         <div class="form-control">
@@ -328,7 +338,12 @@
                             <label class="label">
                                 <span class="label-text">Starts On</span>
                             </label>
-                            <input type="date" name="recurrence_start_date" value="{{ old('recurrence_start_date', $task?->recurrence_start_date?->format('Y-m-d') ?? now()->format('Y-m-d')) }}" class="input input-bordered w-auto">
+                            <div class="relative w-auto">
+                                <input type="text" name="recurrence_start_date" id="recurrenceStartDatePicker" value="{{ old('recurrence_start_date', $task?->recurrence_start_date?->format('Y-m-d') ?? now()->format('Y-m-d')) }}" class="input input-bordered w-full sm:w-auto pl-10" placeholder="Select date">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+                                </span>
+                            </div>
                             <label class="label">
                                 <span class="label-text-alt text-slate-500">When should the recurring series start?</span>
                             </label>
@@ -443,7 +458,7 @@
                                            {{ old('recurrence_end_type', $task?->recurrence_end_type) === 'on_date' ? 'checked' : '' }}>
                                     <span class="label-text flex items-center gap-2">
                                         On date
-                                        <input type="date" name="recurrence_end_date" value="{{ old('recurrence_end_date', $task?->recurrence_end_date?->format('Y-m-d')) }}" class="input input-bordered input-sm" :disabled="endType !== 'on_date'">
+                                        <input type="text" name="recurrence_end_date" id="recurrenceEndDatePicker" value="{{ old('recurrence_end_date', $task?->recurrence_end_date?->format('Y-m-d')) }}" class="input input-bordered input-sm" placeholder="Select date" :disabled="endType !== 'on_date'">
                                     </span>
                                 </label>
                                 <label class="label cursor-pointer justify-start gap-3">
@@ -594,7 +609,12 @@
                             <label class="label">
                                 <span class="label-text">Digest time</span>
                             </label>
-                            <input type="time" name="digest_time" value="{{ old('digest_time', $task?->digest_time ?? '08:00') }}" class="input input-bordered w-auto">
+                            <div class="relative w-auto">
+                                <input type="text" name="digest_time" id="digestTimePicker" value="{{ old('digest_time', $task?->digest_time ?? '08:00') }}" class="input input-bordered w-full sm:w-auto pl-10" placeholder="Select time">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -826,3 +846,65 @@ function assigneeSelect() {
     [x-cloak] { display: none !important; }
 </style>
 @endsection
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/airbnb.css">
+<style>
+    .flatpickr-calendar {
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    }
+</style>
+@endpush
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Due Date Picker
+    flatpickr('#dueDatePicker', {
+        dateFormat: 'Y-m-d',
+        allowInput: true,
+        disableMobile: true,
+        monthSelectorType: 'static'
+    });
+
+    // Due Time Picker
+    flatpickr('#dueTimePicker', {
+        enableTime: true,
+        noCalendar: true,
+        dateFormat: 'H:i',
+        time_24hr: true,
+        allowInput: true,
+        disableMobile: true
+    });
+
+    // Recurrence Start Date Picker
+    flatpickr('#recurrenceStartDatePicker', {
+        dateFormat: 'Y-m-d',
+        allowInput: true,
+        disableMobile: true,
+        monthSelectorType: 'static'
+    });
+
+    // Recurrence End Date Picker
+    flatpickr('#recurrenceEndDatePicker', {
+        dateFormat: 'Y-m-d',
+        allowInput: true,
+        disableMobile: true,
+        monthSelectorType: 'static'
+    });
+
+    // Digest Time Picker
+    flatpickr('#digestTimePicker', {
+        enableTime: true,
+        noCalendar: true,
+        dateFormat: 'H:i',
+        time_24hr: true,
+        allowInput: true,
+        disableMobile: true
+    });
+});
+</script>
+@endpush

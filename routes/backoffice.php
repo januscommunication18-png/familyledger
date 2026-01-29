@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Backoffice\AccountRecoveryController;
 use App\Http\Controllers\Backoffice\AuthController;
 use App\Http\Controllers\Backoffice\DashboardController;
 use App\Http\Controllers\Backoffice\ClientsController;
@@ -61,6 +62,19 @@ Route::middleware('auth:backoffice')->group(function () {
         Route::post('/{client}/verify-view-code', [ClientsController::class, 'verifyViewCode'])->name('verifyViewCode');
         Route::get('/{client}/data', [ClientsController::class, 'showData'])->name('data');
         Route::post('/{client}/revoke-access', [ClientsController::class, 'revokeViewAccess'])->name('revokeAccess');
+    });
+
+    // Account Recovery
+    Route::prefix('account-recovery')->name('backoffice.account-recovery.')->group(function () {
+        Route::get('/', [AccountRecoveryController::class, 'index'])->name('index');
+        Route::get('/search', [AccountRecoveryController::class, 'search'])->name('search');
+        Route::get('/{client}', [AccountRecoveryController::class, 'show'])->name('show');
+        Route::post('/{client}/verify-code', [AccountRecoveryController::class, 'verifyCode'])->name('verifyCode');
+        Route::post('/{client}/change-email', [AccountRecoveryController::class, 'changeEmail'])->name('changeEmail');
+        Route::post('/{client}/reset-password', [AccountRecoveryController::class, 'resetPassword'])->name('resetPassword');
+        Route::post('/{client}/disable-2fa', [AccountRecoveryController::class, 'disable2fa'])->name('disable2fa');
+        Route::post('/{client}/reset-phone', [AccountRecoveryController::class, 'resetPhone'])->name('resetPhone');
+        Route::delete('/{client}/revoke-access', [AccountRecoveryController::class, 'revokeAccess'])->name('revokeAccess');
     });
 
     // Package Plans

@@ -36,6 +36,36 @@
     <style>
         [x-cloak] { display: none !important; }
         body { font-family: 'Inter', sans-serif; }
+
+        /* Alert Text Color Fixes for Better Visibility */
+        .alert-success, .bg-green-50 {
+            background-color: #dcfce7 !important;
+            border-color: #86efac !important;
+        }
+        .alert-success *, .text-green-800, .text-green-700 {
+            color: #166534 !important;
+        }
+        .alert-error, .bg-red-50 {
+            background-color: #fee2e2 !important;
+            border-color: #fca5a5 !important;
+        }
+        .alert-error *, .text-red-800, .text-red-700 {
+            color: #991b1b !important;
+        }
+        .alert-warning, .bg-amber-50, .bg-yellow-50 {
+            background-color: #fef3c7 !important;
+            border-color: #fcd34d !important;
+        }
+        .alert-warning *, .text-amber-800, .text-yellow-800 {
+            color: #92400e !important;
+        }
+        .alert-info, .bg-blue-50 {
+            background-color: #dbeafe !important;
+            border-color: #93c5fd !important;
+        }
+        .alert-info *, .text-blue-800, .text-blue-700 {
+            color: #1e40af !important;
+        }
     </style>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 min-h-screen flex"

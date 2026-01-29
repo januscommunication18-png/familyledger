@@ -464,6 +464,141 @@
                 </div>
             </div>
 
+            {{-- Account Recovery Code --}}
+            <div class="card bg-base-100 shadow-sm">
+                <div class="card-body">
+                    <h2 class="card-title mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        Account Recovery Code
+                    </h2>
+
+                    @if($user->hasAccountRecoveryCode())
+                        <div class="flex items-center gap-3 p-4 bg-emerald-50 rounded-lg border border-emerald-200 mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <div>
+                                <p class="font-medium text-emerald-800">Recovery code is set</p>
+                                <p class="text-sm text-emerald-700">
+                                    Last updated: {{ $user->account_recovery_code_set_at?->format('M d, Y') }}
+                                </p>
+                            </div>
+                        </div>
+                    @else
+                        <div class="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200 mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <div>
+                                <p class="font-medium text-amber-800">No recovery code set</p>
+                                <p class="text-sm text-amber-700">Set a recovery code to help recover your account if needed</p>
+                            </div>
+                        </div>
+                    @endif
+
+                    <p class="text-sm text-base-content/70 mb-4">
+                        A 16-digit recovery code can be used to verify your identity when contacting support.
+                        Store it in a safe place - you'll need to provide it verbally or via chat if you need account recovery assistance.
+                    </p>
+
+                    <button type="button" onclick="openRecoveryCodeModal()" class="btn btn-outline btn-sm gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                        </svg>
+                        {{ $user->hasAccountRecoveryCode() ? 'Update Recovery Code' : 'Set Recovery Code' }}
+                    </button>
+                </div>
+            </div>
+
+            {{-- Recovery Code Modal --}}
+            <div id="recoveryCodeModal" class="fixed inset-0 z-50 hidden">
+                <div class="fixed inset-0 bg-black/50" onclick="closeRecoveryCodeModal()"></div>
+                <div class="fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
+                    <div class="bg-base-100 rounded-xl shadow-xl max-w-md w-full p-6 pointer-events-auto">
+                        <h3 class="font-bold text-lg mb-4">{{ $user->hasAccountRecoveryCode() ? 'Update' : 'Set' }} Recovery Code</h3>
+
+                        <p class="text-sm text-base-content/70 mb-4">
+                            Choose how you want to create your 16-digit recovery code.
+                        </p>
+
+                        <form id="recoveryCodeForm" action="{{ route('settings.recovery-code.save') }}" method="POST" class="space-y-4">
+                            @csrf
+
+                            {{-- Code Generation Method --}}
+                            <div class="space-y-3">
+                                <label class="flex items-start gap-3 p-3 border border-base-200 rounded-lg cursor-pointer hover:bg-base-50">
+                                    <input type="radio" name="code_method" value="generate" class="radio radio-primary mt-1" checked onchange="toggleCodeInput()" />
+                                    <div>
+                                        <p class="font-medium">Auto-generate code</p>
+                                        <p class="text-xs text-base-content/60">System generates a secure 16-digit code</p>
+                                    </div>
+                                </label>
+                                <label class="flex items-start gap-3 p-3 border border-base-200 rounded-lg cursor-pointer hover:bg-base-50">
+                                    <input type="radio" name="code_method" value="custom" class="radio radio-primary mt-1" onchange="toggleCodeInput()" />
+                                    <div>
+                                        <p class="font-medium">Enter my own code</p>
+                                        <p class="text-xs text-base-content/60">Create your own 16-digit numeric code</p>
+                                    </div>
+                                </label>
+                            </div>
+
+                            {{-- Generated Code Display --}}
+                            <div id="generatedCodeSection">
+                                <div class="bg-base-200 rounded-lg p-4 text-center">
+                                    <p class="text-xs text-base-content/60 mb-2">Your Recovery Code</p>
+                                    <div class="flex items-center justify-center gap-2">
+                                        <code id="generatedCode" class="text-2xl font-mono tracking-wider select-all">Click generate</code>
+                                        <button type="button" onclick="copyCode()" class="btn btn-ghost btn-xs" title="Copy code">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                        </button>
+                                    </div>
+                                    <button type="button" onclick="generateNewCode()" class="btn btn-ghost btn-xs mt-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                        Generate New
+                                    </button>
+                                </div>
+                                <input type="hidden" name="recovery_code" id="recoveryCodeInput" value="" />
+                            </div>
+
+                            {{-- Custom Code Input --}}
+                            <div id="customCodeSection" class="hidden">
+                                <div class="form-control">
+                                    <label class="label">
+                                        <span class="label-text">Enter 16-digit code</span>
+                                    </label>
+                                    <input type="text" id="customCodeInput" maxlength="16" pattern="[0-9]{16}" placeholder="0000000000000000" class="input input-bordered text-center text-xl tracking-wider font-mono" oninput="validateCustomCode()" />
+                                    <label class="label">
+                                        <span id="customCodeHint" class="label-text-alt text-base-content/60">Enter exactly 16 digits</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {{-- Password Confirmation --}}
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Confirm your password</span>
+                                </label>
+                                <input type="password" name="current_password" class="input input-bordered" required />
+                                <label class="label">
+                                    <span class="label-text-alt text-base-content/60">Required to save changes</span>
+                                </label>
+                            </div>
+
+                            <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                                <strong>Important:</strong> Write down or save this code securely. You'll need it to verify your identity if you ever need account recovery assistance.
+                            </div>
+
+                            <div class="flex gap-2 pt-2">
+                                <button type="button" onclick="closeRecoveryCodeModal()" class="btn btn-ghost flex-1">Cancel</button>
+                                <button type="submit" id="saveRecoveryCodeBtn" class="btn btn-primary flex-1" disabled>Save Recovery Code</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
             {{-- Recent Login Activity --}}
             @if($loginAttempts->count() > 0)
             <div class="card bg-base-100 shadow-sm">
@@ -964,8 +1099,124 @@ document.addEventListener('DOMContentLoaded', function() {
             if (modal && !modal.classList.contains('hidden')) {
                 closeAuthenticatorModal();
             }
+            const recoveryModal = document.getElementById('recoveryCodeModal');
+            if (recoveryModal && !recoveryModal.classList.contains('hidden')) {
+                closeRecoveryCodeModal();
+            }
         }
     });
 });
+
+// Recovery Code Modal Functions
+function openRecoveryCodeModal() {
+    const modal = document.getElementById('recoveryCodeModal');
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    // Reset form
+    document.getElementById('recoveryCodeForm').reset();
+    document.getElementById('generatedCode').textContent = 'Click generate';
+    document.getElementById('recoveryCodeInput').value = '';
+    document.getElementById('saveRecoveryCodeBtn').disabled = true;
+    toggleCodeInput();
+
+    // Auto-generate a code on open
+    generateNewCode();
+}
+
+function closeRecoveryCodeModal() {
+    const modal = document.getElementById('recoveryCodeModal');
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+function toggleCodeInput() {
+    const method = document.querySelector('input[name="code_method"]:checked').value;
+    const generatedSection = document.getElementById('generatedCodeSection');
+    const customSection = document.getElementById('customCodeSection');
+    const saveBtn = document.getElementById('saveRecoveryCodeBtn');
+
+    if (method === 'generate') {
+        generatedSection.classList.remove('hidden');
+        customSection.classList.add('hidden');
+        // Enable save if we have a generated code
+        const code = document.getElementById('recoveryCodeInput').value;
+        saveBtn.disabled = !code || code.length !== 16;
+    } else {
+        generatedSection.classList.add('hidden');
+        customSection.classList.remove('hidden');
+        validateCustomCode();
+    }
+}
+
+function generateNewCode() {
+    const codeDisplay = document.getElementById('generatedCode');
+    const codeInput = document.getElementById('recoveryCodeInput');
+    const saveBtn = document.getElementById('saveRecoveryCodeBtn');
+
+    codeDisplay.textContent = 'Generating...';
+
+    fetch('{{ route("settings.recovery-code.generate") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.code) {
+            // Format the code with spaces for readability
+            const formattedCode = data.code.match(/.{1,4}/g).join(' ');
+            codeDisplay.textContent = formattedCode;
+            codeInput.value = data.code;
+            saveBtn.disabled = false;
+        } else {
+            codeDisplay.textContent = 'Error generating';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        codeDisplay.textContent = 'Error generating';
+    });
+}
+
+function validateCustomCode() {
+    const input = document.getElementById('customCodeInput');
+    const hint = document.getElementById('customCodeHint');
+    const saveBtn = document.getElementById('saveRecoveryCodeBtn');
+    const recoveryInput = document.getElementById('recoveryCodeInput');
+
+    const value = input.value.replace(/\D/g, ''); // Remove non-digits
+    input.value = value;
+
+    if (value.length === 16) {
+        hint.textContent = 'Valid code';
+        hint.classList.remove('text-base-content/60', 'text-error');
+        hint.classList.add('text-success');
+        saveBtn.disabled = false;
+        recoveryInput.value = value;
+    } else {
+        hint.textContent = `${value.length}/16 digits`;
+        hint.classList.remove('text-success', 'text-error');
+        hint.classList.add('text-base-content/60');
+        saveBtn.disabled = true;
+        recoveryInput.value = '';
+    }
+}
+
+function copyCode() {
+    const codeText = document.getElementById('generatedCode').textContent.replace(/\s/g, '');
+    navigator.clipboard.writeText(codeText).then(() => {
+        // Show brief feedback
+        const btn = event.currentTarget;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>';
+        setTimeout(() => {
+            btn.innerHTML = originalHtml;
+        }, 1500);
+    });
+}
 </script>
 @endsection
