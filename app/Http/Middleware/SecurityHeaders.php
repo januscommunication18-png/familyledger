@@ -54,7 +54,7 @@ class SecurityHeaders
         $csp = implode('; ', [
             "default-src 'self'",
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://code.jquery.com https://*.smartystreets.com https://*.smarty.com https://cdn.paddle.com https://sandbox-cdn.paddle.com",
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.bunny.net https://cdn.jsdelivr.net",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.bunny.net https://cdn.jsdelivr.net https://cdn.paddle.com https://sandbox-cdn.paddle.com",
             "font-src 'self' https://fonts.gstatic.com https://fonts.bunny.net",
             "img-src 'self' data: https:",
             "connect-src 'self' wss: ws: https://*.smartystreets.com https://*.smarty.com https://*.paddle.com",
