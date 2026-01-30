@@ -132,14 +132,58 @@
                 <div class="card-body">
                     <h2 class="card-title mb-4">Payment Details</h2>
 
-                    <!-- Paddle Inline Checkout Container -->
+                    <!-- Paddle Checkout Container -->
                     <div id="paddle-checkout-container" class="w-full">
+                        <!-- Loading State -->
                         <div id="paddle-loading" class="text-center py-8">
                             <span class="loading loading-spinner loading-lg text-primary"></span>
                             <p class="text-sm text-base-content/60 mt-2">Loading secure checkout...</p>
                         </div>
-                        <!-- Paddle will inject checkout here -->
-                        <div id="paddle-checkout-frame" class="w-full min-h-[400px]"></div>
+
+                        <!-- Pay Now Button (shows after Paddle loads) -->
+                        <div id="paddle-button-container" class="hidden">
+                            <div class="bg-base-200/50 rounded-xl p-6 text-center">
+                                <div class="mb-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 mx-auto text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                                    </svg>
+                                </div>
+                                <h3 class="text-lg font-semibold mb-2">Secure Payment</h3>
+                                <p class="text-base-content/70 mb-6">Complete your purchase securely via Paddle. Your payment information is encrypted and protected.</p>
+
+                                <button
+                                    type="button"
+                                    id="paddle-pay-button"
+                                    class="btn btn-primary btn-lg gap-2"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                                    </svg>
+                                    @if($plan->trial_period_days > 0)
+                                        Start {{ $plan->trial_period_days }}-Day Free Trial
+                                    @else
+                                        Pay $<span id="button-price">{{ number_format($discountedPrice, 2) }}</span>
+                                    @endif
+                                </button>
+
+                                <p class="text-xs text-base-content/50 mt-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    </svg>
+                                    Payments processed by Paddle.com
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Error State -->
+                        <div id="paddle-error" class="hidden">
+                            <div class="alert alert-error">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <span>Payment system failed to load. Please refresh the page or try again later.</span>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Fallback form for testing without Paddle -->
@@ -302,46 +346,43 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 if (event.name === 'checkout.error') {
                     console.error('Checkout error:', event.data);
-                    alert('Payment error: ' + JSON.stringify(event.data));
                 }
             }
         });
 
         console.log('Paddle setup complete - Environment:', PADDLE_CONFIG.env);
 
-        // Hide loading, show inline checkout
+        // Hide loading, show button
         document.getElementById('paddle-loading').classList.add('hidden');
+        document.getElementById('paddle-button-container').classList.remove('hidden');
 
-        // TEMP: Test with monthly price ID
-        const testPriceId = 'pri_01kg53j00zek0t6y5ga73dwnwf';
-        console.log('Opening inline checkout for price:', testPriceId);
+        // Use actual price ID from plan
+        const priceId = PADDLE_CONFIG.priceId || 'pri_01kg53j00zek0t6y5ga73dwnwf';
+        console.log('Using price ID:', priceId);
         console.log('Customer email:', PADDLE_CONFIG.customerEmail);
 
-        // Open inline checkout immediately
-        Paddle.Checkout.open({
-            items: [
-                {
-                    priceId: testPriceId,
-                    quantity: 1
+        // Add click handler for Pay button (opens Paddle overlay checkout)
+        document.getElementById('paddle-pay-button').addEventListener('click', function() {
+            console.log('Opening Paddle checkout overlay...');
+
+            Paddle.Checkout.open({
+                items: [
+                    {
+                        priceId: priceId,
+                        quantity: 1
+                    }
+                ],
+                customer: {
+                    email: PADDLE_CONFIG.customerEmail
                 }
-            ],
-            customer: {
-                email: PADDLE_CONFIG.customerEmail
-            },
-            settings: {
-                displayMode: 'inline',
-                frameTarget: 'paddle-checkout-frame',
-                frameInitialHeight: 450,
-                frameStyle: 'width: 100%; min-width: 100%; background-color: transparent; border: none;',
-                theme: 'light',
-                locale: 'en'
-            }
+            });
         });
     };
 
     script.onerror = function() {
         console.error('Failed to load Paddle.js');
-        showFallbackForm();
+        document.getElementById('paddle-loading').classList.add('hidden');
+        document.getElementById('paddle-error').classList.remove('hidden');
     };
 
     document.head.appendChild(script);
