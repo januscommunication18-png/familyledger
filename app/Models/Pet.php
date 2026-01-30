@@ -185,8 +185,9 @@ class Pet extends Model
 
         // Format approx_age as readable string
         if ($this->approx_age) {
-            $years = (int) floor($this->approx_age);
-            $months = (int) round(($this->approx_age - $years) * 12);
+            $approxAge = (float) $this->approx_age;
+            $years = (int) floor($approxAge);
+            $months = (int) round(($approxAge - $years) * 12);
 
             if ($years > 0) {
                 return $years . ' ' . ($years === 1 ? 'year' : 'years') .
