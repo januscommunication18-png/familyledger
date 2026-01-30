@@ -196,9 +196,9 @@ class ClientsController extends Controller
     }
 
     /**
-     * Delete client and all associated records.
+     * Delete client data only (keep users and tenant).
      */
-    public function destroy(Request $request, Tenant $client): RedirectResponse
+    public function destroyData(Request $request, Tenant $client): RedirectResponse
     {
         $request->validate([
             'confirmation' => 'required|string|in:DELETE',
@@ -214,12 +214,63 @@ class ClientsController extends Controller
         $admin->logActivity(
             ActivityLog::ACTION_DELETE_CLIENT,
             $clientId,
-            'Deleted client: ' . $clientName . ' and all associated records'
+            'Deleted data for client: ' . $clientName . ' (users and tenant kept)'
         );
 
-        // Delete all associated records
-        // The order matters due to foreign key constraints
+        // Delete all data
+        $this->deleteClientData($clientId);
 
+        return redirect()->route('backoffice.clients.show', $client)
+            ->with('message', 'All data for client "' . $clientName . '" has been permanently deleted. User accounts and tenant remain intact.');
+    }
+
+    /**
+     * Delete client completely (including users and tenant).
+     */
+    public function destroy(Request $request, Tenant $client): RedirectResponse
+    {
+        $request->validate([
+            'confirmation' => 'required|string|in:DELETE FOREVER',
+        ], [
+            'confirmation.in' => 'You must type DELETE FOREVER to confirm.',
+        ]);
+
+        $admin = Auth::guard('backoffice')->user();
+        $clientId = $client->id;
+        $clientName = $client->name;
+
+        // Log the action before deletion
+        $admin->logActivity(
+            ActivityLog::ACTION_DELETE_CLIENT,
+            $clientId,
+            'Permanently deleted client: ' . $clientName . ' (including all users and tenant)'
+        );
+
+        // Delete all data first
+        $this->deleteClientData($clientId);
+
+        // Delete users (with avatar cleanup)
+        $users = User::where('tenant_id', $clientId)->get();
+        foreach ($users as $user) {
+            if ($user->avatar) {
+                \Storage::disk('do_spaces')->delete($user->avatar);
+            }
+            $user->socialAccounts()->delete();
+            $user->delete();
+        }
+
+        // Finally, delete the tenant
+        $client->delete();
+
+        return redirect()->route('backoffice.clients.index')
+            ->with('message', 'Client "' . $clientName . '" and all associated records have been permanently deleted.');
+    }
+
+    /**
+     * Helper method to delete all client data (without users/tenant).
+     */
+    private function deleteClientData(string $clientId): void
+    {
         // Delete invoices
         \App\Models\Invoice::where('tenant_id', $clientId)->delete();
 
@@ -335,10 +386,5 @@ class ClientsController extends Controller
 
         // Delete sync logs
         \App\Models\SyncLog::where('tenant_id', $clientId)->delete();
-
-        // Note: Users and tenant are kept intact - only their data is deleted
-
-        return redirect()->route('backoffice.clients.show', $client)
-            ->with('message', 'All data for client "' . $clientName . '" has been permanently deleted. User accounts and tenant remain intact.');
     }
 }

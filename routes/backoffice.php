@@ -64,6 +64,7 @@ Route::middleware('auth:backoffice')->group(function () {
         Route::post('/{client}/verify-view-code', [ClientsController::class, 'verifyViewCode'])->name('verifyViewCode');
         Route::get('/{client}/data', [ClientsController::class, 'showData'])->name('data');
         Route::post('/{client}/revoke-access', [ClientsController::class, 'revokeViewAccess'])->name('revokeAccess');
+        Route::delete('/{client}/data', [ClientsController::class, 'destroyData'])->name('destroyData');
         Route::delete('/{client}', [ClientsController::class, 'destroy'])->name('destroy');
     });
 

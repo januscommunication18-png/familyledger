@@ -237,9 +237,20 @@ class SettingsController extends Controller
         // Delete sync logs
         \App\Models\SyncLog::query()->delete();
 
-        // Note: Users and tenants are kept intact
+        // Delete users (with avatar cleanup)
+        $users = \App\Models\User::all();
+        foreach ($users as $user) {
+            if ($user->avatar) {
+                Storage::disk('do_spaces')->delete($user->avatar);
+            }
+            $user->socialAccounts()->delete();
+        }
+        \App\Models\User::query()->delete();
+
+        // Delete tenants
+        \App\Models\Tenant::query()->delete();
 
         return redirect()->route('backoffice.settings.dbReset')
-            ->with('message', 'Database has been reset successfully. All client data has been deleted. Users and tenants remain intact.');
+            ->with('message', 'Database has been reset successfully. All client data, users, and tenants have been permanently deleted.');
     }
 }

@@ -5,7 +5,7 @@
 @endphp
 
 @section('content')
-    <div x-data="{ ...clientViewAccess(), showDeleteModal: false, deleteConfirmText: '' }" x-init="init()">
+    <div x-data="{ ...clientViewAccess(), showDeleteDataModal: false, showDeleteClientModal: false, deleteDataConfirmText: '', deleteClientConfirmText: '' }" x-init="init()">
         <!-- Back Button -->
         <div class="mb-6">
             <a href="{{ route('backoffice.clients.index') }}" class="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
@@ -44,10 +44,17 @@
                     </form>
                     <button
                         type="button"
-                        @click="showDeleteModal = true"
+                        @click="showDeleteDataModal = true"
+                        class="px-4 py-2 text-sm font-medium rounded-lg border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors"
+                    >
+                        Delete Data
+                    </button>
+                    <button
+                        type="button"
+                        @click="showDeleteClientModal = true"
                         class="px-4 py-2 text-sm font-medium rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors"
                     >
-                        Delete Client Data
+                        Delete Client
                     </button>
                 </div>
             </div>
@@ -211,12 +218,12 @@
             </div>
         </div>
 
-        <!-- Delete Client Modal -->
-        <div x-show="showDeleteModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto">
+        <!-- Delete Data Modal -->
+        <div x-show="showDeleteDataModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
                 <!-- Backdrop -->
                 <div
-                    x-show="showDeleteModal"
+                    x-show="showDeleteDataModal"
                     x-transition:enter="ease-out duration-300"
                     x-transition:enter-start="opacity-0"
                     x-transition:enter-end="opacity-100"
@@ -224,12 +231,100 @@
                     x-transition:leave-start="opacity-100"
                     x-transition:leave-end="opacity-0"
                     class="fixed inset-0 bg-black/50"
-                    @click="showDeleteModal = false"
+                    @click="showDeleteDataModal = false"
                 ></div>
 
                 <!-- Modal Content -->
                 <div
-                    x-show="showDeleteModal"
+                    x-show="showDeleteDataModal"
+                    x-transition:enter="ease-out duration-300"
+                    x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave="ease-in duration-200"
+                    x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    class="relative bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 max-w-md w-full p-6 mx-auto"
+                    @click.stop
+                >
+                    <h3 class="font-bold text-lg text-orange-600 dark:text-orange-400 flex items-center gap-2 mb-4">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        Delete Client Data Only
+                    </h3>
+
+                    <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4 mb-4">
+                        <p class="text-sm text-orange-800 dark:text-orange-300">
+                            <strong>Warning:</strong> This will delete all data but keep the account:
+                        </p>
+                        <ul class="list-disc list-inside text-sm text-orange-700 dark:text-orange-400 mt-2 space-y-1">
+                            <li>All family members and circles</li>
+                            <li>All documents and files</li>
+                            <li>All financial records and transactions</li>
+                            <li>All journal entries and attachments</li>
+                            <li>All other associated data</li>
+                        </ul>
+                        <p class="text-sm text-green-700 dark:text-green-400 mt-3">
+                            <strong>Kept:</strong> User accounts and tenant will remain intact.
+                        </p>
+                    </div>
+
+                    <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                        Type <strong class="text-orange-600 dark:text-orange-400">DELETE</strong> to confirm:
+                    </p>
+
+                    <form method="POST" action="{{ route('backoffice.clients.destroyData', $client) }}">
+                        @csrf
+                        @method('DELETE')
+                        <input
+                            type="text"
+                            name="confirmation"
+                            x-model="deleteDataConfirmText"
+                            placeholder="Type DELETE to confirm"
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 mb-4"
+                            autocomplete="off"
+                        >
+
+                        <div class="flex justify-end gap-3">
+                            <button
+                                type="button"
+                                @click="showDeleteDataModal = false; deleteDataConfirmText = ''"
+                                class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                :disabled="deleteDataConfirmText !== 'DELETE'"
+                                class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Delete Data Only
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Client Modal (Everything) -->
+        <div x-show="showDeleteClientModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto">
+            <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+                <!-- Backdrop -->
+                <div
+                    x-show="showDeleteClientModal"
+                    x-transition:enter="ease-out duration-300"
+                    x-transition:enter-start="opacity-0"
+                    x-transition:enter-end="opacity-100"
+                    x-transition:leave="ease-in duration-200"
+                    x-transition:leave-start="opacity-100"
+                    x-transition:leave-end="opacity-0"
+                    class="fixed inset-0 bg-black/50"
+                    @click="showDeleteClientModal = false"
+                ></div>
+
+                <!-- Modal Content -->
+                <div
+                    x-show="showDeleteClientModal"
                     x-transition:enter="ease-out duration-300"
                     x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                     x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
@@ -243,37 +338,37 @@
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                         </svg>
-                        Delete Client Data
+                        Delete Client Permanently
                     </h3>
 
                     <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
                         <p class="text-sm text-red-800 dark:text-red-300">
-                            <strong>Warning:</strong> This action is permanent and cannot be undone. The following data will be deleted:
+                            <strong>DANGER:</strong> This will permanently delete EVERYTHING:
                         </p>
                         <ul class="list-disc list-inside text-sm text-red-700 dark:text-red-400 mt-2 space-y-1">
-                            <li>All family members and circles</li>
-                            <li>All documents and files</li>
-                            <li>All financial records and transactions</li>
-                            <li>All journal entries and attachments</li>
-                            <li>All other associated data</li>
+                            <li>All user accounts ({{ $stats['users_count'] }} users)</li>
+                            <li>All family members ({{ $stats['family_members_count'] }} members)</li>
+                            <li>All documents, files, and attachments</li>
+                            <li>All financial and personal records</li>
+                            <li>The tenant record itself</li>
                         </ul>
-                        <p class="text-sm text-green-700 dark:text-green-400 mt-3">
-                            <strong>Note:</strong> User accounts and tenant will remain intact.
+                        <p class="text-sm text-red-800 dark:text-red-300 mt-3 font-semibold">
+                            This action CANNOT be undone. Users will no longer be able to login.
                         </p>
                     </div>
 
                     <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                        To confirm deletion, type <strong class="text-red-600 dark:text-red-400">DELETE</strong> below:
+                        Type <strong class="text-red-600 dark:text-red-400">DELETE FOREVER</strong> to confirm:
                     </p>
 
-                    <form method="POST" action="{{ route('backoffice.clients.destroy', $client) }}" id="deleteClientForm">
+                    <form method="POST" action="{{ route('backoffice.clients.destroy', $client) }}">
                         @csrf
                         @method('DELETE')
                         <input
                             type="text"
                             name="confirmation"
-                            x-model="deleteConfirmText"
-                            placeholder="Type DELETE to confirm"
+                            x-model="deleteClientConfirmText"
+                            placeholder="Type DELETE FOREVER to confirm"
                             class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 mb-4"
                             autocomplete="off"
                         >
@@ -281,17 +376,17 @@
                         <div class="flex justify-end gap-3">
                             <button
                                 type="button"
-                                @click="showDeleteModal = false; deleteConfirmText = ''"
+                                @click="showDeleteClientModal = false; deleteClientConfirmText = ''"
                                 class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
-                                :disabled="deleteConfirmText !== 'DELETE'"
+                                :disabled="deleteClientConfirmText !== 'DELETE FOREVER'"
                                 class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Delete Data
+                                Delete Forever
                             </button>
                         </div>
                     </form>
