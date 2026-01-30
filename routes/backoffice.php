@@ -64,6 +64,7 @@ Route::middleware('auth:backoffice')->group(function () {
         Route::post('/{client}/verify-view-code', [ClientsController::class, 'verifyViewCode'])->name('verifyViewCode');
         Route::get('/{client}/data', [ClientsController::class, 'showData'])->name('data');
         Route::post('/{client}/revoke-access', [ClientsController::class, 'revokeViewAccess'])->name('revokeAccess');
+        Route::delete('/{client}', [ClientsController::class, 'destroy'])->name('destroy');
     });
 
     // Account Recovery
@@ -150,5 +151,7 @@ Route::middleware('auth:backoffice')->group(function () {
         Route::put('/profile', [SettingsController::class, 'updateProfile'])->name('profile.update');
         Route::get('/change-password', [SettingsController::class, 'changePassword'])->name('changePassword');
         Route::put('/change-password', [SettingsController::class, 'updatePassword'])->name('changePassword.update');
+        Route::get('/db-reset', [SettingsController::class, 'dbReset'])->name('dbReset');
+        Route::delete('/db-reset', [SettingsController::class, 'performDbReset'])->name('dbReset.perform');
     });
 });

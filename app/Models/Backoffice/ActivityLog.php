@@ -44,6 +44,7 @@ class ActivityLog extends Model
     public const ACTION_REQUEST_VIEW_CODE = 'request_view_code';
     public const ACTION_VERIFY_VIEW_CODE = 'verify_view_code';
     public const ACTION_TOGGLE_CLIENT_STATUS = 'toggle_client_status';
+    public const ACTION_DELETE_CLIENT = 'delete_client';
     public const ACTION_UPDATE_PROFILE = 'update_profile';
     public const ACTION_CHANGE_PASSWORD = 'change_password';
 
@@ -71,4 +72,7 @@ class ActivityLog extends Model
     public const ACTION_UPDATE_DRIP_CAMPAIGN = 'update_drip_campaign';
     public const ACTION_DELETE_DRIP_CAMPAIGN = 'delete_drip_campaign';
     public const ACTION_SEND_TEST_DRIP_EMAIL = 'send_test_drip_email';
+
+    // System actions
+    public const ACTION_DB_RESET = 'database_reset';
 }
