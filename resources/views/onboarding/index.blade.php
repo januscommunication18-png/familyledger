@@ -4,16 +4,20 @@
 
 @push('scripts')
 @if($step == 6)
-<script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+<script src="{{ config('paddle.sandbox') ? config('paddle.js_urls.sandbox') : config('paddle.js_urls.production') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize Paddle
-        @if(config('services.paddle.sandbox'))
+        @if(config('paddle.sandbox'))
         Paddle.Environment.set('sandbox');
         @endif
         Paddle.Initialize({
-            token: '{{ config('services.paddle.client_token') }}'
+            token: '{{ config('paddle.client_token') }}'
         });
+
+        // Debug: Log Paddle config
+        console.log('Paddle initialized with token:', '{{ config('paddle.client_token') ? 'Token present' : 'NO TOKEN!' }}');
+        console.log('Paddle environment:', '{{ config('paddle.sandbox') ? 'sandbox' : 'production' }}');
     });
 </script>
 @endif
@@ -775,8 +779,14 @@
                         document.getElementById('step6-form').submit();
                     },
                     openPaddleCheckout() {
+                        console.log('Opening Paddle checkout...');
+                        console.log('Selected plan:', this.selectedPlanData);
+                        console.log('Billing cycle:', this.billingCycle);
+                        console.log('Price ID:', this.priceId);
+
                         if (!this.priceId) {
-                            alert('Payment configuration error. Please try again or contact support.');
+                            console.error('No price ID found for plan:', this.selectedPlanData);
+                            alert('Payment configuration error. The plan may not have Paddle price IDs configured. Please contact support.');
                             return;
                         }
 
