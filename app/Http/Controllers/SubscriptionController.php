@@ -31,13 +31,25 @@ class SubscriptionController extends Controller
     /**
      * Display the subscription management page.
      */
-    public function index(): View
+    public function index(Request $request): View
     {
         $tenant = Auth::user()->tenant;
         $currentPlan = $tenant->getCurrentPlan();
         $plans = PackagePlan::active()->ordered()->get();
 
-        return view('pages.subscription.index', compact('tenant', 'currentPlan', 'plans'));
+        // Get billing history (invoices) with related data
+        $invoices = Invoice::where('tenant_id', $tenant->id)
+            ->with('packagePlan')
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
+
+        // Handle success redirect from Paddle checkout
+        if ($request->has('success')) {
+            session()->flash('success', 'Payment successful! Your subscription has been activated. You will receive a confirmation email shortly.');
+        }
+
+        return view('pages.subscription.index', compact('tenant', 'currentPlan', 'plans', 'invoices'));
     }
 
     /**
@@ -386,6 +398,28 @@ class SubscriptionController extends Controller
 
         $planId = $customData['plan_id'] ?? $tenant->package_plan_id;
         $plan = PackagePlan::find($planId);
+
+        // Update tenant's subscription details
+        if ($plan) {
+            $billingCycle = ($data['billing_period']['interval'] ?? 'month') === 'year' ? 'yearly' : 'monthly';
+            $billingPeriod = $data['billing_period'] ?? [];
+
+            $tenant->update([
+                'package_plan_id' => $plan->id,
+                'subscription_tier' => $plan->type,
+                'billing_cycle' => $billingCycle,
+                'paddle_customer_id' => $data['customer_id'] ?? $tenant->paddle_customer_id,
+                'paddle_subscription_id' => $data['subscription_id'] ?? $tenant->paddle_subscription_id,
+                'subscription_expires_at' => $billingPeriod['ends_at'] ?? null,
+                'trial_ends_at' => null, // Clear trial when payment is made
+            ]);
+
+            Log::info('Tenant subscription updated on payment', [
+                'tenant_id' => $tenant->id,
+                'plan_id' => $plan->id,
+                'billing_cycle' => $billingCycle,
+            ]);
+        }
 
         // Extract billing details
         $billingPeriod = $data['billing_period'] ?? [];

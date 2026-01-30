@@ -16,9 +16,30 @@
 @section('content')
 <div class="space-y-6">
     @if(session('success'))
-        <div class="alert alert-success">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-            <span>{{ session('success') }}</span>
+        <div class="alert alert-success shadow-lg">
+            <div class="flex items-center gap-3">
+                <div class="bg-success/20 rounded-full p-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                </div>
+                <div>
+                    <h3 class="font-bold">Success!</h3>
+                    <p class="text-sm">{{ session('success') }}</p>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if(request('success'))
+        <div class="alert bg-gradient-to-r from-success/20 to-primary/20 border-success/30 shadow-lg">
+            <div class="flex items-center gap-3">
+                <div class="bg-success rounded-full p-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-success-content" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg">Payment Successful!</h3>
+                    <p class="text-sm text-base-content/80">Thank you for your purchase. Your subscription is now active. A confirmation email has been sent to your email address.</p>
+                </div>
+            </div>
         </div>
     @endif
 
@@ -215,8 +236,8 @@
         </div>
     </div>
 
-    <!-- Billing History (Placeholder) -->
-    @if($tenant->onPaidPlan())
+    <!-- Billing History -->
+    @if($tenant->onPaidPlan() || (isset($invoices) && $invoices->count() > 0))
     <div class="card bg-base-100 shadow-sm">
         <div class="card-body">
             <h2 class="card-title mb-4">
@@ -231,18 +252,46 @@
                     <thead>
                         <tr>
                             <th>Date</th>
+                            <th>Invoice</th>
                             <th>Description</th>
                             <th>Amount</th>
                             <th>Status</th>
-                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td colspan="5" class="text-center text-base-content/60 py-8">
-                                Billing history will be available after your first payment.
-                            </td>
-                        </tr>
+                        @forelse($invoices ?? [] as $invoice)
+                            <tr>
+                                <td>{{ $invoice->created_at->format('M d, Y') }}</td>
+                                <td class="font-mono text-sm">{{ $invoice->invoice_number }}</td>
+                                <td>
+                                    {{ $invoice->packagePlan?->name ?? 'Subscription' }}
+                                    <span class="text-xs text-base-content/60">({{ ucfirst($invoice->billing_cycle) }})</span>
+                                </td>
+                                <td class="font-semibold">
+                                    ${{ number_format($invoice->total_amount, 2) }}
+                                    @if($invoice->discount_amount > 0)
+                                        <span class="text-xs text-success block">-${{ number_format($invoice->discount_amount, 2) }} discount</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($invoice->status === 'paid')
+                                        <span class="badge badge-success badge-sm">Paid</span>
+                                    @elseif($invoice->status === 'pending')
+                                        <span class="badge badge-warning badge-sm">Pending</span>
+                                    @elseif($invoice->status === 'failed')
+                                        <span class="badge badge-error badge-sm">Failed</span>
+                                    @else
+                                        <span class="badge badge-ghost badge-sm">{{ ucfirst($invoice->status) }}</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="text-center text-base-content/60 py-8">
+                                    Billing history will be available after your first payment.
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
