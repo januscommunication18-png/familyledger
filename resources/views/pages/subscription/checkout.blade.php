@@ -292,19 +292,43 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Add click handler
         document.getElementById('paddle-checkout-btn').addEventListener('click', function() {
-            console.log('Opening checkout for price:', PADDLE_CONFIG.priceId);
+            // TEMP: Test with monthly price ID
+            const testPriceId = 'pri_01kg53j00zek0t6y5ga73dwnwf';
+            console.log('Opening checkout for price:', testPriceId);
+            console.log('Customer email:', PADDLE_CONFIG.customerEmail);
+            console.log('Client token:', PADDLE_CONFIG.clientToken ? 'Set' : 'Missing');
 
             Paddle.Checkout.open({
                 items: [
                     {
-                        priceId: PADDLE_CONFIG.priceId,
+                        priceId: testPriceId,
                         quantity: 1
                     }
                 ],
                 customer: {
                     email: PADDLE_CONFIG.customerEmail
+                },
+                settings: {
+                    displayMode: 'overlay',
+                    theme: 'light',
+                    locale: 'en'
                 }
             });
+        });
+
+        // Listen for Paddle events
+        Paddle.Checkout.on('checkout.completed', (data) => {
+            console.log('Checkout completed:', data);
+            window.location.href = PADDLE_CONFIG.successUrl;
+        });
+
+        Paddle.Checkout.on('checkout.closed', () => {
+            console.log('Checkout closed');
+        });
+
+        Paddle.Checkout.on('checkout.error', (error) => {
+            console.error('Checkout error:', error);
+            alert('Payment error: ' + JSON.stringify(error));
         });
     };
 
