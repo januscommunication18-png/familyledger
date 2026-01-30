@@ -18,6 +18,9 @@
         // Debug: Log Paddle config
         console.log('Paddle initialized with token:', '{{ config('paddle.client_token') ? 'Token present' : 'NO TOKEN!' }}');
         console.log('Paddle environment:', '{{ config('paddle.sandbox') ? 'sandbox' : 'production' }}');
+
+        // Debug: Log plans data
+        console.log('Plans data:', @json($plans));
     });
 </script>
 @endif
@@ -750,10 +753,47 @@
                 <h2 class="card-title text-2xl mb-2">Choose your plan</h2>
                 <p class="text-base-content/60 mb-6">Start with our free plan or unlock premium features</p>
 
+                <!-- DEBUG: Remove after testing -->
+                @if(config('app.debug'))
+                <div class="collapse collapse-arrow bg-base-200 mb-4">
+                    <input type="checkbox" />
+                    <div class="collapse-title text-sm font-medium">Debug: Plans Data</div>
+                    <div class="collapse-content">
+                        <pre class="text-xs overflow-auto max-h-40">{{ json_encode($plans->map(fn($p) => [
+                            'id' => $p->id,
+                            'name' => $p->name,
+                            'type' => $p->type,
+                            'paddle_product_id' => $p->paddle_product_id,
+                            'paddle_monthly_price_id' => $p->paddle_monthly_price_id,
+                            'paddle_yearly_price_id' => $p->paddle_yearly_price_id,
+                        ]), JSON_PRETTY_PRINT) }}</pre>
+                    </div>
+                </div>
+                @endif
+
+                @php
+                    // Ensure plans have all necessary fields for JavaScript
+                    $plansForJs = $plans->map(function($plan) {
+                        return [
+                            'id' => $plan->id,
+                            'name' => $plan->name,
+                            'type' => $plan->type,
+                            'description' => $plan->description,
+                            'cost_per_month' => $plan->cost_per_month,
+                            'cost_per_year' => $plan->cost_per_year,
+                            'paddle_product_id' => $plan->paddle_product_id,
+                            'paddle_monthly_price_id' => $plan->paddle_monthly_price_id,
+                            'paddle_yearly_price_id' => $plan->paddle_yearly_price_id,
+                            'family_circles_limit' => $plan->family_circles_limit,
+                            'family_members_limit' => $plan->family_members_limit,
+                            'document_storage_limit' => $plan->document_storage_limit,
+                        ];
+                    });
+                @endphp
                 <div x-data="{
                     selectedPlan: '{{ $plans->firstWhere('type', 'free')?->id }}',
                     billingCycle: 'monthly',
-                    plans: {{ Js::from($plans) }},
+                    plans: {{ Js::from($plansForJs) }},
                     processing: false,
                     paymentCompleted: false,
                     get selectedPlanData() {
@@ -764,9 +804,10 @@
                     },
                     get priceId() {
                         if (!this.selectedPlanData) return null;
-                        return this.billingCycle === 'yearly'
+                        const priceId = this.billingCycle === 'yearly'
                             ? this.selectedPlanData.paddle_yearly_price_id
                             : this.selectedPlanData.paddle_monthly_price_id;
+                        return priceId || null;
                     },
                     selectPlan(planId) {
                         this.selectedPlan = planId;
