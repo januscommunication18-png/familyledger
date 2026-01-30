@@ -104,14 +104,14 @@
                     @csrf
 
                     <div class="flex items-center gap-6">
-                        <div class="avatar {{ $user->avatar ? '' : 'placeholder' }}" id="avatar-container">
+                        <div id="avatar-container">
                             @if($user->avatar)
-                                <div class="w-20 h-20 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
-                                    <img src="{{ Storage::disk('do_spaces')->url($user->avatar) }}" alt="Avatar" class="rounded-full object-cover" />
+                                <div class="w-20 h-20 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2 overflow-hidden">
+                                    <img src="{{ Storage::disk('do_spaces')->url($user->avatar) }}" alt="Avatar" class="w-full h-full object-cover" />
                                 </div>
                             @else
-                                <div class="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center ring ring-primary/30 ring-offset-base-100 ring-offset-2">
-                                    <span class="text-2xl font-bold text-white">{{ strtoupper(substr($user->name ?? 'U', 0, 1)) }}</span>
+                                <div class="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center shadow-lg">
+                                    <span class="text-3xl font-bold text-white">{{ strtoupper(substr($user->name ?? 'U', 0, 1)) }}</span>
                                 </div>
                             @endif
                         </div>
