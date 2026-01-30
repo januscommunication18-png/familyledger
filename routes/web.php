@@ -655,6 +655,7 @@ Route::middleware(['security.code', 'auth'])->group(function () {
         Route::get('/checkout/{plan}', [SubscriptionController::class, 'checkout'])->name('checkout');
         Route::post('/subscribe', [SubscriptionController::class, 'subscribe'])->name('subscribe');
         Route::post('/apply-discount', [SubscriptionController::class, 'applyDiscount'])->name('apply-discount');
+        Route::post('/checkout-complete', [SubscriptionController::class, 'checkoutComplete'])->name('checkout-complete');
         Route::post('/cancel', [SubscriptionController::class, 'cancel'])->name('cancel');
         Route::post('/resume', [SubscriptionController::class, 'resume'])->name('resume');
         Route::post('/billing-cycle', [SubscriptionController::class, 'changeBillingCycle'])->name('billing-cycle');
@@ -701,3 +702,6 @@ Route::get('/email/track/click/{token}', [\App\Http\Controllers\EmailTrackingCon
 
 Route::post('/webhooks/paddle', [SubscriptionController::class, 'handlePaddleWebhook'])
     ->name('webhooks.paddle');
+
+// Alternative webhook URL (if configured differently in Paddle)
+Route::post('/paddle/webhook', [SubscriptionController::class, 'handlePaddleWebhook']);

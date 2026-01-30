@@ -304,7 +304,13 @@ const PADDLE_CONFIG = {
     env: '{{ config('paddle.sandbox') ? 'sandbox' : 'production' }}',
     jsUrl: '{{ config('paddle.sandbox') ? config('paddle.js_urls.sandbox') : config('paddle.js_urls.production') }}',
     customerEmail: '{{ auth()->user()->email }}',
-    successUrl: '{{ route('subscription.index') }}?success=1'
+    successUrl: '{{ route('subscription.index') }}?success=1',
+    // Additional data for completing checkout
+    planId: {{ $plan->id }},
+    billingCycle: '{{ $billingCycle }}',
+    tenantId: '{{ auth()->user()->tenant_id }}',
+    checkoutCompleteUrl: '{{ route('subscription.checkout-complete') }}',
+    csrfToken: '{{ csrf_token() }}'
 };
 
 function showFallbackForm() {
@@ -340,10 +346,43 @@ document.addEventListener('DOMContentLoaded', function() {
             token: PADDLE_CONFIG.clientToken,
             eventCallback: function(event) {
                 console.log('Paddle event:', event);
+
                 if (event.name === 'checkout.completed') {
                     console.log('Checkout completed:', event.data);
-                    window.location.href = PADDLE_CONFIG.successUrl;
+
+                    // Call our server to activate subscription and send email
+                    // (Fallback for when webhook can't reach our server)
+                    fetch(PADDLE_CONFIG.checkoutCompleteUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': PADDLE_CONFIG.csrfToken,
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            plan_id: PADDLE_CONFIG.planId,
+                            billing_cycle: PADDLE_CONFIG.billingCycle,
+                            transaction_id: event.data?.transaction_id || null,
+                            customer_id: event.data?.customer?.id || null
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Checkout complete response:', data);
+                        if (data.success) {
+                            window.location.href = data.redirect || PADDLE_CONFIG.successUrl;
+                        } else {
+                            // Still redirect but show error
+                            window.location.href = PADDLE_CONFIG.successUrl;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error completing checkout:', error);
+                        // Redirect anyway - webhook might handle it
+                        window.location.href = PADDLE_CONFIG.successUrl;
+                    });
                 }
+
                 if (event.name === 'checkout.error') {
                     console.error('Checkout error:', event.data);
                 }
@@ -374,6 +413,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 ],
                 customer: {
                     email: PADDLE_CONFIG.customerEmail
+                },
+                customData: {
+                    tenant_id: PADDLE_CONFIG.tenantId,
+                    plan_id: PADDLE_CONFIG.planId,
+                    billing_cycle: PADDLE_CONFIG.billingCycle
                 }
             });
         });

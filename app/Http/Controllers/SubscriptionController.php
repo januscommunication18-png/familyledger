@@ -507,6 +507,92 @@ class SubscriptionController extends Controller
     }
 
     /**
+     * Handle checkout completion from client-side (fallback when webhook isn't available).
+     * This is called when Paddle checkout.completed event fires on the client.
+     */
+    public function checkoutComplete(Request $request): JsonResponse
+    {
+        $request->validate([
+            'plan_id' => 'required|exists:package_plans,id',
+            'billing_cycle' => 'required|in:monthly,yearly',
+            'transaction_id' => 'nullable|string',
+            'customer_id' => 'nullable|string',
+        ]);
+
+        $tenant = Auth::user()->tenant;
+        $plan = PackagePlan::find($request->plan_id);
+        $user = Auth::user();
+
+        if (!$plan) {
+            return response()->json(['success' => false, 'message' => 'Plan not found'], 404);
+        }
+
+        // Update tenant subscription
+        $expiresAt = $request->billing_cycle === 'yearly'
+            ? now()->addYear()
+            : now()->addMonth();
+
+        $tenant->update([
+            'package_plan_id' => $plan->id,
+            'subscription_tier' => $plan->type,
+            'billing_cycle' => $request->billing_cycle,
+            'paddle_customer_id' => $request->customer_id ?? $tenant->paddle_customer_id,
+            'subscription_expires_at' => $expiresAt,
+            'trial_ends_at' => null,
+        ]);
+
+        // Create invoice
+        $price = $request->billing_cycle === 'yearly' ? $plan->cost_per_year : $plan->cost_per_month;
+
+        $invoice = Invoice::create([
+            'tenant_id' => $tenant->id,
+            'user_id' => $user->id,
+            'package_plan_id' => $plan->id,
+            'paddle_transaction_id' => $request->transaction_id,
+            'billing_cycle' => $request->billing_cycle,
+            'subtotal' => $price,
+            'discount_amount' => 0,
+            'tax_amount' => 0,
+            'total_amount' => $price,
+            'currency' => 'USD',
+            'status' => 'paid',
+            'paid_at' => now(),
+            'period_start' => now(),
+            'period_end' => $expiresAt,
+            'customer_name' => $user->name,
+            'customer_email' => $user->email,
+        ]);
+
+        // Send payment success email immediately
+        try {
+            Mail::to($user->email)->send(new PaymentSuccessEmail($invoice, $user, $tenant));
+            $invoice->markAsEmailed();
+
+            Log::info('Payment success email sent (client-side checkout)', [
+                'invoice_id' => $invoice->id,
+                'email' => $user->email,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to send payment success email', [
+                'invoice_id' => $invoice->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        Log::info('Subscription activated via client-side checkout', [
+            'tenant_id' => $tenant->id,
+            'plan_id' => $plan->id,
+            'invoice_id' => $invoice->id,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Subscription activated successfully',
+            'redirect' => route('subscription.index') . '?success=1',
+        ]);
+    }
+
+    /**
      * Cancel subscription.
      */
     public function cancel(Request $request): RedirectResponse
