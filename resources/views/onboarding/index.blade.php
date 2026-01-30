@@ -16,11 +16,6 @@
         });
 
         // Debug: Log Paddle config
-        console.log('Paddle initialized with token:', '{{ config('paddle.client_token') ? 'Token present' : 'NO TOKEN!' }}');
-        console.log('Paddle environment:', '{{ config('paddle.sandbox') ? 'sandbox' : 'production' }}');
-
-        // Debug: Log plans data
-        console.log('Plans data:', @json($plans));
     });
 </script>
 @endif
@@ -753,24 +748,6 @@
                 <h2 class="card-title text-2xl mb-2">Choose your plan</h2>
                 <p class="text-base-content/60 mb-6">Start with our free plan or unlock premium features</p>
 
-                <!-- DEBUG: Remove after testing -->
-                @if(config('app.debug'))
-                <div class="collapse collapse-arrow bg-base-200 mb-4">
-                    <input type="checkbox" />
-                    <div class="collapse-title text-sm font-medium">Debug: Plans Data</div>
-                    <div class="collapse-content">
-                        <pre class="text-xs overflow-auto max-h-40">{{ json_encode($plans->map(fn($p) => [
-                            'id' => $p->id,
-                            'name' => $p->name,
-                            'type' => $p->type,
-                            'paddle_product_id' => $p->paddle_product_id,
-                            'paddle_monthly_price_id' => $p->paddle_monthly_price_id,
-                            'paddle_yearly_price_id' => $p->paddle_yearly_price_id,
-                        ]), JSON_PRETTY_PRINT) }}</pre>
-                    </div>
-                </div>
-                @endif
-
                 @php
                     // Ensure plans have all necessary fields for JavaScript
                     $plansForJs = $plans->map(function($plan) {
@@ -820,14 +797,8 @@
                         document.getElementById('step6-form').submit();
                     },
                     openPaddleCheckout() {
-                        console.log('Opening Paddle checkout...');
-                        console.log('Selected plan:', this.selectedPlanData);
-                        console.log('Billing cycle:', this.billingCycle);
-                        console.log('Price ID:', this.priceId);
-
                         if (!this.priceId) {
-                            console.error('No price ID found for plan:', this.selectedPlanData);
-                            alert('Payment configuration error. The plan may not have Paddle price IDs configured. Please contact support.');
+                            alert('Payment configuration error. Please contact support.');
                             return;
                         }
 

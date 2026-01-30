@@ -162,8 +162,11 @@ class OnboardingController extends Controller
         $firstName = $user->first_name ?? $nameParts[0] ?? '';
         $lastName = $user->last_name ?? ($nameParts[1] ?? '');
 
-        // Get plans for billing step
-        $plans = \App\Models\PackagePlan::active()->ordered()->get();
+        // Get plans for billing step (free plans first, then by sort_order)
+        $plans = \App\Models\PackagePlan::active()
+            ->orderByRaw("CASE WHEN type = 'free' THEN 0 ELSE 1 END")
+            ->ordered()
+            ->get();
 
         return view('onboarding.index', [
             'step' => $tenant->onboarding_step ?? 1,
