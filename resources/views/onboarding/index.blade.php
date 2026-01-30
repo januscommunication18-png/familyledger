@@ -2,6 +2,23 @@
 
 @section('title', 'Setup Your Account')
 
+@push('scripts')
+@if($step == 6)
+<script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Paddle
+        @if(config('services.paddle.sandbox'))
+        Paddle.Environment.set('sandbox');
+        @endif
+        Paddle.Initialize({
+            token: '{{ config('services.paddle.client_token') }}'
+        });
+    });
+</script>
+@endif
+@endpush
+
 @section('content')
 <div class="min-h-screen bg-base-200 py-8">
     <div class="container mx-auto max-w-2xl px-4">
@@ -391,7 +408,7 @@
 
                     <div class="card-actions justify-between mt-8">
                         <a href="javascript:void(0)" onclick="document.getElementById('back-form').submit()" class="btn btn-ghost">Back</a>
-                        <button type="submit" class="btn btn-primary">Complete Setup</button>
+                        <button type="submit" class="btn btn-primary">Continue</button>
                     </div>
                 </form>
                 <form id="back-form" action="/onboarding/back" method="POST" class="hidden">@csrf</form>
@@ -723,6 +740,207 @@
                         }
                     }
                 </script>
+
+                @elseif($step == 6)
+                <!-- Step 6: Payment & Billing -->
+                <h2 class="card-title text-2xl mb-2">Choose your plan</h2>
+                <p class="text-base-content/60 mb-6">Start with our free plan or unlock premium features</p>
+
+                <div x-data="{
+                    selectedPlan: '{{ $plans->firstWhere('type', 'free')?->id }}',
+                    billingCycle: 'monthly',
+                    plans: {{ Js::from($plans) }},
+                    processing: false,
+                    paymentCompleted: false,
+                    get selectedPlanData() {
+                        return this.plans.find(p => p.id == this.selectedPlan);
+                    },
+                    get isPaidPlan() {
+                        return this.selectedPlanData && this.selectedPlanData.type === 'paid';
+                    },
+                    get priceId() {
+                        if (!this.selectedPlanData) return null;
+                        return this.billingCycle === 'yearly'
+                            ? this.selectedPlanData.paddle_yearly_price_id
+                            : this.selectedPlanData.paddle_monthly_price_id;
+                    },
+                    selectPlan(planId) {
+                        this.selectedPlan = planId;
+                        // Reset payment status when switching plans
+                        if (this.plans.find(p => p.id == planId)?.type !== 'paid') {
+                            this.paymentCompleted = false;
+                        }
+                    },
+                    completeSetup() {
+                        document.getElementById('step6-form').submit();
+                    },
+                    openPaddleCheckout() {
+                        if (!this.priceId) {
+                            alert('Payment configuration error. Please try again or contact support.');
+                            return;
+                        }
+
+                        this.processing = true;
+
+                        Paddle.Checkout.open({
+                            items: [{ priceId: this.priceId, quantity: 1 }],
+                            customer: { email: '{{ $user['email'] }}' },
+                            customData: {
+                                tenant_id: '{{ $tenant['id'] }}',
+                                plan_id: this.selectedPlan,
+                                billing_cycle: this.billingCycle,
+                                source: 'onboarding'
+                            },
+                            settings: {
+                                displayMode: 'overlay',
+                                theme: 'light',
+                                successUrl: '{{ route('onboarding') }}?payment=success&plan_id=' + this.selectedPlan + '&billing_cycle=' + this.billingCycle
+                            }
+                        });
+
+                        // Listen for checkout events
+                        Paddle.Checkout.on('checkout.completed', (data) => {
+                            this.paymentCompleted = true;
+                            this.processing = false;
+                        });
+
+                        Paddle.Checkout.on('checkout.closed', () => {
+                            this.processing = false;
+                        });
+                    }
+                }">
+                    <!-- Plan Selection -->
+                    <div class="space-y-4 mb-6">
+                        @foreach($plans as $plan)
+                        <label
+                            class="flex items-start p-4 border-2 rounded-xl cursor-pointer transition-all"
+                            :class="selectedPlan == '{{ $plan->id }}'
+                                ? 'border-primary bg-primary/5 shadow-md'
+                                : 'border-base-300 hover:border-primary/30'"
+                            @click="selectPlan('{{ $plan->id }}')"
+                        >
+                            <input type="radio" name="plan_selection" value="{{ $plan->id }}"
+                                   class="radio radio-primary mt-1"
+                                   x-model="selectedPlan">
+                            <div class="ml-4 flex-1">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-semibold text-lg">{{ $plan->name }}</span>
+                                        @if($plan->isFree())
+                                        <span class="badge badge-success badge-sm">Free Forever</span>
+                                        @else
+                                        <span class="badge badge-primary badge-sm">Premium</span>
+                                        @endif
+                                    </div>
+                                    @if($plan->isPaid())
+                                    <div class="text-right">
+                                        <div x-show="billingCycle === 'monthly'" class="font-bold text-primary">
+                                            ${{ number_format($plan->cost_per_month, 2) }}<span class="text-sm font-normal text-base-content/60">/mo</span>
+                                        </div>
+                                        <div x-show="billingCycle === 'yearly'" class="font-bold text-primary">
+                                            ${{ number_format($plan->cost_per_year / 12, 2) }}<span class="text-sm font-normal text-base-content/60">/mo</span>
+                                            <div class="text-xs text-success">Save ${{ number_format(($plan->cost_per_month * 12) - $plan->cost_per_year, 2) }}/year</div>
+                                        </div>
+                                    </div>
+                                    @else
+                                    <div class="font-bold text-success">$0</div>
+                                    @endif
+                                </div>
+                                <p class="text-sm text-base-content/60 mt-1">{{ $plan->description }}</p>
+
+                                <!-- Features -->
+                                <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
+                                    <div class="flex items-center gap-1">
+                                        <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        <span>{{ $plan->getFormattedLimit('family_circles_limit') }} Family Circles</span>
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                        <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        <span>{{ $plan->getFormattedLimit('family_members_limit') }} Members</span>
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                        <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        <span>{{ $plan->getFormattedLimit('document_storage_limit') }} MB Storage</span>
+                                    </div>
+                                    @if($plan->isPaid())
+                                    <div class="flex items-center gap-1">
+                                        <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        <span>Priority Support</span>
+                                    </div>
+                                    @endif
+                                </div>
+                            </div>
+                        </label>
+                        @endforeach
+                    </div>
+
+                    <!-- Billing Cycle Toggle (only for paid plans) -->
+                    <div x-show="isPaidPlan" x-transition class="mb-6">
+                        <div class="flex items-center justify-center gap-4 p-4 bg-base-200 rounded-xl">
+                            <span class="text-sm" :class="billingCycle === 'monthly' ? 'font-semibold' : 'text-base-content/60'">Monthly</span>
+                            <input type="checkbox" class="toggle toggle-primary"
+                                   :checked="billingCycle === 'yearly'"
+                                   @change="billingCycle = $event.target.checked ? 'yearly' : 'monthly'">
+                            <span class="text-sm" :class="billingCycle === 'yearly' ? 'font-semibold' : 'text-base-content/60'">
+                                Yearly <span class="text-success text-xs">(Save 17%)</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Form for submission -->
+                    <form action="/onboarding/step6" method="POST" id="step6-form">
+                        @csrf
+                        <input type="hidden" name="plan_id" x-model="selectedPlan">
+                        <input type="hidden" name="billing_cycle" x-model="billingCycle">
+                    </form>
+
+                    <!-- Payment Success Message -->
+                    <div x-show="paymentCompleted" x-transition class="mb-6">
+                        <div class="alert alert-success">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <span>Payment successful! Click "Complete Setup" to finish.</span>
+                        </div>
+                    </div>
+
+                    <div class="card-actions justify-between mt-8">
+                        <a href="javascript:void(0)" onclick="document.getElementById('back-form').submit()" class="btn btn-ghost">Back</a>
+
+                        <div class="flex gap-2">
+                            <!-- Pay Now button (only for paid plans, before payment) -->
+                            <button
+                                x-show="isPaidPlan && !paymentCompleted"
+                                type="button"
+                                @click="openPaddleCheckout()"
+                                class="btn btn-secondary gap-2"
+                                :disabled="processing"
+                                :class="{ 'loading': processing }"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                                Pay Now
+                            </button>
+
+                            <!-- Complete Setup button -->
+                            <button
+                                type="button"
+                                @click="completeSetup()"
+                                class="btn btn-primary"
+                                :disabled="isPaidPlan && !paymentCompleted"
+                                :class="{ 'btn-disabled opacity-50': isPaidPlan && !paymentCompleted }"
+                            >
+                                Complete Setup
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <form id="back-form" action="/onboarding/back" method="POST" class="hidden">@csrf</form>
 
                 @else
                 <!-- Fallback -->

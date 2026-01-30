@@ -634,6 +634,7 @@ Route::middleware(['security.code', 'auth'])->group(function () {
     Route::middleware(['verified', 'onboarding'])->prefix('settings')->name('settings.')->group(function () {
         Route::get('/', [SettingsController::class, 'index'])->name('index');
         Route::post('/profile', [SettingsController::class, 'updateProfile'])->name('profile.update');
+        Route::delete('/profile/avatar', [SettingsController::class, 'removeAvatar'])->name('profile.remove-avatar');
         Route::post('/password', [SettingsController::class, 'updatePassword'])->name('password.update');
         Route::delete('/sessions/{session}', [SettingsController::class, 'revokeSession'])->name('sessions.revoke');
         Route::post('/sessions/revoke-all', [SettingsController::class, 'revokeAllSessions'])->name('sessions.revoke-all');
@@ -673,6 +674,7 @@ Route::middleware(['security.code', 'auth'])->group(function () {
     Route::post('/onboarding/step3', [OnboardingController::class, 'step3']);
     Route::post('/onboarding/step4', [OnboardingController::class, 'step4']);
     Route::post('/onboarding/step5', [OnboardingController::class, 'step5']);
+    Route::post('/onboarding/step6', [OnboardingController::class, 'step6']);
     Route::post('/onboarding/back', [OnboardingController::class, 'back']);
     Route::post('/onboarding/skip', [OnboardingController::class, 'skip'])->name('onboarding.skip');
     Route::post('/onboarding/restart', [OnboardingController::class, 'restart'])->name('onboarding.restart');

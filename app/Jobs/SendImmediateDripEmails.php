@@ -6,23 +6,16 @@ use App\Models\Backoffice\DripCampaign;
 use App\Models\Backoffice\DripEmailLog;
 use App\Models\Backoffice\DripEmailStep;
 use App\Models\User;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
 /**
  * Send immediate drip campaign emails when a user signs up.
- * This is triggered at registration time, not by the daily scheduler.
+ * This runs synchronously (not queued) for reliable delivery on shared hosting.
  */
-class SendImmediateDripEmails implements ShouldQueue
+class SendImmediateDripEmails
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-
-    public int $tries = 3;
-    public int $timeout = 60;
+    use Dispatchable;
 
     public function __construct(
         protected User $user
@@ -91,24 +84,21 @@ class SendImmediateDripEmails implements ShouldQueue
                 continue;
             }
 
-            // For immediate emails (0 delay), send now
-            // For delayed emails, schedule them
+            // Only send immediate emails (0 delay) synchronously
+            // Delayed emails will be handled by the daily ProcessDripCampaigns scheduler
             if ($totalDelayMinutes === 0) {
-                // Send immediately
-                SendDripEmail::dispatch($step, $email, $userId, $tenantId);
+                // Send immediately and synchronously (no queue)
+                SendDripEmail::dispatchSync($step, $email, $userId, $tenantId);
 
-                Log::info('Immediate drip email dispatched', [
+                Log::info('Immediate drip email sent', [
                     'campaign_id' => $campaign->id,
                     'step_id' => $step->id,
                     'step_subject' => $step->subject,
                     'email' => $email,
                 ]);
             } else {
-                // Schedule for later
-                SendDripEmail::dispatch($step, $email, $userId, $tenantId)
-                    ->delay(now()->addMinutes($totalDelayMinutes));
-
-                Log::info('Drip email scheduled', [
+                // Delayed emails are handled by ProcessDripCampaigns daily job
+                Log::info('Drip email will be sent by daily scheduler', [
                     'campaign_id' => $campaign->id,
                     'step_id' => $step->id,
                     'step_subject' => $step->subject,

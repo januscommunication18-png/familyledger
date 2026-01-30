@@ -35,7 +35,9 @@ class SubscriptionReminderEmail extends Mailable
      */
     private function getReminderType(int $days): string
     {
-        if ($days <= 0) {
+        if ($days < 0) {
+            return 'expired';
+        } elseif ($days === 0) {
             return '0_days';
         } elseif ($days <= 3) {
             return '3_days';
@@ -50,6 +52,7 @@ class SubscriptionReminderEmail extends Mailable
     public function envelope(): Envelope
     {
         $subject = match ($this->reminderType) {
+            'expired' => 'Your Family Ledger subscription has expired',
             '0_days' => 'Your subscription renewal is due today',
             '3_days' => 'Your subscription renews in 3 days',
             '7_days' => 'Your subscription renews in 7 days',

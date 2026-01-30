@@ -107,6 +107,27 @@ class SettingsController extends Controller
     }
 
     /**
+     * Remove user avatar.
+     */
+    public function removeAvatar(Request $request)
+    {
+        $user = Auth::user();
+
+        if ($user->avatar) {
+            // Delete the avatar from storage
+            Storage::disk('do_spaces')->delete($user->avatar);
+            $user->avatar = null;
+            $user->save();
+
+            return redirect()->route('settings.index', ['tab' => 'profile'])
+                ->with('success', 'Profile photo removed successfully');
+        }
+
+        return redirect()->route('settings.index', ['tab' => 'profile'])
+            ->with('error', 'No profile photo to remove');
+    }
+
+    /**
      * Update password.
      */
     public function updatePassword(Request $request)

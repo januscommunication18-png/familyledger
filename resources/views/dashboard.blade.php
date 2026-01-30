@@ -36,6 +36,58 @@
 @endpush
 
 @section('content')
+{{-- Subscription Expiration Alert --}}
+@if($subscriptionAlert)
+<div
+    x-data="{
+        dismissed: sessionStorage.getItem('{{ $subscriptionAlert['dismissKey'] }}') === 'true',
+        dismiss() {
+            this.dismissed = true;
+            sessionStorage.setItem('{{ $subscriptionAlert['dismissKey'] }}', 'true');
+        }
+    }"
+    x-show="!dismissed"
+    x-cloak
+    class="mb-6"
+>
+    <div class="card shadow-sm border {{ $subscriptionAlert['severity'] === 'error' ? 'bg-gradient-to-r from-red-50 to-rose-50 border-red-200' : ($subscriptionAlert['severity'] === 'warning' ? 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200' : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200') }}">
+        <div class="card-body py-4">
+            <div class="flex items-start justify-between gap-4">
+                <div class="flex items-start gap-3">
+                    <div class="p-2 rounded-full shrink-0 {{ $subscriptionAlert['severity'] === 'error' ? 'bg-red-100' : ($subscriptionAlert['severity'] === 'warning' ? 'bg-amber-100' : 'bg-blue-100') }}">
+                        @if($subscriptionAlert['type'] === 'expired')
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{ $subscriptionAlert['severity'] === 'error' ? 'rgb(239 68 68)' : 'rgb(245 158 11)' }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        @else
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{ $subscriptionAlert['severity'] === 'warning' ? 'rgb(245 158 11)' : 'rgb(59 130 246)' }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        @endif
+                    </div>
+                    <div>
+                        <h3 class="font-semibold {{ $subscriptionAlert['severity'] === 'error' ? 'text-red-800' : ($subscriptionAlert['severity'] === 'warning' ? 'text-amber-800' : 'text-blue-800') }}">
+                            {{ $subscriptionAlert['title'] }}
+                        </h3>
+                        <p class="text-sm mt-1 {{ $subscriptionAlert['severity'] === 'error' ? 'text-red-600' : ($subscriptionAlert['severity'] === 'warning' ? 'text-amber-600' : 'text-blue-600') }}">
+                            {{ $subscriptionAlert['message'] }}
+                        </p>
+                        <div class="mt-3">
+                            <a href="{{ route('subscription.index') }}" class="btn btn-sm {{ $subscriptionAlert['severity'] === 'error' ? 'btn-error' : ($subscriptionAlert['severity'] === 'warning' ? 'btn-warning' : 'btn-primary') }}">
+                                {{ $subscriptionAlert['cta'] }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <button
+                    @click="dismiss()"
+                    class="btn btn-ghost btn-sm btn-circle shrink-0 {{ $subscriptionAlert['severity'] === 'error' ? 'hover:bg-red-100' : ($subscriptionAlert['severity'] === 'warning' ? 'hover:bg-amber-100' : 'hover:bg-blue-100') }}"
+                    title="Dismiss"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
 {{-- Pending Co-parent Invitations --}}
 @if($pendingCoparentInvites->count() > 0)
 <div class="mb-6">

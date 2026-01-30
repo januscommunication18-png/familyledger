@@ -144,7 +144,13 @@
             <h1>Family Ledger</h1>
         </div>
 
-        @if($reminderType === '0_days')
+        @if($reminderType === 'expired')
+            <div class="reminder-header urgent">
+                <h2>Subscription Expired</h2>
+                <div class="days">!</div>
+                <p>Your subscription has ended</p>
+            </div>
+        @elseif($reminderType === '0_days')
             <div class="reminder-header urgent">
                 <h2>Payment Due Today</h2>
                 <div class="days">!</div>
@@ -166,7 +172,9 @@
 
         <p>Hello {{ $user?->name ?? 'Valued Customer' }},</p>
 
-        @if($reminderType === '0_days')
+        @if($reminderType === 'expired')
+            <p>Your Family Ledger subscription has <strong>expired</strong>. To continue enjoying premium features and keep your family organized, please renew your subscription.</p>
+        @elseif($reminderType === '0_days')
             <p>This is a reminder that your Family Ledger subscription renewal is due <strong>today</strong>. Please ensure your payment method is up to date to avoid any interruption in service.</p>
         @elseif($reminderType === '3_days')
             <p>Your Family Ledger subscription will automatically renew in <strong>{{ $daysRemaining }} days</strong>. We wanted to give you a heads up so there are no surprises.</p>
@@ -184,19 +192,26 @@
                 <span class="subscription-value">{{ ucfirst($tenant->billing_cycle ?? 'Monthly') }}</span>
             </div>
             <div class="subscription-row">
-                <span class="subscription-label">Renewal Date</span>
+                <span class="subscription-label">{{ $reminderType === 'expired' ? 'Expired On' : 'Renewal Date' }}</span>
                 <span class="subscription-value">{{ $renewalDate?->format('F j, Y') ?? 'N/A' }}</span>
             </div>
         </div>
 
+        @if($reminderType !== 'expired')
         <div class="amount-highlight">
             <div class="label">Amount to be charged</div>
             <div class="amount">{{ $amount }}</div>
         </div>
+        @endif
 
-        <a href="{{ config('app.url') }}/subscription" class="cta-button">Manage Subscription</a>
+        <a href="{{ config('app.url') }}/subscription" class="cta-button">{{ $reminderType === 'expired' ? 'Renew Subscription' : 'Manage Subscription' }}</a>
 
-        @if($reminderType === '0_days')
+        @if($reminderType === 'expired')
+            <div class="info-box danger">
+                <strong>Limited Access</strong><br>
+                Your account may be limited to free plan features. Renew your subscription now to regain full access to all premium features.
+            </div>
+        @elseif($reminderType === '0_days')
             <div class="info-box danger">
                 <strong>Action Required</strong><br>
                 If your payment fails, your account may be downgraded to the free plan. Update your payment method now to ensure uninterrupted access.

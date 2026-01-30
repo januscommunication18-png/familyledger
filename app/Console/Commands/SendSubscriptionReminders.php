@@ -21,12 +21,12 @@ class SendSubscriptionReminders extends Command
     /**
      * The console command description.
      */
-    protected $description = 'Send subscription renewal reminder emails (7 days, 3 days, 0 days before expiry)';
+    protected $description = 'Send subscription reminder emails (7 days, 3 days, 0 days before expiry, and on expiration day)';
 
     /**
-     * Days before expiry to send reminders.
+     * Days before expiry to send reminders (negative values = days after expiry).
      */
-    protected array $reminderDays = [7, 3, 0];
+    protected array $reminderDays = [7, 3, 0, -1];
 
     /**
      * Execute the console command.
@@ -58,26 +58,36 @@ class SendSubscriptionReminders extends Command
     }
 
     /**
-     * Send reminders for a specific number of days before expiry.
+     * Send reminders for a specific number of days before/after expiry.
      */
     protected function sendRemindersForDay(int $days, bool $dryRun): int
     {
         $targetDate = Carbon::today()->addDays($days);
+        $isExpiredReminder = $days < 0;
 
         // Find tenants with subscriptions expiring on the target date
         $tenants = Tenant::query()
             ->whereNotNull('subscription_expires_at')
             ->whereDate('subscription_expires_at', $targetDate)
             ->where('subscription_tier', '!=', 'free')
-            ->whereNotNull('paddle_subscription_id')
             ->get();
 
+        // For expired reminders, we don't require paddle_subscription_id
+        // as the subscription may have been cancelled
+        if (!$isExpiredReminder) {
+            $tenants = $tenants->filter(fn($t) => $t->paddle_subscription_id !== null);
+        }
+
+        $label = $isExpiredReminder
+            ? abs($days) . ' day(s) after expiry'
+            : "{$days} days before expiry";
+
         if ($tenants->isEmpty()) {
-            $this->line("  No reminders needed for {$days} days before expiry");
+            $this->line("  No reminders needed for {$label}");
             return 0;
         }
 
-        $this->info("  Found {$tenants->count()} tenant(s) for {$days}-day reminder");
+        $this->info("  Found {$tenants->count()} tenant(s) for {$label}");
 
         $sent = 0;
 

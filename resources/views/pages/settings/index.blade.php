@@ -94,28 +94,42 @@
             <div class="card-body">
                 <h2 class="card-title mb-6">Profile Settings</h2>
 
+                {{-- Hidden form for removing avatar --}}
+                <form id="remove-avatar-form" action="{{ route('settings.profile.remove-avatar') }}" method="POST" class="hidden">
+                    @csrf
+                    @method('DELETE')
+                </form>
+
                 <form action="{{ route('settings.profile.update') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                     @csrf
 
                     <div class="flex items-center gap-6">
-                        <div class="avatar {{ $user->avatar ? '' : 'placeholder' }}">
+                        <div class="avatar {{ $user->avatar ? '' : 'placeholder' }}" id="avatar-container">
                             @if($user->avatar)
-                                <div class="w-20 rounded-full">
-                                    <img src="{{ Storage::disk('do_spaces')->url($user->avatar) }}" alt="Avatar" />
+                                <div class="w-20 h-20 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
+                                    <img src="{{ Storage::disk('do_spaces')->url($user->avatar) }}" alt="Avatar" class="rounded-full object-cover" />
                                 </div>
                             @else
-                                <div class="w-20 rounded-full bg-primary text-primary-content">
-                                    <span class="text-2xl">{{ substr($user->name ?? 'U', 0, 1) }}</span>
+                                <div class="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center ring ring-primary/30 ring-offset-base-100 ring-offset-2">
+                                    <span class="text-2xl font-bold text-white">{{ strtoupper(substr($user->name ?? 'U', 0, 1)) }}</span>
                                 </div>
                             @endif
                         </div>
                         <div>
-                            <label class="btn btn-outline btn-sm cursor-pointer">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                                Upload Photo
-                                <input type="file" name="avatar" accept="image/jpeg,image/png,image/jpg,image/gif" class="hidden" onchange="previewAvatar(this)" />
-                            </label>
-                            <p class="text-sm text-base-content/60 mt-1">JPG, PNG, or GIF. Max 2MB.</p>
+                            <div class="flex flex-wrap gap-2">
+                                <label class="btn btn-outline btn-sm cursor-pointer gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                                    Upload Photo
+                                    <input type="file" name="avatar" accept="image/jpeg,image/png,image/jpg,image/gif" class="hidden" onchange="previewAvatar(this)" />
+                                </label>
+                                @if($user->avatar)
+                                <button type="button" onclick="confirmRemoveAvatar()" class="btn btn-ghost btn-sm text-error gap-2" id="remove-avatar-btn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    Remove
+                                </button>
+                                @endif
+                            </div>
+                            <p class="text-sm text-base-content/60 mt-2">JPG, PNG, or GIF. Max 2MB.</p>
                         </div>
                     </div>
 
@@ -957,15 +971,39 @@ function previewAvatar(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
         reader.onload = function(e) {
-            const avatarContainer = input.closest('form').querySelector('.avatar');
+            const avatarContainer = document.getElementById('avatar-container');
             avatarContainer.classList.remove('placeholder');
             avatarContainer.innerHTML = `
-                <div class="w-20 rounded-full">
-                    <img src="${e.target.result}" alt="Avatar Preview" />
+                <div class="w-20 h-20 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
+                    <img src="${e.target.result}" alt="Avatar Preview" class="rounded-full object-cover" />
                 </div>
             `;
+            // Show remove button if it was hidden
+            const removeBtn = document.getElementById('remove-avatar-btn');
+            if (!removeBtn) {
+                // Add remove button dynamically
+                const btnContainer = input.closest('.flex.flex-wrap');
+                if (btnContainer) {
+                    const newBtn = document.createElement('button');
+                    newBtn.type = 'button';
+                    newBtn.id = 'remove-avatar-btn';
+                    newBtn.className = 'btn btn-ghost btn-sm text-error gap-2';
+                    newBtn.onclick = confirmRemoveAvatar;
+                    newBtn.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        Remove
+                    `;
+                    btnContainer.appendChild(newBtn);
+                }
+            }
         };
         reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function confirmRemoveAvatar() {
+    if (confirm('Are you sure you want to remove your profile photo?')) {
+        document.getElementById('remove-avatar-form').submit();
     }
 }
 

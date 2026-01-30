@@ -18,6 +18,7 @@ use App\Models\ShoppingList;
 use App\Models\TaxReturn;
 use App\Models\TodoItem;
 use App\Models\CollaboratorInvite;
+use App\Models\Tenant;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -29,6 +30,10 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
         $tenantId = $user->tenant_id;
+
+        // Subscription expiration status
+        $tenant = Tenant::with('packagePlan')->find($tenantId);
+        $subscriptionAlert = $this->getSubscriptionAlert($tenant);
 
         // Pending co-parent invites
         $pendingCoparentInvites = CollaboratorInvite::where('email', $user->email)
@@ -236,7 +241,70 @@ class DashboardController extends Controller
             'assetChartColors',
             'expenseCategoryLabels',
             'expenseCategoryData',
-            'todos'
+            'todos',
+            'subscriptionAlert'
         ));
+    }
+
+    /**
+     * Get subscription alert data for display.
+     */
+    private function getSubscriptionAlert(?Tenant $tenant): ?array
+    {
+        if (!$tenant || !$tenant->packagePlan) {
+            return null;
+        }
+
+        // Only show for paid plans
+        if ($tenant->packagePlan->type !== 'paid') {
+            return null;
+        }
+
+        $expiresAt = $tenant->subscription_expires_at;
+
+        if (!$expiresAt) {
+            return null;
+        }
+
+        $now = now();
+        $daysRemaining = (int) $now->diffInDays($expiresAt, false);
+
+        // Subscription already expired
+        if ($daysRemaining < 0) {
+            $daysExpired = abs($daysRemaining);
+            return [
+                'type' => 'expired',
+                'severity' => 'error',
+                'title' => 'Your subscription has expired',
+                'message' => $daysExpired === 1
+                    ? 'Your ' . $tenant->packagePlan->name . ' plan expired yesterday. Renew now to continue enjoying premium features.'
+                    : 'Your ' . $tenant->packagePlan->name . ' plan expired ' . $daysExpired . ' days ago. Renew now to continue enjoying premium features.',
+                'cta' => 'Renew Subscription',
+                'daysExpired' => $daysExpired,
+                'planName' => $tenant->packagePlan->name,
+                'dismissKey' => 'sub_expired_' . $tenant->id . '_' . $expiresAt->format('Y-m-d'),
+            ];
+        }
+
+        // Expiring soon (within 7 days)
+        if ($daysRemaining <= 7) {
+            return [
+                'type' => 'expiring_soon',
+                'severity' => $daysRemaining <= 3 ? 'warning' : 'info',
+                'title' => $daysRemaining === 0
+                    ? 'Your subscription expires today!'
+                    : ($daysRemaining === 1
+                        ? 'Your subscription expires tomorrow!'
+                        : 'Your subscription expires in ' . $daysRemaining . ' days'),
+                'message' => 'Your ' . $tenant->packagePlan->name . ' plan will expire on ' . $expiresAt->format('M j, Y') . '. Renew now to avoid service interruption.',
+                'cta' => 'Renew Now',
+                'daysRemaining' => $daysRemaining,
+                'expiresAt' => $expiresAt->format('M j, Y'),
+                'planName' => $tenant->packagePlan->name,
+                'dismissKey' => 'sub_expiring_' . $tenant->id . '_' . $expiresAt->format('Y-m-d'),
+            ];
+        }
+
+        return null;
     }
 }
