@@ -904,19 +904,6 @@
                         @endforeach
                     </div>
 
-                    <!-- Billing Cycle Toggle (only for paid plans) -->
-                    <div x-show="isPaidPlan" x-transition class="mb-6">
-                        <div class="flex items-center justify-center gap-4 p-4 bg-base-200 rounded-xl">
-                            <span class="text-sm" :class="billingCycle === 'monthly' ? 'font-semibold' : 'text-base-content/60'">Monthly</span>
-                            <input type="checkbox" class="toggle toggle-primary"
-                                   :checked="billingCycle === 'yearly'"
-                                   @change="billingCycle = $event.target.checked ? 'yearly' : 'monthly'">
-                            <span class="text-sm" :class="billingCycle === 'yearly' ? 'font-semibold' : 'text-base-content/60'">
-                                Yearly <span class="text-success text-xs">(Save 17%)</span>
-                            </span>
-                        </div>
-                    </div>
-
                     <!-- Form for submission -->
                     <form action="/onboarding/step6" method="POST" id="step6-form">
                         @csrf
