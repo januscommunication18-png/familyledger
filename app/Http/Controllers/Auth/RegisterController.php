@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SendImmediateDripEmails;
 use App\Models\Otp;
 use App\Models\Tenant;
 use App\Models\User;
@@ -96,6 +97,13 @@ class RegisterController extends Controller
                 $user->notify(new OtpNotification($otp->code, 'verify'));
             } catch (\Exception $e) {
                 Log::warning('Failed to send verification email', ['error' => $e->getMessage()]);
+            }
+
+            // Trigger immediate drip campaign emails (welcome email, etc.)
+            try {
+                SendImmediateDripEmails::dispatch($user);
+            } catch (\Exception $e) {
+                Log::warning('Failed to dispatch drip emails', ['error' => $e->getMessage()]);
             }
 
             Log::info('New user registered', ['user_id' => $user->id]);

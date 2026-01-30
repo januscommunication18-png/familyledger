@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\PackagePlan;
 use App\Models\DiscountCode;
+use App\Models\Invoice;
+use App\Mail\PaymentSuccessEmail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
@@ -248,6 +251,14 @@ class SubscriptionController extends Controller
             case 'subscription.paused':
                 $this->handleSubscriptionPaused($payload);
                 break;
+
+            case 'transaction.completed':
+                $this->handleTransactionCompleted($payload);
+                break;
+
+            case 'transaction.payment_failed':
+                $this->handlePaymentFailed($payload);
+                break;
         }
 
         return response()->json(['success' => true]);
@@ -338,6 +349,127 @@ class SubscriptionController extends Controller
         $tenant->update([
             'subscription_expires_at' => $payload['data']['paused_at'] ?? now(),
         ]);
+    }
+
+    /**
+     * Handle transaction completed webhook (payment successful).
+     */
+    private function handleTransactionCompleted(array $payload): void
+    {
+        $data = $payload['data'] ?? [];
+        $customData = $data['custom_data'] ?? [];
+        $tenantId = $customData['tenant_id'] ?? null;
+
+        // Try to find tenant by subscription ID if not in custom data
+        if (!$tenantId && isset($data['subscription_id'])) {
+            $tenant = \App\Models\Tenant::where('paddle_subscription_id', $data['subscription_id'])->first();
+            $tenantId = $tenant?->id;
+        }
+
+        // Try to find tenant by customer email
+        if (!$tenantId && isset($data['customer']['email'])) {
+            $user = \App\Models\User::where('email', $data['customer']['email'])->first();
+            $tenantId = $user?->tenant_id;
+        }
+
+        if (!$tenantId) {
+            Log::warning('Transaction completed but could not find tenant', [
+                'transaction_id' => $data['id'] ?? null,
+            ]);
+            return;
+        }
+
+        $tenant = \App\Models\Tenant::find($tenantId);
+        if (!$tenant) {
+            return;
+        }
+
+        $planId = $customData['plan_id'] ?? $tenant->package_plan_id;
+        $plan = PackagePlan::find($planId);
+
+        // Extract billing details
+        $billingPeriod = $data['billing_period'] ?? [];
+        $details = $data['details'] ?? [];
+        $totals = $details['totals'] ?? [];
+
+        // Create invoice
+        $invoice = Invoice::create([
+            'tenant_id' => $tenant->id,
+            'user_id' => $tenant->users()->first()?->id,
+            'package_plan_id' => $plan?->id,
+            'paddle_transaction_id' => $data['id'] ?? null,
+            'paddle_subscription_id' => $data['subscription_id'] ?? null,
+            'billing_cycle' => ($data['billing_cycle']['interval'] ?? 'month') === 'year' ? 'yearly' : 'monthly',
+            'subtotal' => ($totals['subtotal'] ?? 0) / 100, // Paddle uses cents
+            'discount_amount' => ($totals['discount'] ?? 0) / 100,
+            'tax_amount' => ($totals['tax'] ?? 0) / 100,
+            'total_amount' => ($totals['total'] ?? 0) / 100,
+            'currency' => $data['currency_code'] ?? 'USD',
+            'discount_code' => $customData['discount_code'] ?? null,
+            'status' => 'paid',
+            'paid_at' => now(),
+            'period_start' => $billingPeriod['starts_at'] ?? null,
+            'period_end' => $billingPeriod['ends_at'] ?? null,
+            'customer_name' => $data['customer']['name'] ?? null,
+            'customer_email' => $data['customer']['email'] ?? null,
+            'paddle_data' => $data,
+        ]);
+
+        // Send payment success email
+        $user = $tenant->users()->first();
+        if ($user && $invoice) {
+            try {
+                Mail::to($user->email)->send(new PaymentSuccessEmail($invoice, $user, $tenant));
+                $invoice->markAsEmailed();
+                Log::info('Payment success email sent', [
+                    'invoice_id' => $invoice->id,
+                    'email' => $user->email,
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Failed to send payment success email', [
+                    'invoice_id' => $invoice->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        Log::info('Invoice created for transaction', [
+            'invoice_id' => $invoice->id,
+            'invoice_number' => $invoice->invoice_number,
+            'tenant_id' => $tenant->id,
+        ]);
+    }
+
+    /**
+     * Handle payment failed webhook.
+     */
+    private function handlePaymentFailed(array $payload): void
+    {
+        $data = $payload['data'] ?? [];
+
+        // Find tenant by subscription ID
+        $tenant = null;
+        if (isset($data['subscription_id'])) {
+            $tenant = \App\Models\Tenant::where('paddle_subscription_id', $data['subscription_id'])->first();
+        }
+
+        if (!$tenant && isset($data['customer']['email'])) {
+            $user = \App\Models\User::where('email', $data['customer']['email'])->first();
+            $tenant = $user?->tenant;
+        }
+
+        if (!$tenant) {
+            return;
+        }
+
+        // Log the failed payment
+        Log::warning('Payment failed for tenant', [
+            'tenant_id' => $tenant->id,
+            'transaction_id' => $data['id'] ?? null,
+        ]);
+
+        // You could send a payment failed email here
+        // Mail::to($tenant->users()->first()->email)->send(new PaymentFailedEmail($tenant));
     }
 
     /**

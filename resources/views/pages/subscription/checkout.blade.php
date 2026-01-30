@@ -17,6 +17,24 @@
 @section('page-title', 'Complete Your Purchase')
 @section('page-description', 'Review your order and complete payment.')
 
+@push('styles')
+<style>
+    /* Ensure Paddle checkout iframe takes full width */
+    #paddle-checkout-frame {
+        width: 100% !important;
+        min-width: 100% !important;
+    }
+    #paddle-checkout-frame iframe {
+        width: 100% !important;
+        min-width: 100% !important;
+    }
+    .paddle-frame-overlay,
+    .paddle-frame-inline {
+        width: 100% !important;
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="max-w-4xl mx-auto" x-data="checkoutForm()">
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -114,22 +132,14 @@
                 <div class="card-body">
                     <h2 class="card-title mb-4">Payment Details</h2>
 
-                    <!-- Paddle Checkout Button -->
-                    <div id="paddle-checkout-container" class="min-h-[200px] flex flex-col items-center justify-center">
-                        <button type="button" id="paddle-checkout-btn" class="btn btn-primary btn-lg gap-2 hidden">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                            </svg>
-                            @if($plan->trial_period_days > 0)
-                                Start {{ $plan->trial_period_days }}-Day Free Trial
-                            @else
-                                Pay with Card
-                            @endif
-                        </button>
-                        <div id="paddle-loading" class="text-center">
+                    <!-- Paddle Inline Checkout Container -->
+                    <div id="paddle-checkout-container" class="w-full">
+                        <div id="paddle-loading" class="text-center py-8">
                             <span class="loading loading-spinner loading-lg text-primary"></span>
                             <p class="text-sm text-base-content/60 mt-2">Loading secure checkout...</p>
                         </div>
+                        <!-- Paddle will inject checkout here -->
+                        <div id="paddle-checkout-frame" class="w-full min-h-[400px]"></div>
                     </div>
 
                     <!-- Fallback form for testing without Paddle -->
@@ -258,9 +268,8 @@ function showFallbackForm() {
     document.getElementById('checkout-form').classList.remove('hidden');
 }
 
-function showCheckoutButton() {
+function hideLoading() {
     document.getElementById('paddle-loading').classList.add('hidden');
-    document.getElementById('paddle-checkout-btn').classList.remove('hidden');
 }
 
 // Load Paddle.js and setup
@@ -282,53 +291,51 @@ document.addEventListener('DOMContentLoaded', function() {
         // Set environment (sandbox or production)
         Paddle.Environment.set(PADDLE_CONFIG.env);
 
-        // Setup Paddle
+        // Setup Paddle with event callback
         Paddle.Setup({
-            token: PADDLE_CONFIG.clientToken
+            token: PADDLE_CONFIG.clientToken,
+            eventCallback: function(event) {
+                console.log('Paddle event:', event);
+                if (event.name === 'checkout.completed') {
+                    console.log('Checkout completed:', event.data);
+                    window.location.href = PADDLE_CONFIG.successUrl;
+                }
+                if (event.name === 'checkout.error') {
+                    console.error('Checkout error:', event.data);
+                    alert('Payment error: ' + JSON.stringify(event.data));
+                }
+            }
         });
 
         console.log('Paddle setup complete - Environment:', PADDLE_CONFIG.env);
-        showCheckoutButton();
 
-        // Add click handler
-        document.getElementById('paddle-checkout-btn').addEventListener('click', function() {
-            // TEMP: Test with monthly price ID
-            const testPriceId = 'pri_01kg53j00zek0t6y5ga73dwnwf';
-            console.log('Opening checkout for price:', testPriceId);
-            console.log('Customer email:', PADDLE_CONFIG.customerEmail);
-            console.log('Client token:', PADDLE_CONFIG.clientToken ? 'Set' : 'Missing');
+        // Hide loading, show inline checkout
+        document.getElementById('paddle-loading').classList.add('hidden');
 
-            Paddle.Checkout.open({
-                items: [
-                    {
-                        priceId: testPriceId,
-                        quantity: 1
-                    }
-                ],
-                customer: {
-                    email: PADDLE_CONFIG.customerEmail
-                },
-                settings: {
-                    displayMode: 'overlay',
-                    theme: 'light',
-                    locale: 'en'
+        // TEMP: Test with monthly price ID
+        const testPriceId = 'pri_01kg53j00zek0t6y5ga73dwnwf';
+        console.log('Opening inline checkout for price:', testPriceId);
+        console.log('Customer email:', PADDLE_CONFIG.customerEmail);
+
+        // Open inline checkout immediately
+        Paddle.Checkout.open({
+            items: [
+                {
+                    priceId: testPriceId,
+                    quantity: 1
                 }
-            });
-        });
-
-        // Listen for Paddle events
-        Paddle.Checkout.on('checkout.completed', (data) => {
-            console.log('Checkout completed:', data);
-            window.location.href = PADDLE_CONFIG.successUrl;
-        });
-
-        Paddle.Checkout.on('checkout.closed', () => {
-            console.log('Checkout closed');
-        });
-
-        Paddle.Checkout.on('checkout.error', (error) => {
-            console.error('Checkout error:', error);
-            alert('Payment error: ' + JSON.stringify(error));
+            ],
+            customer: {
+                email: PADDLE_CONFIG.customerEmail
+            },
+            settings: {
+                displayMode: 'inline',
+                frameTarget: 'paddle-checkout-frame',
+                frameInitialHeight: 450,
+                frameStyle: 'width: 100%; min-width: 100%; background-color: transparent; border: none;',
+                theme: 'light',
+                locale: 'en'
+            }
         });
     };
 

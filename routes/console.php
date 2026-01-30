@@ -11,3 +11,7 @@ Artisan::command('inspire', function () {
 
 // Process drip email campaigns daily at 9 AM
 Schedule::job(new ProcessDripCampaigns)->dailyAt('09:00');
+
+// Send subscription renewal reminder emails daily at 8 AM
+// Sends reminders 7 days, 3 days, and 0 days before subscription expiry
+Schedule::command('subscriptions:send-reminders')->dailyAt('08:00');

@@ -8,6 +8,7 @@ use App\Http\Controllers\Backoffice\SettingsController;
 use App\Http\Controllers\Backoffice\PackagePlanController;
 use App\Http\Controllers\Backoffice\DiscountCodeController;
 use App\Http\Controllers\Backoffice\DripCampaignController;
+use App\Http\Controllers\Backoffice\InvoiceController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -121,6 +122,26 @@ Route::middleware('auth:backoffice')->group(function () {
         Route::put('/{campaign}/steps/{step}', [DripCampaignController::class, 'updateStep'])->name('steps.update');
         Route::delete('/{campaign}/steps/{step}', [DripCampaignController::class, 'deleteStep'])->name('steps.destroy');
         Route::post('/{campaign}/steps/reorder', [DripCampaignController::class, 'reorderSteps'])->name('steps.reorder');
+    });
+
+    // Invoices
+    Route::prefix('invoices')->name('backoffice.invoices.')->group(function () {
+        Route::get('/', [InvoiceController::class, 'index'])->name('index');
+        Route::get('/export', [InvoiceController::class, 'export'])->name('export');
+
+        // TESTING ONLY - Remove after testing
+        Route::get('/create-test', [InvoiceController::class, 'createTest'])->name('create-test');
+        Route::post('/store-test', [InvoiceController::class, 'storeTest'])->name('store-test');
+        // END TESTING ONLY
+
+        Route::get('/{invoice}', [InvoiceController::class, 'show'])->name('show');
+        Route::post('/{invoice}/resend', [InvoiceController::class, 'resend'])->name('resend');
+        Route::post('/{invoice}/resend-to-email', [InvoiceController::class, 'resendToEmail'])->name('resend-to-email');
+        Route::post('/{invoice}/add-note', [InvoiceController::class, 'addNote'])->name('add-note');
+
+        // TESTING ONLY - Remove after testing
+        Route::delete('/{invoice}/delete-test', [InvoiceController::class, 'destroyTest'])->name('destroy-test');
+        // END TESTING ONLY
     });
 
     // Settings

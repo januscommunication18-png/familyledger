@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SendImmediateDripEmails;
 use App\Models\Otp;
 use App\Models\Tenant;
 use App\Models\User;
@@ -162,6 +163,13 @@ class OtpAuthController extends Controller
             ]);
 
             Log::info('New user created via OTP', ['user_id' => $user->id]);
+
+            // Trigger immediate drip campaign emails (welcome email, etc.)
+            try {
+                SendImmediateDripEmails::dispatch($user);
+            } catch (\Exception $e) {
+                Log::warning('Failed to dispatch drip emails', ['error' => $e->getMessage()]);
+            }
 
             return $user;
         });

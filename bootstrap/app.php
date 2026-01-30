@@ -18,6 +18,12 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('web')
                 ->prefix('backoffice')
                 ->group(base_path('routes/backoffice.php'));
+
+            // Email preview routes (development only)
+            if (file_exists(base_path('routes/email-preview.php'))) {
+                Route::middleware('web')
+                    ->group(base_path('routes/email-preview.php'));
+            }
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
