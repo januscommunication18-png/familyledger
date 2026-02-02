@@ -15,12 +15,20 @@
         "vite": "^7.0.7"
     },
     "dependencies": {
+        "@fullcalendar/core": "^6.1.20",
+        "@fullcalendar/daygrid": "^6.1.20",
+        "@fullcalendar/interaction": "^6.1.20",
+        "@fullcalendar/timegrid": "^6.1.20",
         "@vitejs/plugin-vue": "^6.0.3",
         "alpinejs": "^3.15.3",
+        "apexcharts": "^5.3.6",
         "flatpickr": "^4.6.13",
         "flyonui": "^2.4.1",
+        "jquery": "^4.0.0",
         "laravel-echo": "^2.2.7",
         "pusher-js": "^8.4.0",
+        "quill": "^2.0.3",
+        "select2": "^4.1.0-rc.0",
         "vue": "^3.5.26"
     }
 }

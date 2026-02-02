@@ -46,7 +46,6 @@
 
 @once
 @push('styles')
-<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet" />
 <style>
     .quill-editor-wrapper .ql-container {
         font-size: 14px;
@@ -71,7 +70,7 @@
 @endpush
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+@vite('resources/js/vendor/quill.js')
 <script>
 window.initQuillEditors = window.initQuillEditors || [];
 </script>

@@ -534,7 +534,7 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+@vite('resources/js/vendor/apexcharts.js')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Income vs Expense Chart

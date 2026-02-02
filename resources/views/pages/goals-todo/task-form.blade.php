@@ -848,8 +848,6 @@ function assigneeSelect() {
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/airbnb.css">
 <style>
     .flatpickr-calendar {
         border-radius: 12px;
@@ -859,7 +857,6 @@ function assigneeSelect() {
 @endpush
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Due Date Picker

@@ -1,6 +1,10 @@
 {
+  "__commonjsHelpers-CE1G-McA.js": {
+    "file": "assets/_commonjsHelpers-CE1G-McA.js",
+    "name": "_commonjsHelpers"
+  },
   "resources/css/app.css": {
-    "file": "assets/app-upuprntn.css",
+    "file": "assets/app-CYo62m0x.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -9,9 +13,51 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-B2Zr0nC0.js",
+    "file": "assets/app-BNsG7Iv9.js",
     "name": "app",
     "src": "resources/js/app.js",
+    "isEntry": true,
+    "imports": [
+      "__commonjsHelpers-CE1G-McA.js"
+    ],
+    "css": [
+      "assets/app-CksuuEqD.css"
+    ]
+  },
+  "resources/js/vendor/apexcharts.js": {
+    "file": "assets/apexcharts-BMvZXXXI.js",
+    "name": "apexcharts",
+    "src": "resources/js/vendor/apexcharts.js",
     "isEntry": true
+  },
+  "resources/js/vendor/fullcalendar.js": {
+    "file": "assets/fullcalendar-CuN1ElOa.js",
+    "name": "fullcalendar",
+    "src": "resources/js/vendor/fullcalendar.js",
+    "isEntry": true
+  },
+  "resources/js/vendor/quill.js": {
+    "file": "assets/quill-Bl8AV6X-.js",
+    "name": "quill",
+    "src": "resources/js/vendor/quill.js",
+    "isEntry": true,
+    "imports": [
+      "__commonjsHelpers-CE1G-McA.js"
+    ],
+    "css": [
+      "assets/quill-Bf4bJ6eu.css"
+    ]
+  },
+  "resources/js/vendor/select2.js": {
+    "file": "assets/select2-CKwNylwe.js",
+    "name": "select2",
+    "src": "resources/js/vendor/select2.js",
+    "isEntry": true,
+    "imports": [
+      "__commonjsHelpers-CE1G-McA.js"
+    ],
+    "css": [
+      "assets/select2-Dc_9RrAu.css"
+    ]
   }
 }

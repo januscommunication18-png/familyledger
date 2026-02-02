@@ -2,6 +2,7 @@ import './bootstrap';
 import 'flyonui/flyonui';
 import Alpine from 'alpinejs';
 import flatpickr from 'flatpickr';
+import 'flatpickr/dist/flatpickr.min.css';
 
 // Make Alpine available globally
 window.Alpine = Alpine;

@@ -353,7 +353,6 @@
     </div>
 
     @push('styles')
-    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
     <style>
         .ql-toolbar.ql-snow {
             border-top-left-radius: 0.5rem;
@@ -395,7 +394,7 @@
     @endpush
 
     @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+    @vite('resources/js/vendor/quill.js')
     <script>
         function campaignEditor() {
             return {

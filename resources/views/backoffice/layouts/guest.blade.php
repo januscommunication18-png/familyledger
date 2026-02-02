@@ -11,8 +11,8 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700" rel="stylesheet" />
 
-    <!-- Tailwind CSS (pre-built) via jsDelivr -->
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <!-- Tailwind CSS (pre-built) via jsDelivr with SRI -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" integrity="sha256-/eX4mWnTdP7Sa0mRIlqfcsDQ8Kbn84f+md8la9xVmYc=" crossorigin="anonymous">
 
     <!-- Custom primary colors & dark mode -->
     <style>
@@ -128,8 +128,8 @@
         </div>
     </div>
 
-    <!-- Alpine.js via jsDelivr (CSP-allowed) -->
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <!-- Alpine.js via jsDelivr with SRI -->
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js" defer integrity="sha256-NTuMLF/sME9UZFNI4NeECGUuD/BQklDxKSXxPyrXCHM=" crossorigin="anonymous"></script>
 
     @stack('scripts')
 </body>
