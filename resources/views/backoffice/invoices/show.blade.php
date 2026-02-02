@@ -145,11 +145,12 @@
                 <!-- Resend to custom email -->
                 <form action="{{ route('backoffice.invoices.resend-to-email', $invoice) }}" method="POST">
                     @csrf
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Send to different email</label>
+                    <label for="custom_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Send to different email</label>
                     <div class="flex gap-2">
                         <input
                             type="email"
                             name="email"
+                            id="custom_email"
                             placeholder="email@example.com"
                             class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                             required

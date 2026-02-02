@@ -195,16 +195,16 @@
                             <form id="emailAction" action="{{ route('backoffice.account-recovery.changeEmail', $client) }}" method="POST" class="hidden space-y-3">
                                 @csrf
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Email</label>
-                                    <input type="email" value="{{ $owner->email ?? '' }}" disabled class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400">
+                                    <label for="current_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Email</label>
+                                    <input type="email" id="current_email" value="{{ $owner->email ?? '' }}" disabled class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Email</label>
-                                    <input type="email" name="new_email" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                    <label for="new_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Email</label>
+                                    <input type="email" id="new_email" name="new_email" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reason</label>
-                                    <textarea name="reason" required rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Why is this change needed?"></textarea>
+                                    <label for="email_reason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reason</label>
+                                    <textarea name="reason" id="email_reason" required rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Why is this change needed?"></textarea>
                                 </div>
                                 <button type="submit" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors">
                                     Change Email
@@ -226,13 +226,13 @@
                             <form id="passwordAction" action="{{ route('backoffice.account-recovery.resetPassword', $client) }}" method="POST" class="hidden space-y-3">
                                 @csrf
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password</label>
-                                    <input type="text" name="new_password" required minlength="8" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Enter new password (min 8 characters)">
+                                    <label for="new_password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password</label>
+                                    <input type="text" id="new_password" name="new_password" required minlength="8" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Enter new password (min 8 characters)">
                                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Share this password with the client securely</p>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reason</label>
-                                    <textarea name="reason" required rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Why is this change needed?"></textarea>
+                                    <label for="password_reason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reason</label>
+                                    <textarea name="reason" id="password_reason" required rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Why is this change needed?"></textarea>
                                 </div>
                                 <button type="submit" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors">
                                     Reset Password
@@ -257,15 +257,15 @@
                             <form id="2faAction" action="{{ route('backoffice.account-recovery.disable2fa', $client) }}" method="POST" class="hidden space-y-3">
                                 @csrf
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current 2FA Method</label>
-                                    <input type="text" value="{{ $owner->mfa_method === 'sms' ? 'SMS' : 'Authenticator App' }}" disabled class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400">
+                                    <label for="current_2fa_method" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current 2FA Method</label>
+                                    <input type="text" id="current_2fa_method" value="{{ $owner->mfa_method === 'sms' ? 'SMS' : 'Authenticator App' }}" disabled class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400">
                                 </div>
                                 <div class="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800 text-sm text-amber-700 dark:text-amber-400">
                                     This will disable all two-factor authentication methods for this account.
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reason</label>
-                                    <textarea name="reason" required rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Why is this change needed?"></textarea>
+                                    <label for="twofa_reason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reason</label>
+                                    <textarea name="reason" id="twofa_reason" required rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Why is this change needed?"></textarea>
                                 </div>
                                 <button type="submit" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors">
                                     Disable 2FA
@@ -298,8 +298,8 @@
                             <form id="phoneAction" action="{{ route('backoffice.account-recovery.resetPhone', $client) }}" method="POST" class="hidden space-y-3">
                                 @csrf
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Phone Number</label>
-                                    <input type="text" value="{{ $owner->phone }}" disabled class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400">
+                                    <label for="current_phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Phone Number</label>
+                                    <input type="text" id="current_phone" value="{{ $owner->phone }}" disabled class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400">
                                 </div>
                                 @if($owner->mfa_method === 'sms')
                                 <div class="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800 text-sm text-amber-700 dark:text-amber-400">
@@ -307,8 +307,8 @@
                                 </div>
                                 @endif
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reason</label>
-                                    <textarea name="reason" required rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Why is this change needed?"></textarea>
+                                    <label for="phone_reason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reason</label>
+                                    <textarea name="reason" id="phone_reason" required rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Why is this change needed?"></textarea>
                                 </div>
                                 <button type="submit" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors">
                                     Reset Phone Number
