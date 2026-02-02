@@ -105,7 +105,7 @@ class FamilyMemberController extends Controller
         ];
 
         if ($request->hasFile('profile_image')) {
-            $path = $request->file('profile_image')->store('family-ledger/members/profiles', 'do_spaces');
+            $path = $request->file('profile_image')->storePublicly('family-ledger/members/profiles', 'do_spaces');
             $data['profile_image'] = $path;
         }
 
@@ -322,7 +322,7 @@ class FamilyMemberController extends Controller
         // Handle profile image
         $newProfileImage = null;
         if ($request->hasFile('profile_image')) {
-            $path = $request->file('profile_image')->store('family-ledger/members/profiles', 'do_spaces');
+            $path = $request->file('profile_image')->storePublicly('family-ledger/members/profiles', 'do_spaces');
             $newProfileImage = $path;
             $data['profile_image'] = $path;
         }

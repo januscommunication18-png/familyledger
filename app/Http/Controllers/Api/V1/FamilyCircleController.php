@@ -70,8 +70,7 @@ class FamilyCircleController extends Controller
 
         // Handle file upload (web)
         if ($request->hasFile('cover_image')) {
-            $path = $request->file('cover_image')->store('family-ledger/circles/covers', 'do_spaces');
-            Storage::disk('do_spaces')->setVisibility($path, 'public');
+            $path = $request->file('cover_image')->storePublicly('family-ledger/circles/covers', 'do_spaces');
             $data['cover_image'] = $path;
         }
         // Handle base64 image (mobile)

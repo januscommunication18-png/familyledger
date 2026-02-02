@@ -180,7 +180,7 @@ class AssetController extends Controller
 
         // Handle image upload to Digital Ocean
         if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('family-ledger/assets/images', 'do_spaces');
+            $data['image'] = $request->file('image')->storePublicly('family-ledger/assets/images', 'do_spaces');
         }
 
         $asset = Asset::create($data);
@@ -375,7 +375,7 @@ class AssetController extends Controller
             if ($asset->image) {
                 Storage::disk('do_spaces')->delete($asset->image);
             }
-            $data['image'] = $request->file('image')->store('family-ledger/assets/images', 'do_spaces');
+            $data['image'] = $request->file('image')->storePublicly('family-ledger/assets/images', 'do_spaces');
         }
 
         // Handle image removal

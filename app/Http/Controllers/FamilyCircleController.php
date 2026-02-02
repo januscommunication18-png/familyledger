@@ -98,7 +98,7 @@ class FamilyCircleController extends Controller
         ];
 
         if ($request->hasFile('cover_image')) {
-            $path = $request->file('cover_image')->store('family-ledger/circles/covers', 'do_spaces');
+            $path = $request->file('cover_image')->storePublicly('family-ledger/circles/covers', 'do_spaces');
             $data['cover_image'] = $path;
         }
 
@@ -256,7 +256,7 @@ class FamilyCircleController extends Controller
             if ($familyCircle->cover_image) {
                 Storage::disk('do_spaces')->delete($familyCircle->cover_image);
             }
-            $path = $request->file('cover_image')->store('family-ledger/circles/covers', 'do_spaces');
+            $path = $request->file('cover_image')->storePublicly('family-ledger/circles/covers', 'do_spaces');
             $data['cover_image'] = $path;
         }
 

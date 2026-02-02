@@ -23,6 +23,8 @@ use App\Http\Controllers\Api\V1\BudgetController;
 use App\Http\Controllers\Api\V1\CoparentingController;
 use App\Http\Controllers\Api\V1\LegalDocumentApiController;
 use App\Http\Controllers\Api\V1\SyncController;
+use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\Auth\MfaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -270,6 +272,36 @@ Route::prefix('v1')->group(function () {
             Route::post('/push', [SyncController::class, 'push']);
             Route::post('/resolve', [SyncController::class, 'resolve']);
             Route::get('/conflicts', [SyncController::class, 'conflicts']);
+        });
+
+        // Settings
+        Route::prefix('settings')->group(function () {
+            Route::get('/', [SettingsController::class, 'getSettingsApi']);
+            Route::post('/profile', [SettingsController::class, 'updateProfileApi']);
+            Route::delete('/profile/avatar', [SettingsController::class, 'removeAvatarApi']);
+            Route::post('/password', [SettingsController::class, 'updatePasswordApi']);
+            Route::get('/sessions', [SettingsController::class, 'getSessionsApi']);
+            Route::delete('/sessions/{session}', [SettingsController::class, 'revokeSessionApi']);
+            Route::post('/sessions/revoke-all', [SettingsController::class, 'revokeAllSessionsApi']);
+            Route::post('/notifications', [SettingsController::class, 'updateNotificationsApi']);
+            Route::post('/appearance', [SettingsController::class, 'updateAppearanceApi']);
+            Route::post('/privacy', [SettingsController::class, 'updatePrivacyApi']);
+            Route::get('/export-data', [SettingsController::class, 'exportDataApi']);
+            Route::post('/delete-account', [SettingsController::class, 'requestAccountDeletionApi']);
+            Route::get('/login-activity', [SettingsController::class, 'getLoginActivityApi']);
+            Route::post('/recovery-code/generate', [SettingsController::class, 'generateRecoveryCodeApi']);
+            Route::post('/recovery-code', [SettingsController::class, 'saveRecoveryCodeApi']);
+
+            // MFA Routes (existing methods return JSON)
+            Route::post('/mfa/authenticator/setup', [MfaController::class, 'setupAuthenticator']);
+            Route::post('/mfa/authenticator/confirm', [MfaController::class, 'confirmAuthenticator']);
+            Route::post('/mfa/sms/enable', [MfaController::class, 'enableSmsMfa']);
+            Route::post('/mfa/sms/confirm', [MfaController::class, 'confirmSmsMfa']);
+            Route::post('/mfa/disable', [MfaController::class, 'disableMfa']);
+
+            // Social Accounts
+            Route::get('/social-accounts', [SettingsController::class, 'getSocialAccountsApi']);
+            Route::delete('/social/{provider}', [SettingsController::class, 'disconnectSocialApi']);
         });
     });
 });
