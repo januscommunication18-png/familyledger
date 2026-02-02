@@ -1,5 +1,10 @@
 @extends('layouts.dashboard')
 
+@php
+    $canEdit = $access->canEdit('medical');
+    $isViewOnly = !$canEdit;
+@endphp
+
 @section('title', 'Health & Medical')
 @section('page-name', 'Health & Medical')
 
@@ -33,7 +38,12 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2h-2z"/></svg>
             </div>
             <div>
-                <h1 class="text-2xl font-bold text-slate-900">Health & Medical</h1>
+                <div class="flex items-center gap-3">
+                    <h1 class="text-2xl font-bold text-slate-900">Health & Medical</h1>
+                    @if($isViewOnly)
+                        <span class="badge badge-soft badge-secondary text-xs">View Only</span>
+                    @endif
+                </div>
                 <p class="text-slate-500">{{ $member->full_name }}</p>
             </div>
         </div>

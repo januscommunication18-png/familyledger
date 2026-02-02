@@ -3,7 +3,7 @@
 @section('title', 'Setup Your Account')
 
 @push('scripts')
-@if($step == 6)
+@if($step == 5)
 <script src="{{ config('paddle.sandbox') ? config('paddle.js_urls.sandbox') : config('paddle.js_urls.production') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -234,39 +234,11 @@
                 <form id="back-form" action="/onboarding/back" method="POST" class="hidden">@csrf</form>
 
                 @elseif($step == 4)
-                <!-- Step 4: Quick Setup -->
-                <h2 class="card-title text-2xl mb-2">What do you want to set up first?</h2>
-                <p class="text-base-content/60 mb-6">Select one or more to get started</p>
-
-                <form action="/onboarding/step4" method="POST">
-                    @csrf
-                    <div class="space-y-3">
-                        @foreach($quickSetup as $key => $item)
-                            <label class="flex items-start p-4 border rounded-lg cursor-pointer transition-colors hover:border-primary/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                                <input type="checkbox" name="quick_setup[]" value="{{ $key }}"
-                                       class="checkbox checkbox-primary mt-1"
-                                       {{ in_array($key, $tenant['quick_setup'] ?? []) ? 'checked' : '' }}>
-                                <div class="ml-3">
-                                    <div class="font-medium text-sm">{{ $item['title'] }}</div>
-                                    <div class="text-xs text-base-content/60">{{ $item['description'] }}</div>
-                                </div>
-                            </label>
-                        @endforeach
-                    </div>
-
-                    <div class="card-actions justify-between mt-8">
-                        <a href="javascript:void(0)" onclick="document.getElementById('back-form').submit()" class="btn btn-ghost">Back</a>
-                        <button type="submit" class="btn btn-primary">Continue</button>
-                    </div>
-                </form>
-                <form id="back-form" action="/onboarding/back" method="POST" class="hidden">@csrf</form>
-
-                @elseif($step == 5)
-                <!-- Step 5: Security & Finish -->
+                <!-- Step 4: Security & Finish -->
                 <h2 class="card-title text-2xl mb-2">Secure your account</h2>
                 <p class="text-base-content/60 mb-6">Set up security options and notifications</p>
 
-                <form action="/onboarding/step5" method="POST" id="step5-form">
+                <form action="/onboarding/step4" method="POST" id="step4-form">
                     @csrf
                     <div class="space-y-4">
                         <!-- Notifications Section -->
@@ -743,8 +715,8 @@
                     }
                 </script>
 
-                @elseif($step == 6)
-                <!-- Step 6: Payment & Billing -->
+                @elseif($step == 5)
+                <!-- Step 5: Payment & Billing -->
                 <h2 class="card-title text-2xl mb-2">Choose your plan</h2>
                 <p class="text-base-content/60 mb-6">Start with our free plan or unlock premium features</p>
 
@@ -794,7 +766,7 @@
                         }
                     },
                     completeSetup() {
-                        document.getElementById('step6-form').submit();
+                        document.getElementById('step5-form').submit();
                     },
                     openPaddleCheckout() {
                         if (!this.priceId) {
@@ -905,19 +877,11 @@
                     </div>
 
                     <!-- Form for submission -->
-                    <form action="/onboarding/step6" method="POST" id="step6-form">
+                    <form action="/onboarding/step5" method="POST" id="step5-form">
                         @csrf
                         <input type="hidden" name="plan_id" x-model="selectedPlan">
                         <input type="hidden" name="billing_cycle" x-model="billingCycle">
                     </form>
-
-                    <!-- Payment Success Message -->
-                    <div x-show="paymentCompleted" x-transition class="mb-6">
-                        <div class="alert alert-success">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            <span>Payment successful! Click "Complete Setup" to finish.</span>
-                        </div>
-                    </div>
 
                     <div class="card-actions justify-between mt-8">
                         <a href="javascript:void(0)" onclick="document.getElementById('back-form').submit()" class="btn btn-ghost">Back</a>

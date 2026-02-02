@@ -1,5 +1,10 @@
 @extends('layouts.dashboard')
 
+@php
+    $canEdit = $access->canEdit('school');
+    $isViewOnly = !$canEdit;
+@endphp
+
 @section('title', 'School Record')
 @section('page-name', 'School Record')
 
@@ -42,6 +47,9 @@
                         <h1 class="text-2xl font-bold text-slate-900">{{ $schoolRecord->school_name }}</h1>
                         @if($schoolRecord->is_current)
                             <span class="badge badge-primary">Current</span>
+                        @endif
+                        @if($isViewOnly)
+                            <span class="badge badge-soft badge-secondary text-xs">View Only</span>
                         @endif
                     </div>
                     <p class="text-slate-500">

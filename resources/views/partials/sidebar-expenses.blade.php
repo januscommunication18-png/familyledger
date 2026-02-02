@@ -66,7 +66,16 @@
             </a>
         </li>
 
-        {{-- Share --}}
+        {{-- Share (only for budget admins/owners) --}}
+        @php
+            $selectedBudgetId = session('selected_budget_id');
+            $canShareBudget = false;
+            if ($selectedBudgetId && $selectedBudgetId !== 'all') {
+                $selectedBudget = \App\Models\Budget::find($selectedBudgetId);
+                $canShareBudget = $selectedBudget && $selectedBudget->canUserAdmin();
+            }
+        @endphp
+        @if($canShareBudget)
         <li>
             <a href="{{ route('expenses.share') }}" class="group flex items-center gap-3 px-2 py-2.5 rounded-lg text-sm font-medium @if(request()->routeIs('expenses.share')) bg-gradient-to-r from-emerald-600 to-teal-600 text-white @else text-slate-400 hover:text-white hover:bg-slate-800 @endif">
                 <div class="w-5 h-5 shrink-0 flex items-center justify-center">
@@ -75,6 +84,7 @@
                 <span class="nav-text">Share</span>
             </a>
         </li>
+        @endif
 
         {{-- Alerts --}}
         <li>

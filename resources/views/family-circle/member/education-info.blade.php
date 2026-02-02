@@ -1,5 +1,10 @@
 @extends('layouts.dashboard')
 
+@php
+    $canEdit = $access->canEdit('school');
+    $isViewOnly = !$canEdit;
+@endphp
+
 @section('title', 'Education')
 @section('page-name', 'Education')
 
@@ -34,7 +39,12 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
                 </div>
                 <div>
-                    <h1 class="text-2xl font-bold text-slate-900">Education</h1>
+                    <div class="flex items-center gap-3">
+                        <h1 class="text-2xl font-bold text-slate-900">Education</h1>
+                        @if($isViewOnly)
+                            <span class="badge badge-soft badge-secondary text-xs">View Only</span>
+                        @endif
+                    </div>
                     <p class="text-slate-500">{{ $member->full_name }}</p>
                 </div>
             </div>

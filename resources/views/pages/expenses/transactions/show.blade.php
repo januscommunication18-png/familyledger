@@ -288,18 +288,67 @@
                 <div class="card-body">
                     <h3 class="font-semibold text-slate-800 mb-4">Actions</h3>
                     <div class="space-y-2">
-                        <form action="{{ route('expenses.transactions.delete', $transaction) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this transaction? This action cannot be undone.')">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-error btn-outline btn-sm w-full gap-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                                Delete Transaction
-                            </button>
-                        </form>
+                        <button type="button" onclick="openDeleteModal()" class="btn btn-error btn-outline btn-sm w-full gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                            Delete Transaction
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+{{-- Delete Confirmation Modal --}}
+<div id="deleteModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+        {{-- Backdrop --}}
+        <div class="fixed inset-0 transition-opacity bg-slate-900/50" onclick="closeDeleteModal()"></div>
+
+        {{-- Modal Content --}}
+        <div class="relative bg-white rounded-xl shadow-xl w-full max-w-md mx-4 transform transition-all">
+            <div class="p-6">
+                {{-- Warning Icon --}}
+                <div class="w-14 h-14 mx-auto rounded-full bg-error/10 flex items-center justify-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgb(239 68 68)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                </div>
+
+                {{-- Title --}}
+                <h3 class="text-lg font-semibold text-slate-800 mb-2">Delete Transaction</h3>
+                <p class="text-sm text-slate-500 mb-4">Are you sure you want to delete this transaction? This action cannot be undone.</p>
+
+                {{-- Transaction Details --}}
+                <div class="bg-slate-50 rounded-lg p-3 mb-6">
+                    <p class="font-medium text-slate-800 truncate">{{ $transaction->description }}</p>
+                    <p class="text-sm text-slate-500">{{ $transaction->formatted_amount }}</p>
+                </div>
+
+                {{-- Actions --}}
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeDeleteModal()" class="btn btn-ghost flex-1">Cancel</button>
+                    <form action="{{ route('expenses.transactions.delete', $transaction) }}" method="POST" class="flex-1">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-error w-full">Delete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openDeleteModal() {
+    document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.add('hidden');
+}
+
+// Close on Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeDeleteModal();
+});
+</script>
 @endsection

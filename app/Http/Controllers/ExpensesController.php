@@ -558,12 +558,20 @@ class ExpensesController extends Controller
 
         $children = $ownChildren->merge($coparentChildren)->unique('id')->sortBy('first_name')->values();
 
+        // Get user's permission for this budget
+        $userPermission = $budget->getUserPermission();
+        $isSharedBudget = $budget->isSharedWith();
+        $budgetOwnerName = $isSharedBudget ? $budget->getOwnerName() : null;
+
         return view('pages.expenses.transactions.index', [
             'budget' => $budget,
             'transactions' => $transactions,
             'categories' => $categories,
             'children' => $children,
             'filters' => $request->only(['category_id', 'type', 'start_date', 'end_date', 'search']),
+            'userPermission' => $userPermission,
+            'isSharedBudget' => $isSharedBudget,
+            'budgetOwnerName' => $budgetOwnerName,
         ]);
     }
 
@@ -578,6 +586,12 @@ class ExpensesController extends Controller
 
         if (!$budget) {
             return redirect()->route('expenses.intro');
+        }
+
+        // Check if user has permission to add transactions
+        if (!$budget->canUserEdit()) {
+            return redirect()->route('expenses.dashboard')
+                ->withErrors(['error' => 'You do not have permission to add transactions to this budget.']);
         }
 
         $categories = $budget->categories()->ordered()->get();
@@ -848,7 +862,7 @@ class ExpensesController extends Controller
 
         $transaction->delete();
 
-        return back()->with('success', 'Transaction deleted successfully!');
+        return redirect()->route('expenses.transactions')->with('success', 'Transaction deleted successfully!');
     }
 
     // ==================== CSV IMPORT ====================
@@ -1346,6 +1360,25 @@ class ExpensesController extends Controller
             ->orderBy('first_name')
             ->get();
 
+        // Determine user's permission for the current budget
+        $userPermission = 'owner';
+        $isSharedBudget = false;
+        $budgetOwnerName = null;
+
+        if (!$showAllBudgets && $budget) {
+            $userPermission = $budget->getUserPermission();
+            $isSharedBudget = $budget->isSharedWith();
+            if ($isSharedBudget) {
+                $budgetOwnerName = $budget->getOwnerName();
+            }
+        }
+
+        // Add share info to all budgets for dropdown display
+        foreach ($allBudgets as $b) {
+            $b->is_shared_with_me = $b->isSharedWith();
+            $b->owner_name = $b->is_shared_with_me ? $b->getOwnerName() : null;
+        }
+
         return view('pages.expenses.dashboard', [
             'budget' => $budget,
             'allBudgets' => $allBudgets,
@@ -1368,6 +1401,10 @@ class ExpensesController extends Controller
             'currentPeriodLabel' => $currentPeriodLabel,
             // Goals for traditional budgets
             'goals' => $goals,
+            // Sharing info
+            'userPermission' => $userPermission,
+            'isSharedBudget' => $isSharedBudget,
+            'budgetOwnerName' => $budgetOwnerName,
         ]);
     }
 

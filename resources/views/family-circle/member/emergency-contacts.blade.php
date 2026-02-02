@@ -1,5 +1,11 @@
 @extends('layouts.dashboard')
 
+@php
+    $canEdit = $access->canEdit('emergency_contacts');
+    $canDelete = $access->canDelete('emergency_contacts');
+    $isViewOnly = !$canEdit;
+@endphp
+
 @section('title', 'Emergency Contacts')
 @section('page-name', 'Emergency Contacts')
 
@@ -33,7 +39,12 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
             </div>
             <div>
-                <h1 class="text-2xl font-bold text-slate-900">Emergency Contacts</h1>
+                <div class="flex items-center gap-3">
+                    <h1 class="text-2xl font-bold text-slate-900">Emergency Contacts</h1>
+                    @if($isViewOnly)
+                        <span class="badge badge-soft badge-secondary text-xs">View Only</span>
+                    @endif
+                </div>
                 <p class="text-slate-500">{{ $member->full_name }}</p>
             </div>
         </div>
@@ -52,13 +63,16 @@
                         <p class="text-xs text-slate-400">People to contact in case of emergency</p>
                     </div>
                 </div>
-                <button type="button" onclick="toggleContactForm()" class="btn btn-primary btn-sm gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                    Add
-                </button>
+                @if($canEdit)
+                    <button type="button" onclick="toggleContactForm()" class="btn btn-primary btn-sm gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                        Add
+                    </button>
+                @endif
             </div>
 
             <!-- Add Contact Form (Hidden by default) -->
+            @if($canEdit)
             <div id="contactForm" class="hidden mb-4 p-4 bg-amber-50 rounded-xl border border-amber-200">
                 <form action="{{ route('member.emergency-contact.store', $member) }}" method="POST">
                     @csrf
@@ -120,6 +134,7 @@
                     </div>
                 </form>
             </div>
+            @endif
 
             <!-- Contacts List -->
             @if($member->contacts->count() > 0)
@@ -165,20 +180,27 @@
                                         @endif
                                     </div>
                                 </div>
+                                @if($canEdit || $canDelete)
                                 <div class="flex gap-1">
-                                    <button type="button" onclick="toggleContactEdit({{ $contact->id }})" class="btn btn-ghost btn-xs text-slate-500 hover:bg-slate-100">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                                    </button>
-                                    <form action="{{ route('member.emergency-contact.destroy', [$member, $contact]) }}" method="POST" onsubmit="event.preventDefault(); confirmDelete(this, 'Remove Contact?', 'Are you sure you want to remove {{ $contact->name }}? This action cannot be undone.')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-ghost btn-xs text-rose-500 hover:bg-rose-50">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                    @if($canEdit)
+                                        <button type="button" onclick="toggleContactEdit({{ $contact->id }})" class="btn btn-ghost btn-xs text-slate-500 hover:bg-slate-100">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                                         </button>
-                                    </form>
+                                    @endif
+                                    @if($canDelete)
+                                        <form action="{{ route('member.emergency-contact.destroy', [$member, $contact]) }}" method="POST" onsubmit="event.preventDefault(); confirmDelete(this, 'Remove Contact?', 'Are you sure you want to remove {{ $contact->name }}? This action cannot be undone.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-ghost btn-xs text-rose-500 hover:bg-rose-50">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                            </button>
+                                        </form>
+                                    @endif
                                 </div>
+                                @endif
                             </div>
                             <!-- Edit Mode -->
+                            @if($canEdit)
                             <div id="contactEdit{{ $contact->id }}" class="hidden p-3 bg-amber-50 border-t border-amber-200">
                                 <form action="{{ route('member.emergency-contact.update', [$member, $contact]) }}" method="POST">
                                     @csrf
@@ -245,6 +267,7 @@
                                     </div>
                                 </form>
                             </div>
+                            @endif
                         </div>
                     @endforeach
                 </div>

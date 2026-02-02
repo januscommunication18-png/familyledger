@@ -76,6 +76,8 @@ class DripEmail extends Mailable
             $firstName = $nameParts[0];
         }
 
+        $appUrl = config('app.url');
+
         $variables = [
             '{{first_name}}' => $firstName,
             '{{user_name}}' => $this->user?->name ?? 'Valued Customer',
@@ -83,7 +85,7 @@ class DripEmail extends Mailable
             '{{tenant_name}}' => $this->tenant?->name ?? 'Your Family',
             '{{plan_name}}' => $this->tenant?->getCurrentPlan()?->name ?? 'Free',
             '{{trial_days_left}}' => $this->tenant?->trialDaysRemaining() ?? '0',
-            '{{app_url}}' => config('app.url'),
+            '{{app_url}}' => $appUrl,
             '{{app_name}}' => config('app.name'),
             '{{unsubscribe_url}}' => $this->getUnsubscribeUrl(),
             // Usage stats for upgrade emails
@@ -95,7 +97,41 @@ class DripEmail extends Mailable
             '{{storage_limit}}' => $this->tenant?->getCurrentPlan()?->max_storage_mb ?? 100 . ' MB',
         ];
 
-        return str_replace(array_keys($variables), array_values($variables), $content);
+        $content = str_replace(array_keys($variables), array_values($variables), $content);
+
+        // Convert relative URLs to absolute URLs (handles href="/path" patterns)
+        $content = $this->convertRelativeUrls($content, $appUrl);
+
+        return $content;
+    }
+
+    /**
+     * Convert relative URLs in href attributes to absolute URLs
+     */
+    protected function convertRelativeUrls(string $content, string $appUrl): string
+    {
+        // Remove trailing slash from app URL
+        $appUrl = rtrim($appUrl, '/');
+
+        // Convert href="/path" to href="https://domain.com/path"
+        $content = preg_replace_callback(
+            '/href=["\']\/([^"\']*)["\']/',
+            function ($matches) use ($appUrl) {
+                return 'href="' . $appUrl . '/' . $matches[1] . '"';
+            },
+            $content
+        );
+
+        // Convert src="/path" to src="https://domain.com/path"
+        $content = preg_replace_callback(
+            '/src=["\']\/([^"\']*)["\']/',
+            function ($matches) use ($appUrl) {
+                return 'src="' . $appUrl . '/' . $matches[1] . '"';
+            },
+            $content
+        );
+
+        return $content;
     }
 
     protected function getStorageUsed(): string

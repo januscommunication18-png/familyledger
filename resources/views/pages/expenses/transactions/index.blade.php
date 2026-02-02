@@ -7,13 +7,29 @@
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-            <h1 class="text-2xl font-bold text-slate-800">Transactions</h1>
-            <p class="text-sm text-slate-500">Manage your income and expenses</p>
+            <div class="flex items-center gap-2">
+                <h1 class="text-2xl font-bold text-slate-800">Transactions</h1>
+                @if($isSharedBudget ?? false)
+                <span class="badge badge-primary badge-sm gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    Shared
+                </span>
+                @endif
+            </div>
+            <p class="text-sm text-slate-500">
+                @if($isSharedBudget ?? false)
+                    {{ $budget->name }} &bull; Shared by {{ $budgetOwnerName }}
+                @else
+                    Manage your income and expenses
+                @endif
+            </p>
         </div>
+        @if(in_array($userPermission ?? 'owner', ['owner', 'edit', 'admin']))
         <a href="{{ route('expenses.transactions.create') }}" class="btn btn-primary gap-1">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
             Add Transaction
         </a>
+        @endif
     </div>
 
     {{-- Filters --}}
@@ -126,11 +142,7 @@
                                     <li><a href="{{ route('expenses.transactions.show', $transaction) }}">View</a></li>
                                     <li><a href="#" class="edit-btn">Edit</a></li>
                                     <li>
-                                        <form action="{{ route('expenses.transactions.delete', $transaction) }}" method="POST" onsubmit="return confirm('Delete this transaction?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="text-error w-full text-left">Delete</button>
-                                        </form>
+                                        <button type="button" class="text-error w-full text-left" onclick="openDeleteModal('{{ $transaction->id }}', '{{ addslashes($transaction->description) }}', '{{ number_format($transaction->amount, 2) }}')">Delete</button>
                                     </li>
                                 </ul>
                             </td>
@@ -149,11 +161,15 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgb(148 163 184)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/></svg>
                 </div>
                 <h3 class="font-semibold text-slate-800 mb-1">No transactions yet</h3>
+                @if(in_array($userPermission ?? 'owner', ['owner', 'edit', 'admin']))
                 <p class="text-sm text-slate-500 mb-4">Start tracking your expenses by adding your first transaction.</p>
                 <a href="{{ route('expenses.transactions.create') }}" class="btn btn-primary btn-sm gap-1">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
                     Add Transaction
                 </a>
+                @else
+                <p class="text-sm text-slate-500">No transactions have been recorded in this budget yet.</p>
+                @endif
             </div>
             @endif
         </div>
@@ -656,7 +672,64 @@ if (receiptDropZone) {
 
 // Close on Escape
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeModal();
+    if (e.key === 'Escape') {
+        closeModal();
+        closeDeleteModal();
+    }
 });
+
+// Delete confirmation modal
+function openDeleteModal(id, description, amount) {
+    document.getElementById('deleteTransactionId').value = id;
+    document.getElementById('deleteTransactionDescription').textContent = description;
+    document.getElementById('deleteTransactionAmount').textContent = '$' + amount;
+    document.getElementById('deleteForm').action = '/expenses/transactions/' + id;
+    document.getElementById('deleteModal').classList.remove('hidden');
+    // Close any open dropdowns
+    document.querySelectorAll('[id^="txn-dropdown-"]').forEach(d => d.classList.add('hidden'));
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.add('hidden');
+}
 </script>
+
+{{-- Delete Confirmation Modal --}}
+<div id="deleteModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+        {{-- Backdrop --}}
+        <div class="fixed inset-0 transition-opacity bg-slate-900/50" onclick="closeDeleteModal()"></div>
+
+        {{-- Modal Content --}}
+        <div class="relative bg-white rounded-xl shadow-xl w-full max-w-md mx-4 transform transition-all">
+            <div class="p-6">
+                {{-- Warning Icon --}}
+                <div class="w-14 h-14 mx-auto rounded-full bg-error/10 flex items-center justify-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgb(239 68 68)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                </div>
+
+                {{-- Title --}}
+                <h3 class="text-lg font-semibold text-slate-800 mb-2">Delete Transaction</h3>
+                <p class="text-sm text-slate-500 mb-4">Are you sure you want to delete this transaction? This action cannot be undone.</p>
+
+                {{-- Transaction Details --}}
+                <div class="bg-slate-50 rounded-lg p-3 mb-6">
+                    <p class="font-medium text-slate-800 truncate" id="deleteTransactionDescription"></p>
+                    <p class="text-sm text-slate-500" id="deleteTransactionAmount"></p>
+                </div>
+
+                {{-- Actions --}}
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeDeleteModal()" class="btn btn-ghost flex-1">Cancel</button>
+                    <form id="deleteForm" method="POST" class="flex-1">
+                        @csrf
+                        @method('DELETE')
+                        <input type="hidden" id="deleteTransactionId" name="id" value="">
+                        <button type="submit" class="btn btn-error w-full">Delete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection

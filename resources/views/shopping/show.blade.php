@@ -143,6 +143,23 @@
                 @endif
             </div>
 
+            <!-- Category Filter -->
+            @if($items->count() > 0)
+            <div class="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100 overflow-x-auto">
+                <span class="text-xs text-slate-400 flex-shrink-0">Filter:</span>
+                <button type="button" onclick="filterByCategory('all')" class="filter-btn badge badge-sm badge-primary cursor-pointer flex-shrink-0" data-filter="all">
+                    All
+                </button>
+                @foreach(['produce' => 'Produce', 'dairy' => 'Dairy', 'meat' => 'Meat', 'household' => 'Household', 'pharmacy' => 'Pharmacy', 'other' => 'Other'] as $key => $label)
+                    @if($items->where('category', $key)->count() > 0)
+                        <button type="button" onclick="filterByCategory('{{ $key }}')" class="filter-btn badge badge-sm badge-outline cursor-pointer hover:badge-primary flex-shrink-0" data-filter="{{ $key }}">
+                            {{ $label }} ({{ $items->where('category', $key)->count() }})
+                        </button>
+                    @endif
+                @endforeach
+            </div>
+            @endif
+
             <!-- Items by Category -->
             <div id="itemsList" class="space-y-4">
                 @php
@@ -152,7 +169,7 @@
 
                 <!-- Unchecked Items -->
                 @foreach($uncheckedItems as $category => $categoryItems)
-                    <div class="category-group">
+                    <div class="category-group" data-category="{{ $category }}">
                         <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
                             <span class="w-5 h-5 rounded {{ $categoryItems->first()->category_color }} flex items-center justify-center">
                                 <span class="{{ $categoryItems->first()->category_icon }} size-3"></span>
@@ -413,7 +430,7 @@
 <script>
 const listId = {{ $list->id }};
 
-// Category selection
+// Category selection for adding items
 function setCategory(category) {
     document.getElementById('selectedCategory').value = category;
     document.querySelectorAll('.category-btn').forEach(btn => {
@@ -422,6 +439,41 @@ function setCategory(category) {
     });
     document.querySelector(`[data-category="${category}"]`).classList.remove('badge-outline');
     document.querySelector(`[data-category="${category}"]`).classList.add('badge-primary');
+}
+
+// Filter items by category
+function filterByCategory(category) {
+    // Update filter button styles
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('badge-primary');
+        btn.classList.add('badge-outline');
+    });
+    document.querySelector(`[data-filter="${category}"]`).classList.remove('badge-outline');
+    document.querySelector(`[data-filter="${category}"]`).classList.add('badge-primary');
+
+    // Show/hide category groups
+    const categoryGroups = document.querySelectorAll('.category-group');
+    categoryGroups.forEach(group => {
+        if (category === 'all' || group.dataset.category === category) {
+            group.classList.remove('hidden');
+        } else {
+            group.classList.add('hidden');
+        }
+    });
+
+    // Also filter checked items if visible
+    const checkedItemsList = document.getElementById('checkedItemsList');
+    if (checkedItemsList) {
+        const checkedItems = checkedItemsList.querySelectorAll('.item-row');
+        checkedItems.forEach(item => {
+            const itemCategory = item.dataset.category;
+            if (category === 'all' || itemCategory === category) {
+                item.classList.remove('hidden');
+            } else {
+                item.classList.add('hidden');
+            }
+        });
+    }
 }
 
 // Quick add from history

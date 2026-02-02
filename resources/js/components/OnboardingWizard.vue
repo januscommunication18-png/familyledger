@@ -159,34 +159,8 @@
                 </div>
             </div>
 
-            <!-- Step 5: Quick Setup -->
+            <!-- Step 5: Security -->
             <div v-if="currentStep === 5">
-                <h2 class="card-title text-2xl mb-2">What do you want to set up first?</h2>
-                <p class="text-base-content/60 mb-6">Select one or more to get started quickly</p>
-
-                <div class="grid gap-3 sm:grid-cols-2">
-                    <label
-                        v-for="(item, key) in quickSetup"
-                        :key="key"
-                        class="flex items-start p-4 border rounded-lg cursor-pointer transition-colors"
-                        :class="selectedQuickSetup.includes(key) ? 'border-primary bg-primary/5' : 'border-base-300 hover:border-primary/50'"
-                    >
-                        <input
-                            type="checkbox"
-                            :value="key"
-                            v-model="selectedQuickSetup"
-                            class="checkbox checkbox-primary mt-1"
-                        />
-                        <div class="ml-3">
-                            <div class="font-medium text-sm">{{ item.title }}</div>
-                            <div class="text-xs text-base-content/60">{{ item.description }}</div>
-                        </div>
-                    </label>
-                </div>
-            </div>
-
-            <!-- Step 6: Security -->
-            <div v-if="currentStep === 6">
                 <h2 class="card-title text-2xl mb-2">Security & privacy</h2>
                 <p class="text-base-content/60 mb-6">Your data is encrypted and only shared with people you approve</p>
 
@@ -274,7 +248,7 @@
                     :disabled="loading || !canProceed"
                     :class="{ 'loading': loading }"
                 >
-                    {{ currentStep === 6 ? 'Complete Setup' : 'Continue' }}
+                    {{ currentStep === 5 ? 'Complete Setup' : 'Continue' }}
                 </button>
             </div>
         </div>
@@ -286,12 +260,11 @@ export default {
     name: 'OnboardingWizard',
     props: {
         initialStep: { type: Number, default: 1 },
-        totalSteps: { type: Number, default: 6 },
+        totalSteps: { type: Number, default: 5 },
         goals: { type: Object, required: true },
         countries: { type: Object, required: true },
         familyTypes: { type: Object, required: true },
         roles: { type: Object, required: true },
-        quickSetup: { type: Object, required: true },
         timezones: { type: Object, required: true },
         tenant: { type: Object, required: true },
         user: { type: Object, required: true },
@@ -313,8 +286,6 @@ export default {
             // Step 4
             familyMembers: [{ email: '', phone: '', role: '', relationship: '' }],
             // Step 5
-            selectedQuickSetup: this.tenant.quick_setup || [],
-            // Step 6
             emailNotifications: true,
             enable2FA: false,
         };
@@ -331,8 +302,6 @@ export default {
                 case 4:
                     return true; // Optional step
                 case 5:
-                    return this.selectedQuickSetup.length > 0;
-                case 6:
                     return true;
                 default:
                     return false;
@@ -466,8 +435,6 @@ export default {
                     const validMembers = this.familyMembers.filter(m => m.email && m.role);
                     return { members: validMembers };
                 case 5:
-                    return { quick_setup: this.selectedQuickSetup };
-                case 6:
                     return {
                         email_notifications: this.emailNotifications,
                         enable_2fa: this.enable2FA,

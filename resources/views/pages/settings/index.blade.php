@@ -680,15 +680,15 @@
                                 <input type="checkbox" name="email_notifications" value="1" class="toggle toggle-primary" {{ $tenant->getSetting('notifications.email_notifications', true) ? 'checked' : '' }} />
                             </label>
 
-                            <label class="flex items-center justify-between p-3 border border-base-200 rounded-lg cursor-pointer hover:bg-base-50">
+                            <label class="flex items-center justify-between p-3 border border-base-200 rounded-lg opacity-60 cursor-not-allowed">
                                 <div class="flex items-center gap-3">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-base-content/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
                                     <div>
-                                        <p class="font-medium">SMS Notifications</p>
+                                        <p class="font-medium">SMS Notifications <span class="badge badge-sm badge-ghost ml-2">Coming Soon</span></p>
                                         <p class="text-xs text-base-content/60">Receive important alerts via SMS</p>
                                     </div>
                                 </div>
-                                <input type="checkbox" name="sms_notifications" value="1" class="toggle toggle-primary" {{ $tenant->getSetting('notifications.sms_notifications', false) ? 'checked' : '' }} />
+                                <input type="checkbox" name="sms_notifications" value="1" class="toggle toggle-primary" disabled />
                             </label>
                         </div>
                     </div>
@@ -745,22 +745,22 @@
 
                     {{-- Digest & Marketing --}}
                     <div>
-                        <h3 class="text-sm font-semibold text-base-content/80 mb-3">Summary & Updates</h3>
-                        <div class="space-y-3">
-                            <label class="flex items-center justify-between p-3 border border-base-200 rounded-lg cursor-pointer hover:bg-base-50">
+                        <h3 class="text-sm font-semibold text-base-content/80 mb-3">Summary & Updates <span class="badge badge-sm badge-ghost ml-2">Coming Soon</span></h3>
+                        <div class="space-y-3 opacity-60">
+                            <label class="flex items-center justify-between p-3 border border-base-200 rounded-lg cursor-not-allowed">
                                 <div>
                                     <p class="font-medium">Weekly Digest</p>
                                     <p class="text-xs text-base-content/60">Weekly summary of activity</p>
                                 </div>
-                                <input type="checkbox" name="weekly_digest" value="1" class="toggle toggle-primary" {{ $tenant->getSetting('notifications.weekly_digest', false) ? 'checked' : '' }} />
+                                <input type="checkbox" name="weekly_digest" value="1" class="toggle toggle-primary" disabled />
                             </label>
 
-                            <label class="flex items-center justify-between p-3 border border-base-200 rounded-lg cursor-pointer hover:bg-base-50">
+                            <label class="flex items-center justify-between p-3 border border-base-200 rounded-lg cursor-not-allowed">
                                 <div>
                                     <p class="font-medium">Product Updates</p>
                                     <p class="text-xs text-base-content/60">New features and announcements</p>
                                 </div>
-                                <input type="checkbox" name="marketing_emails" value="1" class="toggle toggle-primary" {{ $tenant->getSetting('notifications.marketing_emails', false) ? 'checked' : '' }} />
+                                <input type="checkbox" name="marketing_emails" value="1" class="toggle toggle-primary" disabled />
                             </label>
                         </div>
                     </div>
@@ -879,12 +879,12 @@
                                 <input type="checkbox" name="activity_tracking" value="1" class="toggle toggle-primary" {{ $tenant->getSetting('privacy.activity_tracking', true) ? 'checked' : '' }} />
                             </label>
 
-                            <label class="flex items-center justify-between p-3 border border-base-200 rounded-lg cursor-pointer hover:bg-base-50">
+                            <label class="flex items-center justify-between p-3 border border-base-200 rounded-lg opacity-60 cursor-not-allowed">
                                 <div>
-                                    <p class="font-medium">Anonymous Analytics</p>
+                                    <p class="font-medium">Anonymous Analytics <span class="badge badge-sm badge-ghost ml-2">Coming Soon</span></p>
                                     <p class="text-xs text-base-content/60">Help improve FamilyLedger with usage data</p>
                                 </div>
-                                <input type="checkbox" name="share_analytics" value="1" class="toggle toggle-primary" {{ $tenant->getSetting('privacy.share_analytics', false) ? 'checked' : '' }} />
+                                <input type="checkbox" name="share_analytics" value="1" class="toggle toggle-primary" disabled />
                             </label>
                         </div>
 

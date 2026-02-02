@@ -6,6 +6,7 @@ use App\Models\FamilyMember;
 use App\Models\Pet;
 use App\Models\PetMedication;
 use App\Models\PetVaccination;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -358,17 +359,21 @@ class PetController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
-            'date_administered' => 'required|date|before_or_equal:today',
-            'next_due_date' => 'nullable|date|after:date_administered',
+            'date_administered' => 'required|string',
+            'next_due_date' => 'nullable|string',
             'administered_by' => 'nullable|string|max:255',
             'notes' => 'nullable|string|max:500',
         ]);
 
+        // Parse dates from MM/DD/YYYY format
+        $dateAdministered = Carbon::createFromFormat('m/d/Y', $request->date_administered);
+        $nextDueDate = $request->next_due_date ? Carbon::createFromFormat('m/d/Y', $request->next_due_date) : null;
+
         $pet->vaccinations()->create([
             'tenant_id' => $user->tenant_id,
             'name' => $request->name,
-            'date_administered' => $request->date_administered,
-            'next_due_date' => $request->next_due_date,
+            'date_administered' => $dateAdministered,
+            'next_due_date' => $nextDueDate,
             'administered_by' => $request->administered_by,
             'notes' => $request->notes,
         ]);
@@ -447,19 +452,23 @@ class PetController extends Controller
             'name' => 'required|string|max:255',
             'dosage' => 'nullable|string|max:255',
             'frequency' => 'nullable|string|in:' . implode(',', array_keys(PetMedication::FREQUENCIES)),
-            'start_date' => 'nullable|date',
-            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'start_date' => 'nullable|string',
+            'end_date' => 'nullable|string',
             'instructions' => 'nullable|string|max:500',
             'is_active' => 'boolean',
         ]);
+
+        // Parse dates from MM/DD/YYYY format
+        $startDate = $request->start_date ? Carbon::createFromFormat('m/d/Y', $request->start_date) : null;
+        $endDate = $request->end_date ? Carbon::createFromFormat('m/d/Y', $request->end_date) : null;
 
         $pet->medications()->create([
             'tenant_id' => $user->tenant_id,
             'name' => $request->name,
             'dosage' => $request->dosage,
             'frequency' => $request->frequency,
-            'start_date' => $request->start_date,
-            'end_date' => $request->end_date,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
             'instructions' => $request->instructions,
             'is_active' => $request->boolean('is_active', true),
         ]);
