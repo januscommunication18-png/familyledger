@@ -194,4 +194,197 @@ class ClientsController extends Controller
 
         return response()->json(['success' => true]);
     }
+
+    /**
+     * Delete client data only (keep users and tenant).
+     */
+    public function destroyData(Request $request, Tenant $client): RedirectResponse
+    {
+        $request->validate([
+            'confirmation' => 'required|string|in:DELETE',
+        ], [
+            'confirmation.in' => 'You must type DELETE to confirm.',
+        ]);
+
+        $admin = Auth::guard('backoffice')->user();
+        $clientId = $client->id;
+        $clientName = $client->name;
+
+        // Log the action before deletion
+        $admin->logActivity(
+            ActivityLog::ACTION_DELETE_CLIENT,
+            $clientId,
+            'Deleted data for client: ' . $clientName . ' (users and tenant kept)'
+        );
+
+        // Delete all data
+        $this->deleteClientData($clientId);
+
+        return redirect()->route('backoffice.clients.show', $client)
+            ->with('message', 'All data for client "' . $clientName . '" has been permanently deleted. User accounts and tenant remain intact.');
+    }
+
+    /**
+     * Delete client completely (including users and tenant).
+     */
+    public function destroy(Request $request, Tenant $client): RedirectResponse
+    {
+        $request->validate([
+            'confirmation' => 'required|string|in:DELETE FOREVER',
+        ], [
+            'confirmation.in' => 'You must type DELETE FOREVER to confirm.',
+        ]);
+
+        $admin = Auth::guard('backoffice')->user();
+        $clientId = $client->id;
+        $clientName = $client->name;
+
+        // Log the action before deletion
+        $admin->logActivity(
+            ActivityLog::ACTION_DELETE_CLIENT,
+            $clientId,
+            'Permanently deleted client: ' . $clientName . ' (including all users and tenant)'
+        );
+
+        // Delete all data first
+        $this->deleteClientData($clientId);
+
+        // Delete users (with avatar cleanup)
+        $users = User::where('tenant_id', $clientId)->get();
+        foreach ($users as $user) {
+            if ($user->avatar) {
+                \Storage::disk('do_spaces')->delete($user->avatar);
+            }
+            $user->socialAccounts()->delete();
+            $user->delete();
+        }
+
+        // Finally, delete the tenant
+        $client->delete();
+
+        return redirect()->route('backoffice.clients.index')
+            ->with('message', 'Client "' . $clientName . '" and all associated records have been permanently deleted.');
+    }
+
+    /**
+     * Helper method to delete all client data (without users/tenant).
+     */
+    private function deleteClientData(string $clientId): void
+    {
+        // Delete invoices
+        \App\Models\Invoice::where('tenant_id', $clientId)->delete();
+
+        // Delete coparenting records (with file cleanup)
+        $coparentAttachments = \App\Models\CoparentMessageAttachment::where('tenant_id', $clientId)->get();
+        foreach ($coparentAttachments as $attachment) {
+            if ($attachment->file_path) {
+                \Storage::disk('do_spaces')->delete($attachment->file_path);
+            }
+        }
+        \App\Models\CoparentMessageAttachment::where('tenant_id', $clientId)->delete();
+        \App\Models\CoparentMessageEdit::where('tenant_id', $clientId)->delete();
+        \App\Models\CoparentMessage::where('tenant_id', $clientId)->delete();
+        \App\Models\CoparentConversation::where('tenant_id', $clientId)->delete();
+        \App\Models\CoparentMessageTemplate::where('tenant_id', $clientId)->delete();
+        \App\Models\CoparentingActivity::where('tenant_id', $clientId)->delete();
+        \App\Models\CoparentingActualTime::where('tenant_id', $clientId)->delete();
+        \App\Models\CoparentingSchedule::where('tenant_id', $clientId)->delete();
+        \App\Models\PendingCoparentEdit::where('tenant_id', $clientId)->delete();
+        \App\Models\SharedExpensePayment::where('tenant_id', $clientId)->delete();
+        \App\Models\ConflictResolution::where('tenant_id', $clientId)->delete();
+
+        // Delete member-related records
+        \App\Models\MemberAllergy::where('tenant_id', $clientId)->delete();
+        \App\Models\MemberAuditLog::where('tenant_id', $clientId)->delete();
+        \App\Models\MemberContact::where('tenant_id', $clientId)->delete();
+        \App\Models\MemberDocument::where('tenant_id', $clientId)->delete();
+        \App\Models\MemberEducationDocument::where('tenant_id', $clientId)->delete();
+        \App\Models\MemberHealthcareProvider::where('tenant_id', $clientId)->delete();
+        \App\Models\MemberMedicalCondition::where('tenant_id', $clientId)->delete();
+        \App\Models\MemberMedicalInfo::where('tenant_id', $clientId)->delete();
+        \App\Models\MemberMedication::where('tenant_id', $clientId)->delete();
+        \App\Models\MemberSchoolInfo::where('tenant_id', $clientId)->delete();
+        \App\Models\MemberVaccination::where('tenant_id', $clientId)->delete();
+
+        // Delete family-related records
+        \App\Models\FamilyCircle::where('tenant_id', $clientId)->delete();
+        \App\Models\FamilyMember::where('tenant_id', $clientId)->delete();
+        \App\Models\FamilyResource::where('tenant_id', $clientId)->delete();
+
+        // Delete budget records
+        \App\Models\BudgetTransaction::where('tenant_id', $clientId)->delete();
+        \App\Models\Budget::where('tenant_id', $clientId)->delete();
+
+        // Delete goal records
+        \App\Models\GoalCheckIn::where('tenant_id', $clientId)->delete();
+        \App\Models\GoalTemplate::where('tenant_id', $clientId)->delete();
+        \App\Models\Goal::where('tenant_id', $clientId)->delete();
+
+        // Delete asset records (with file cleanup)
+        $assetDocuments = \App\Models\AssetDocument::where('tenant_id', $clientId)->get();
+        foreach ($assetDocuments as $doc) {
+            if ($doc->file_path) {
+                \Storage::disk('do_spaces')->delete($doc->file_path);
+            }
+        }
+        \App\Models\AssetDocument::where('tenant_id', $clientId)->delete();
+        \App\Models\AssetOwner::where('tenant_id', $clientId)->delete();
+        \App\Models\Asset::where('tenant_id', $clientId)->delete();
+
+        // Delete insurance policies
+        \App\Models\InsurancePolicy::where('tenant_id', $clientId)->delete();
+
+        // Delete legal documents
+        \App\Models\LegalDocument::where('tenant_id', $clientId)->delete();
+
+        // Delete tax returns
+        \App\Models\TaxReturn::where('tenant_id', $clientId)->delete();
+
+        // Delete person records (with file cleanup)
+        $personAttachments = \App\Models\PersonAttachment::where('tenant_id', $clientId)->get();
+        foreach ($personAttachments as $attachment) {
+            if ($attachment->file_path) {
+                \Storage::disk('do_spaces')->delete($attachment->file_path);
+            }
+        }
+        \App\Models\PersonAttachment::where('tenant_id', $clientId)->delete();
+        \App\Models\Person::where('tenant_id', $clientId)->delete();
+
+        // Delete pet records
+        \App\Models\PetMedication::where('tenant_id', $clientId)->delete();
+        \App\Models\PetVaccination::where('tenant_id', $clientId)->delete();
+        \App\Models\Pet::where('tenant_id', $clientId)->delete();
+
+        // Delete journal records (with file cleanup)
+        $journalAttachments = \App\Models\JournalAttachment::where('tenant_id', $clientId)->get();
+        foreach ($journalAttachments as $attachment) {
+            if ($attachment->file_path) {
+                \Storage::disk('do_spaces')->delete($attachment->file_path);
+            }
+            if ($attachment->thumbnail_path) {
+                \Storage::disk('do_spaces')->delete($attachment->thumbnail_path);
+            }
+        }
+        \App\Models\JournalAttachment::where('tenant_id', $clientId)->delete();
+        \App\Models\JournalTag::where('tenant_id', $clientId)->delete();
+        \App\Models\JournalEntry::where('tenant_id', $clientId)->delete();
+
+        // Delete shopping lists and items
+        \App\Models\ShoppingItemHistory::where('tenant_id', $clientId)->delete();
+        \App\Models\ShoppingItem::where('tenant_id', $clientId)->delete();
+        \App\Models\ShoppingList::where('tenant_id', $clientId)->delete();
+
+        // Delete todo records
+        \App\Models\TaskOccurrence::where('tenant_id', $clientId)->delete();
+        \App\Models\TodoList::where('tenant_id', $clientId)->delete();
+        \App\Models\TodoItem::where('tenant_id', $clientId)->delete();
+
+        // Delete invitations and collaborators
+        \App\Models\Invitation::where('tenant_id', $clientId)->delete();
+        \App\Models\Collaborator::where('tenant_id', $clientId)->delete();
+        \App\Models\CollaboratorInvite::where('tenant_id', $clientId)->delete();
+
+        // Delete sync logs
+        \App\Models\SyncLog::where('tenant_id', $clientId)->delete();
+    }
 }

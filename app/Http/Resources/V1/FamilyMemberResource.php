@@ -3,8 +3,10 @@
 namespace App\Http\Resources\V1;
 
 use App\Models\MemberDocument;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class FamilyMemberResource extends JsonResource
 {
@@ -25,7 +27,7 @@ class FamilyMemberResource extends JsonResource
             'relationship' => $this->relationship,
             'relationship_name' => $this->relationship_name,
             'is_minor' => (bool) $this->is_minor,
-            'profile_image_url' => $this->profile_image_url,
+            'profile_image_url' => $this->getProfileImageWithFallback(),
             'immigration_status' => $this->immigration_status,
             'immigration_status_name' => $this->immigration_status_name,
             'co_parenting_enabled' => (bool) $this->co_parenting_enabled,
@@ -34,7 +36,21 @@ class FamilyMemberResource extends JsonResource
             // Include related data when loaded
             'documents_count' => $this->whenCounted('documents'),
             'medical_info' => $this->whenLoaded('medicalInfo'),
-            'contacts' => $this->whenLoaded('contacts'),
+            'contacts' => $this->when(
+                $this->relationLoaded('contacts'),
+                fn () => $this->contacts->map(fn ($c) => [
+                    'id' => $c->id,
+                    'name' => $c->name,
+                    'email' => $c->email,
+                    'phone' => $c->phone,
+                    'relationship' => $c->relationship,
+                    'relationship_name' => $c->relationship_name,
+                    'address' => $c->address,
+                    'notes' => $c->notes,
+                    'is_emergency_contact' => $c->is_emergency_contact,
+                    'priority' => $c->priority,
+                ])
+            ),
             'allergies' => $this->when(
                 $this->relationLoaded('allergies'),
                 fn () => $this->allergies->map(fn ($a) => [
@@ -90,11 +106,16 @@ class FamilyMemberResource extends JsonResource
                 $this->relationLoaded('vaccinations'),
                 fn () => $this->vaccinations->map(fn ($v) => [
                     'id' => $v->id,
+                    'vaccine_type' => $v->vaccine_type,
                     'vaccine_name' => $v->vaccine_name,
-                    'date_administered' => $v->date_administered?->format('Y-m-d'),
+                    'custom_vaccine_name' => $v->custom_vaccine_name,
+                    'vaccination_date' => $v->vaccination_date?->format('Y-m-d'),
+                    'next_vaccination_date' => $v->next_vaccination_date?->format('Y-m-d'),
                     'administered_by' => $v->administered_by,
-                    'next_due_date' => $v->next_due_date?->format('Y-m-d'),
+                    'lot_number' => $v->lot_number,
                     'notes' => $v->notes,
+                    'is_due' => $v->is_due,
+                    'is_coming_soon' => $v->is_coming_soon,
                 ])
             ),
             // Include specific document types when documents are loaded
@@ -113,6 +134,72 @@ class FamilyMemberResource extends JsonResource
             'birth_certificate' => $this->when(
                 $this->relationLoaded('documents'),
                 fn () => $this->formatDocument($this->birth_certificate)
+            ),
+            // School/Education info
+            'school_info' => $this->when(
+                $this->relationLoaded('schoolInfo'),
+                fn () => $this->schoolInfo ? [
+                    'id' => $this->schoolInfo->id,
+                    'school_name' => $this->schoolInfo->school_name,
+                    'grade_level' => $this->schoolInfo->grade_level,
+                    'grade_level_name' => $this->schoolInfo->grade_level_name,
+                    'school_year' => $this->schoolInfo->school_year,
+                    'is_current' => (bool) $this->schoolInfo->is_current,
+                    'start_date' => $this->schoolInfo->start_date?->format('Y-m-d'),
+                    'end_date' => $this->schoolInfo->end_date?->format('Y-m-d'),
+                    'student_id' => $this->schoolInfo->student_id,
+                    'school_address' => $this->schoolInfo->school_address,
+                    'school_phone' => $this->schoolInfo->school_phone,
+                    'school_email' => $this->schoolInfo->school_email,
+                    'teacher_name' => $this->schoolInfo->teacher_name,
+                    'teacher_email' => $this->schoolInfo->teacher_email,
+                    'counselor_name' => $this->schoolInfo->counselor_name,
+                    'counselor_email' => $this->schoolInfo->counselor_email,
+                    'bus_number' => $this->schoolInfo->bus_number,
+                    'bus_pickup_time' => $this->schoolInfo->bus_pickup_time,
+                    'bus_dropoff_time' => $this->schoolInfo->bus_dropoff_time,
+                    'notes' => $this->schoolInfo->notes,
+                ] : null
+            ),
+            'school_records' => $this->when(
+                $this->relationLoaded('schoolRecords'),
+                fn () => $this->schoolRecords->map(fn ($s) => [
+                    'id' => $s->id,
+                    'school_name' => $s->school_name,
+                    'grade_level' => $s->grade_level,
+                    'grade_level_name' => $s->grade_level_name,
+                    'school_year' => $s->school_year,
+                    'is_current' => (bool) $s->is_current,
+                    'start_date' => $s->start_date?->format('Y-m-d'),
+                    'end_date' => $s->end_date?->format('Y-m-d'),
+                    'student_id' => $s->student_id,
+                    'school_address' => $s->school_address,
+                    'school_phone' => $s->school_phone,
+                    'school_email' => $s->school_email,
+                    'teacher_name' => $s->teacher_name,
+                    'teacher_email' => $s->teacher_email,
+                    'counselor_name' => $s->counselor_name,
+                    'counselor_email' => $s->counselor_email,
+                    'bus_number' => $s->bus_number,
+                    'bus_pickup_time' => $s->bus_pickup_time,
+                    'bus_dropoff_time' => $s->bus_dropoff_time,
+                    'notes' => $s->notes,
+                    'documents' => $s->documents->map(fn ($d) => [
+                        'id' => $d->id,
+                        'document_type' => $d->document_type,
+                        'document_type_name' => $d->document_type_name,
+                        'title' => $d->title,
+                        'description' => $d->description,
+                        'school_year' => $d->school_year,
+                        'grade_level' => $d->grade_level,
+                        'file_name' => $d->file_name,
+                        'file_size' => $d->file_size,
+                        'formatted_file_size' => $d->formatted_file_size,
+                        'mime_type' => $d->mime_type,
+                        'file_url' => $d->file_url,
+                        'created_at' => $d->created_at?->toISOString(),
+                    ]),
+                ])
             ),
         ];
     }
@@ -138,6 +225,29 @@ class FamilyMemberResource extends JsonResource
             'is_expired' => $document->isExpired(),
             'days_until_expiry' => $document->expiry_date ? now()->diffInDays($document->expiry_date, false) : null,
             'status' => $document->isExpired() ? 'expired' : 'valid',
+            'front_image_url' => $document->front_image ? Storage::disk('do_spaces')->url($document->front_image) : null,
+            'back_image_url' => $document->back_image ? Storage::disk('do_spaces')->url($document->back_image) : null,
         ];
+    }
+
+    /**
+     * Get profile image URL with fallback to user avatar if member has matching email.
+     */
+    protected function getProfileImageWithFallback(): ?string
+    {
+        // First, try the member's own profile image
+        if ($this->profile_image_url) {
+            return $this->profile_image_url;
+        }
+
+        // Fallback: Check if there's a user with matching email and use their avatar
+        if ($this->email) {
+            $user = User::where('email', $this->email)->first();
+            if ($user && $user->avatar) {
+                return Storage::disk('do_spaces')->url($user->avatar);
+            }
+        }
+
+        return null;
     }
 }

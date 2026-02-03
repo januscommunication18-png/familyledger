@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SendImmediateDripEmails;
 use App\Models\SocialAccount;
 use App\Models\Tenant;
 use App\Models\User;
@@ -146,6 +147,13 @@ class SocialAuthController extends Controller
                 'user_id' => $user->id,
                 'provider' => $provider,
             ]);
+
+            // Trigger immediate drip campaign emails (welcome email, etc.)
+            try {
+                SendImmediateDripEmails::dispatch($user);
+            } catch (\Exception $e) {
+                Log::warning('Failed to dispatch drip emails', ['error' => $e->getMessage()]);
+            }
 
             return $user;
         });

@@ -54,8 +54,6 @@ class Pet extends Model
         'fish' => ['label' => 'Fish', 'emoji' => '🐠'],
         'reptile' => ['label' => 'Reptile', 'emoji' => '🦎'],
         'rabbit' => ['label' => 'Rabbit', 'emoji' => '🐰'],
-        'hamster' => ['label' => 'Hamster', 'emoji' => '🐹'],
-        'guinea_pig' => ['label' => 'Guinea Pig', 'emoji' => '🐹'],
         'other' => ['label' => 'Other', 'emoji' => '🐾'],
     ];
 
@@ -175,8 +173,8 @@ class Pet extends Model
     public function getAgeAttribute(): ?string
     {
         if ($this->date_of_birth) {
-            $years = $this->date_of_birth->diffInYears(now());
-            $months = $this->date_of_birth->diffInMonths(now()) % 12;
+            $years = (int) $this->date_of_birth->diffInYears(now());
+            $months = (int) ($this->date_of_birth->diffInMonths(now()) % 12);
 
             if ($years > 0) {
                 return $years . ' ' . ($years === 1 ? 'year' : 'years') .
@@ -184,7 +182,21 @@ class Pet extends Model
             }
             return $months . ' ' . ($months === 1 ? 'month' : 'months');
         }
-        return $this->approx_age;
+
+        // Format approx_age as readable string
+        if ($this->approx_age) {
+            $approxAge = (float) $this->approx_age;
+            $years = (int) floor($approxAge);
+            $months = (int) round(($approxAge - $years) * 12);
+
+            if ($years > 0) {
+                return $years . ' ' . ($years === 1 ? 'year' : 'years') .
+                    ($months > 0 ? ', ' . $months . ' ' . ($months === 1 ? 'month' : 'months') : '');
+            }
+            return $months . ' ' . ($months === 1 ? 'month' : 'months');
+        }
+
+        return null;
     }
 
     /**

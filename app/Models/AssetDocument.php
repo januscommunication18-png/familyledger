@@ -145,6 +145,6 @@ class AssetDocument extends Model
      */
     public function fileExists(): bool
     {
-        return Storage::disk('private')->exists($this->file_path);
+        return Storage::disk('do_spaces')->exists($this->file_path);
     }
 }

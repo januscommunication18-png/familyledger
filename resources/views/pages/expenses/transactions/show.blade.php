@@ -65,6 +65,41 @@
                                 {{ $transaction->category_name }}
                             </p>
                         </div>
+                        @if($transaction->budget)
+                        <div>
+                            <p class="text-xs text-slate-500 uppercase tracking-wide mb-1">Budget</p>
+                            <p class="font-medium text-slate-800 flex items-center gap-2">
+                                <span>{{ $transaction->budget->icon ?? '💰' }}</span>
+                                {{ $transaction->budget->name }}
+                            </p>
+                        </div>
+                        @endif
+                        @if($transaction->metadata && isset($transaction->metadata['payment_method']))
+                        <div>
+                            <p class="text-xs text-slate-500 uppercase tracking-wide mb-1">Payment Method</p>
+                            <p class="font-medium text-slate-800 flex items-center gap-2">
+                                @php
+                                    $paymentMethod = $transaction->metadata['payment_method'];
+                                    $paymentIcons = [
+                                        'cash' => '💵',
+                                        'credit_card' => '💳',
+                                        'debit_card' => '💳',
+                                        'bank_transfer' => '🏦',
+                                        'check' => '📝',
+                                    ];
+                                    $paymentLabels = [
+                                        'cash' => 'Cash',
+                                        'credit_card' => 'Credit Card',
+                                        'debit_card' => 'Debit Card',
+                                        'bank_transfer' => 'Bank Transfer',
+                                        'check' => 'Check',
+                                    ];
+                                @endphp
+                                <span>{{ $paymentIcons[$paymentMethod] ?? '💰' }}</span>
+                                {{ $paymentLabels[$paymentMethod] ?? ucfirst($paymentMethod) }}
+                            </p>
+                        </div>
+                        @endif
                         <div>
                             <p class="text-xs text-slate-500 uppercase tracking-wide mb-1">Source</p>
                             <p class="font-medium text-slate-800 flex items-center gap-2">
@@ -82,6 +117,40 @@
                             <p class="font-medium text-slate-800">{{ $transaction->created_at->format('M j, Y g:i A') }}</p>
                         </div>
                     </div>
+
+                    {{-- Recurring Info --}}
+                    @if($transaction->metadata && isset($transaction->metadata['is_recurring']) && $transaction->metadata['is_recurring'])
+                    <div class="divider my-4"></div>
+                    <div class="bg-blue-50 rounded-lg p-4">
+                        <div class="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                            <span class="badge badge-info badge-sm">Recurring Expense</span>
+                            @php
+                                $frequencyLabels = [
+                                    'daily' => 'Daily',
+                                    'weekly' => 'Weekly',
+                                    'biweekly' => 'Bi-weekly',
+                                    'monthly' => 'Monthly',
+                                    'quarterly' => 'Quarterly',
+                                    'yearly' => 'Yearly',
+                                ];
+                                $frequency = $transaction->metadata['recurring_frequency'] ?? 'monthly';
+                            @endphp
+                            <span class="text-sm text-blue-700 font-medium">{{ $frequencyLabels[$frequency] ?? ucfirst($frequency) }}</span>
+                        </div>
+                    </div>
+                    @endif
+
+                    {{-- Notes --}}
+                    @if($transaction->metadata && isset($transaction->metadata['notes']) && $transaction->metadata['notes'])
+                    <div class="divider my-4"></div>
+                    <div>
+                        <p class="text-xs text-slate-500 uppercase tracking-wide mb-2">Notes</p>
+                        <div class="bg-slate-50 rounded-lg p-4">
+                            <p class="text-sm text-slate-700 whitespace-pre-wrap">{{ $transaction->metadata['notes'] }}</p>
+                        </div>
+                    </div>
+                    @endif
 
                     @if($transaction->is_shared)
                     <div class="divider my-4"></div>
@@ -166,8 +235,8 @@
                         <div class="space-y-4">
                             @if($transaction->isReceiptImage())
                                 <div class="rounded-lg overflow-hidden border border-slate-200">
-                                    <a href="{{ asset('storage/' . $transaction->receipt_path) }}" target="_blank">
-                                        <img src="{{ asset('storage/' . $transaction->receipt_path) }}" alt="Receipt" class="w-full h-auto">
+                                    <a href="{{ $transaction->receipt_url }}" target="_blank">
+                                        <img src="{{ $transaction->receipt_url }}" alt="Receipt" class="w-full h-auto">
                                     </a>
                                 </div>
                             @elseif($transaction->isReceiptPdf())
@@ -183,11 +252,11 @@
                             </div>
 
                             <div class="flex gap-2">
-                                <a href="{{ asset('storage/' . $transaction->receipt_path) }}" target="_blank" class="btn btn-primary btn-sm flex-1 gap-1">
+                                <a href="{{ $transaction->receipt_url }}" target="_blank" class="btn btn-primary btn-sm flex-1 gap-1">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                                     View
                                 </a>
-                                <a href="{{ asset('storage/' . $transaction->receipt_path) }}" download="{{ $transaction->receipt_original_filename }}" class="btn btn-ghost btn-sm flex-1 gap-1">
+                                <a href="{{ $transaction->receipt_url }}" download="{{ $transaction->receipt_original_filename }}" class="btn btn-ghost btn-sm flex-1 gap-1">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                                     Download
                                 </a>
@@ -219,18 +288,67 @@
                 <div class="card-body">
                     <h3 class="font-semibold text-slate-800 mb-4">Actions</h3>
                     <div class="space-y-2">
-                        <form action="{{ route('expenses.transactions.delete', $transaction) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this transaction? This action cannot be undone.')">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-error btn-outline btn-sm w-full gap-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                                Delete Transaction
-                            </button>
-                        </form>
+                        <button type="button" onclick="openDeleteModal()" class="btn btn-error btn-outline btn-sm w-full gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                            Delete Transaction
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+{{-- Delete Confirmation Modal --}}
+<div id="deleteModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+        {{-- Backdrop --}}
+        <div class="fixed inset-0 transition-opacity bg-slate-900/50" onclick="closeDeleteModal()"></div>
+
+        {{-- Modal Content --}}
+        <div class="relative bg-white rounded-xl shadow-xl w-full max-w-md mx-4 transform transition-all">
+            <div class="p-6">
+                {{-- Warning Icon --}}
+                <div class="w-14 h-14 mx-auto rounded-full bg-error/10 flex items-center justify-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgb(239 68 68)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                </div>
+
+                {{-- Title --}}
+                <h3 class="text-lg font-semibold text-slate-800 mb-2">Delete Transaction</h3>
+                <p class="text-sm text-slate-500 mb-4">Are you sure you want to delete this transaction? This action cannot be undone.</p>
+
+                {{-- Transaction Details --}}
+                <div class="bg-slate-50 rounded-lg p-3 mb-6">
+                    <p class="font-medium text-slate-800 truncate">{{ $transaction->description }}</p>
+                    <p class="text-sm text-slate-500">{{ $transaction->formatted_amount }}</p>
+                </div>
+
+                {{-- Actions --}}
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeDeleteModal()" class="btn btn-ghost flex-1">Cancel</button>
+                    <form action="{{ route('expenses.transactions.delete', $transaction) }}" method="POST" class="flex-1">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-error w-full">Delete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openDeleteModal() {
+    document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.add('hidden');
+}
+
+// Close on Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeDeleteModal();
+});
+</script>
 @endsection

@@ -11,35 +11,74 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700" rel="stylesheet" />
 
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            50: '#faf5ff',
-                            100: '#f3e8ff',
-                            200: '#e9d5ff',
-                            300: '#d8b4fe',
-                            400: '#c084fc',
-                            500: '#a855f7',
-                            600: '#9333ea',
-                            700: '#7e22ce',
-                            800: '#6b21a8',
-                            900: '#581c87',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <!-- Tailwind CSS (pre-built) via jsDelivr with SRI -->
+t    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" integrity="sha256-tq2XQC7duQPnpdenPuR6Z5IE773aRSGjkcutnfUJuTI=" crossorigin="anonymous">
+
+    <!-- Custom primary colors & dark mode -->
+    <style>
+        .bg-primary-50 { background-color: #faf5ff; }
+        .bg-primary-100 { background-color: #f3e8ff; }
+        .bg-primary-600 { background-color: #9333ea; }
+        .bg-primary-900 { background-color: #581c87; }
+        .bg-primary-900\/20, .dark .bg-primary-900\/20 { background-color: rgba(88, 28, 135, 0.2); }
+        .text-primary-300 { color: #d8b4fe; }
+        .text-primary-700 { color: #7e22ce; }
+        .hover\:bg-primary-700:hover { background-color: #7e22ce; }
+
+        /* Dark mode support */
+        .dark .dark\:bg-gray-800 { background-color: #1f2937; }
+        .dark .dark\:bg-gray-900 { background-color: #111827; }
+        .dark .dark\:bg-gray-700 { background-color: #374151; }
+        .dark .dark\:bg-gray-600 { background-color: #4b5563; }
+        .dark .dark\:text-gray-100 { color: #f3f4f6; }
+        .dark .dark\:text-gray-300 { color: #d1d5db; }
+        .dark .dark\:text-gray-400 { color: #9ca3af; }
+        .dark .dark\:text-primary-300 { color: #d8b4fe; }
+        .dark .dark\:border-gray-700 { border-color: #374151; }
+        .dark .dark\:border-gray-800 { border-color: #1f2937; }
+        .dark .dark\:hover\:bg-gray-700:hover { background-color: #374151; }
+        .dark .dark\:bg-primary-900 { background-color: #581c87; }
+        .dark .dark\:bg-green-900\/20 { background-color: rgba(20, 83, 45, 0.2); }
+        .dark .dark\:bg-red-900\/20 { background-color: rgba(127, 29, 29, 0.2); }
+        .dark .dark\:border-green-800 { border-color: #166534; }
+        .dark .dark\:border-red-800 { border-color: #991b1b; }
+        .dark .dark\:text-green-300 { color: #86efac; }
+        .dark .dark\:text-red-300 { color: #fca5a5; }
+    </style>
 
     <style>
         [x-cloak] { display: none !important; }
         body { font-family: 'Inter', sans-serif; }
+
+        /* Alert Text Color Fixes for Better Visibility */
+        .alert-success, .bg-green-50 {
+            background-color: #dcfce7 !important;
+            border-color: #86efac !important;
+        }
+        .text-green-800, .text-green-700 {
+            color: #166534 !important;
+        }
+        .alert-error, .bg-red-50 {
+            background-color: #fee2e2 !important;
+            border-color: #fca5a5 !important;
+        }
+        .text-red-800, .text-red-700 {
+            color: #991b1b !important;
+        }
+        .alert-warning, .bg-amber-50, .bg-yellow-50 {
+            background-color: #fef3c7 !important;
+            border-color: #fcd34d !important;
+        }
+        .text-amber-800, .text-yellow-800, .text-amber-700 {
+            color: #92400e !important;
+        }
+        .alert-info, .bg-blue-50 {
+            background-color: #dbeafe !important;
+            border-color: #93c5fd !important;
+        }
+        .text-blue-800, .text-blue-700 {
+            color: #1e40af !important;
+        }
     </style>
 
     @stack('styles')
@@ -104,22 +143,44 @@
                     <span>Clients</span>
                 </a>
 
-                <a href="#"
-                   class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                <a href="{{ route('backoffice.account-recovery.index') }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-lg {{ request()->routeIs('backoffice.account-recovery.*') ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }} transition-colors">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                     </svg>
-                    <span>Invoices</span>
-                    <span class="ml-auto text-xs bg-gray-200 dark:bg-gray-600 px-2 py-0.5 rounded-full">Soon</span>
+                    <span>Account Recovery</span>
                 </a>
 
-                <a href="#"
-                   class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                <a href="{{ route('backoffice.package-plans.index') }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-lg {{ request()->routeIs('backoffice.package-plans.*') ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }} transition-colors">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
                     </svg>
-                    <span>Plans</span>
-                    <span class="ml-auto text-xs bg-gray-200 dark:bg-gray-600 px-2 py-0.5 rounded-full">Soon</span>
+                    <span>Package Plans</span>
+                </a>
+
+                <a href="{{ route('backoffice.discount-codes.index') }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-lg {{ request()->routeIs('backoffice.discount-codes.*') ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }} transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                    </svg>
+                    <span>Discount Codes</span>
+                </a>
+
+                <a href="{{ route('backoffice.invoices.index') }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-lg {{ request()->routeIs('backoffice.invoices.*') ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }} transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <span>Invoices</span>
+                </a>
+
+                <a href="{{ route('backoffice.drip-campaigns.index') }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-lg {{ request()->routeIs('backoffice.drip-campaigns.*') ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }} transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                    <span>Drip Campaigns</span>
                 </a>
 
                 <div class="pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
@@ -139,6 +200,14 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
                         </svg>
                         <span>Change Password</span>
+                    </a>
+
+                    <a href="{{ route('backoffice.settings.dbReset') }}"
+                       class="flex items-center gap-3 px-4 py-3 rounded-lg {{ request()->routeIs('backoffice.settings.dbReset') ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300' : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20' }} transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        <span>DB Reset</span>
                     </a>
                 </div>
             </nav>
@@ -218,8 +287,43 @@
         </div>
     </div>
 
-    <!-- Alpine.js -->
-    <script src="//unpkg.com/alpinejs" defer></script>
+    <!-- Alpine.js via jsDelivr with SRI -->
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js" defer integrity="sha256-NTuMLF/sME9UZFNI4NeECGUuD/BQklDxKSXxPyrXCHM=" crossorigin="anonymous"></script>
+
+    {{-- Form Double Submit Prevention --}}
+    <script>
+    (function() {
+        document.addEventListener('DOMContentLoaded', function() {
+            document.addEventListener('submit', function(e) {
+                const form = e.target;
+                if (form.tagName !== 'FORM') return;
+                if (form.hasAttribute('data-no-submit-protection')) return;
+                if (form.hasAttribute('data-submitting')) {
+                    e.preventDefault();
+                    return false;
+                }
+                form.setAttribute('data-submitting', 'true');
+                const submitButtons = form.querySelectorAll('button[type="submit"], input[type="submit"], button:not([type])');
+                submitButtons.forEach(function(btn) {
+                    btn.setAttribute('data-original-content', btn.innerHTML);
+                    btn.disabled = true;
+                    btn.classList.add('opacity-75', 'cursor-not-allowed');
+                    btn.innerHTML = '<span class="inline-flex items-center gap-2"><svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Processing...</span></span>';
+                });
+                setTimeout(function() {
+                    form.removeAttribute('data-submitting');
+                    submitButtons.forEach(function(btn) {
+                        btn.disabled = false;
+                        btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                        if (btn.hasAttribute('data-original-content')) {
+                            btn.innerHTML = btn.getAttribute('data-original-content');
+                        }
+                    });
+                }, 10000);
+            });
+        });
+    })();
+    </script>
 
     @stack('scripts')
 </body>

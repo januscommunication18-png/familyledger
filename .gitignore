@@ -24,10 +24,8 @@
 /public/hot
 /public/storage
 
-# Mobile app build artifacts
-/mobile-app/node_modules
-/mobile-app/dist
-/mobile-app/.expo
+# Mobile app (ignored for now)
+/mobile-app
 
 /storage/*.key
 /storage/app

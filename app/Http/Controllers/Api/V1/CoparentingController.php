@@ -215,51 +215,273 @@ class CoparentingController extends Controller
      */
     public function showChild(Request $request, FamilyMember $child): JsonResponse
     {
-        $user = $request->user();
+        try {
+            $user = $request->user();
 
-        // Check access
-        if (!$this->userHasAccessToChild($user, $child)) {
-            return $this->forbidden('You do not have access to this child');
-        }
+            // Check access and determine if owner or co-parent
+            $isOwner = $child->tenant_id === $user->tenant_id;
+            $collaborator = null;
+            $coparentChild = null;
 
-        // Load related medical information
-        $child->load(['allergies', 'medicalConditions', 'medications']);
+            if (!$isOwner) {
+                // Check co-parent access
+                $collaborator = Collaborator::where('user_id', $user->id)
+                    ->where('coparenting_enabled', true)
+                    ->whereHas('coparentChildren', function ($q) use ($child) {
+                        $q->where('family_member_id', $child->id);
+                    })
+                    ->first();
 
-        // Format allergies as comma-separated string
-        $allergiesText = $child->allergies->isNotEmpty()
-            ? $child->allergies->pluck('allergen_name')->filter()->join(', ')
-            : null;
+                if (!$collaborator) {
+                    return $this->forbidden('You do not have access to this child');
+                }
 
-        // Format medical conditions as comma-separated string
-        $conditionsText = $child->medicalConditions->isNotEmpty()
-            ? $child->medicalConditions->pluck('condition_name')->filter()->join(', ')
-            : null;
+                // Get the pivot with permissions
+                $coparentChild = CoparentChild::where('collaborator_id', $collaborator->id)
+                    ->where('family_member_id', $child->id)
+                    ->first();
+            }
 
-        // Format medications as comma-separated string
-        $medicationsText = $child->medications->isNotEmpty()
-            ? $child->medications->pluck('medication_name')->filter()->join(', ')
-            : null;
+            // Helper to check permission level
+            $canView = function ($category) use ($isOwner, $coparentChild) {
+                if ($isOwner) return true;
+                if (!$coparentChild) return false;
+                return $coparentChild->canView($category);
+            };
 
-        return $this->success([
-            'child' => [
+            // Helper to check edit permission
+            $canEdit = function ($category) use ($isOwner, $coparentChild) {
+                if ($isOwner) return true;
+                if (!$coparentChild) return false;
+                return $coparentChild->canEdit($category);
+            };
+
+            // Helper to get permission level string ('none', 'view', 'edit')
+            $getPermissionLevel = function ($category) use ($isOwner, $coparentChild) {
+                if ($isOwner) return 'edit'; // Owner always has full edit access
+                if (!$coparentChild) return 'none';
+                return $coparentChild->getPermission($category);
+            };
+
+            // Load all related data
+            $child->load([
+                'allergies',
+                'medicalConditions',
+                'medications',
+                'healthcareProviders',
+                'contacts', // For emergency contacts
+                'schoolInfo',
+                'medicalInfo',
+                'coparents.user',
+                'insurancePolicies',
+                'assets',
+                'documents', // For drivers_license, passport, etc. accessors
+            ]);
+
+            // Build response based on permissions
+            $childData = [
                 'id' => $child->id,
                 'first_name' => $child->first_name,
                 'last_name' => $child->last_name,
                 'full_name' => $child->first_name . ' ' . $child->last_name,
-                'nickname' => $child->nickname,
-                'date_of_birth' => $child->date_of_birth?->format('Y-m-d'),
-                'age' => $child->date_of_birth ? $child->date_of_birth->age : null,
-                'gender' => $child->gender,
-                'avatar' => $child->avatar,
-                'blood_type' => $child->blood_type,
-                'allergies' => $allergiesText,
-                'medical_conditions' => $conditionsText,
-                'medications' => $medicationsText,
-                'school_name' => $child->school_name,
-                'grade' => $child->grade,
-                'notes' => $child->notes,
-            ],
-        ]);
+                'initials' => strtoupper(substr($child->first_name ?? '', 0, 1) . substr($child->last_name ?? '', 0, 1)),
+                'profile_image_url' => $child->profile_image_url,
+                'is_owner' => $isOwner,
+                'is_coparent' => !$isOwner,
+            ];
+
+            // Basic Info (always visible for minimal context)
+            $childData['date_of_birth'] = $child->date_of_birth?->format('Y-m-d');
+            $childData['age'] = $child->date_of_birth ? $child->date_of_birth->age : null;
+            $childData['gender'] = $child->gender;
+
+            // Permission-based data - now returns level ('none', 'view', 'edit') instead of boolean
+            $permissions = [];
+
+            // Basic Info permission
+            if ($canView('basic_info')) {
+                $permissions['basic_info'] = $getPermissionLevel('basic_info');
+                $childData['nickname'] = $child->nickname;
+                $childData['blood_type'] = $child->medicalInfo?->blood_type ?? $child->blood_type;
+                $childData['immigration_status'] = $child->immigration_status_name;
+                $childData['relationship'] = $child->relationship_name;
+            } else {
+                $permissions['basic_info'] = 'none';
+            }
+
+            // Medical Records permission
+            if ($canView('medical_records')) {
+                $permissions['medical_records'] = $getPermissionLevel('medical_records');
+                $childData['medical_info'] = $child->medicalInfo ? [
+                    'blood_type' => $child->medicalInfo->blood_type,
+                    'primary_doctor' => $child->medicalInfo->primary_doctor,
+                    'doctor_phone' => $child->medicalInfo->doctor_phone,
+                    'insurance_provider' => $child->medicalInfo->insurance_provider,
+                    'insurance_policy_number' => $child->medicalInfo->insurance_policy_number,
+                ] : null;
+                $childData['allergies'] = $child->allergies->map(fn($a) => [
+                    'id' => $a->id,
+                    'name' => $a->allergen_name,
+                    'severity' => $a->severity,
+                    'reaction' => $a->reaction,
+                ])->toArray();
+                $childData['medical_conditions'] = $child->medicalConditions->map(fn($c) => [
+                    'id' => $c->id,
+                    'name' => $c->name,
+                    'diagnosed_date' => $c->diagnosed_date?->format('Y-m-d'),
+                    'notes' => $c->notes,
+                ])->toArray();
+                $childData['medications'] = $child->medications->map(fn($m) => [
+                    'id' => $m->id,
+                    'name' => $m->name,
+                    'dosage' => $m->dosage,
+                    'frequency' => $m->frequency,
+                    'prescribing_doctor' => $m->prescribing_doctor ?? null,
+                ])->toArray();
+            } else {
+                $permissions['medical_records'] = 'none';
+            }
+
+            // Healthcare Providers permission
+            if ($canView('healthcare_providers')) {
+                $permissions['healthcare_providers'] = $getPermissionLevel('healthcare_providers');
+                $childData['healthcare_providers'] = $child->healthcareProviders->map(fn($p) => [
+                    'id' => $p->id,
+                    'name' => $p->name,
+                    'specialty' => $p->specialty,
+                    'phone' => $p->phone,
+                    'address' => $p->address,
+                ])->toArray();
+            } else {
+                $permissions['healthcare_providers'] = 'none';
+            }
+
+            // Emergency Contacts permission
+            if ($canView('emergency_contacts')) {
+                $permissions['emergency_contacts'] = $getPermissionLevel('emergency_contacts');
+                $childData['emergency_contacts'] = $child->emergencyContacts->map(fn($c) => [
+                    'id' => $c->id,
+                    'name' => $c->name,
+                    'relationship' => $c->relationship,
+                    'phone' => $c->phone,
+                    'email' => $c->email,
+                    'is_primary' => $c->priority === 1,
+                ])->toArray();
+            } else {
+                $permissions['emergency_contacts'] = 'none';
+            }
+
+            // School Info permission
+            if ($canView('school_info')) {
+                $permissions['school_info'] = $getPermissionLevel('school_info');
+                $childData['school_info'] = $child->schoolInfo ? [
+                    'school_name' => $child->schoolInfo->school_name,
+                    'grade' => $child->schoolInfo->grade_level,
+                    'teacher_name' => $child->schoolInfo->teacher_name,
+                    'school_phone' => $child->schoolInfo->school_phone,
+                    'school_address' => $child->schoolInfo->school_address,
+                    'bus_number' => $child->schoolInfo->bus_number ?? null,
+                ] : null;
+            } else {
+                $permissions['school_info'] = 'none';
+            }
+
+            // Documents permission
+            if ($canView('documents')) {
+                $permissions['documents'] = $getPermissionLevel('documents');
+                $childData['documents'] = [
+                    'drivers_license' => $child->drivers_license ? [
+                        'document_number' => $child->drivers_license->document_number,
+                        'expiry_date' => $child->drivers_license->expiry_date?->format('Y-m-d'),
+                        'issue_date' => $child->drivers_license->issue_date?->format('Y-m-d'),
+                        'issuing_state' => $child->drivers_license->state_of_issue,
+                    ] : null,
+                    'passport' => $child->passport ? [
+                        'document_number' => $child->passport->document_number,
+                        'expiry_date' => $child->passport->expiry_date?->format('Y-m-d'),
+                        'issue_date' => $child->passport->issue_date?->format('Y-m-d'),
+                        'issuing_country' => $child->passport->country_of_issue,
+                    ] : null,
+                    'social_security' => $child->social_security ? [
+                        'last_four' => substr($child->social_security->document_number ?? '', -4),
+                        'has_document' => true,
+                    ] : null,
+                    'birth_certificate' => $child->birth_certificate ? [
+                        'document_number' => $child->birth_certificate->document_number,
+                        'issue_date' => $child->birth_certificate->issue_date?->format('Y-m-d'),
+                        'has_document' => true,
+                    ] : null,
+                ];
+            } else {
+                $permissions['documents'] = 'none';
+            }
+
+            // Insurance permission
+            if ($canView('insurance')) {
+                $permissions['insurance'] = $getPermissionLevel('insurance');
+                $childData['insurance_policies'] = $child->insurancePolicies->map(fn($p) => [
+                    'id' => $p->id,
+                    'provider_name' => $p->provider_name,
+                    'policy_number' => $p->policy_number,
+                    'insurance_type' => $p->insurance_type,
+                    'coverage_amount' => $p->premium_amount,
+                    'expiry_date' => $p->expiration_date?->format('Y-m-d'),
+                ])->toArray();
+            } else {
+                $permissions['insurance'] = 'none';
+            }
+
+            // Assets permission
+            if ($canView('assets')) {
+                $permissions['assets'] = $getPermissionLevel('assets');
+                $childData['assets'] = $child->assets->map(fn($a) => [
+                    'id' => $a->id,
+                    'name' => $a->name,
+                    'category' => $a->asset_category,
+                    'current_value' => $a->current_value,
+                ])->toArray();
+            } else {
+                $permissions['assets'] = 'none';
+            }
+
+            // Co-parents (always visible to show who has access)
+            $childData['coparents'] = $child->coparents->map(fn($cp) => [
+                'id' => $cp->id,
+                'name' => $cp->user->name ?? 'Unknown',
+                'email' => $cp->user->email ?? null,
+                'avatar_url' => $cp->user->avatar ?? null,
+                'parent_role' => $cp->parent_role,
+                'parent_role_label' => Collaborator::PARENT_ROLES[$cp->parent_role]['label'] ?? 'Parent',
+            ])->toArray();
+
+            // Quick stats
+            $childData['stats'] = [
+                'coparents_count' => $child->coparents->count(),
+                'emergency_contacts_count' => $canView('emergency_contacts') ? $child->emergencyContacts->count() : null,
+                'documents_count' => $canView('documents') ? (
+                    ($child->drivers_license ? 1 : 0) +
+                    ($child->passport ? 1 : 0) +
+                    ($child->social_security ? 1 : 0) +
+                    ($child->birth_certificate ? 1 : 0)
+                ) : null,
+                'allergies_count' => $canView('medical_records') ? $child->allergies->count() : null,
+                'medications_count' => $canView('medical_records') ? $child->medications->count() : null,
+            ];
+
+            // Add a convenience flag to check if user can edit anything
+            $canEditAny = $isOwner || ($coparentChild && count($coparentChild->getGrantedPermissions()) > 0
+                && collect($coparentChild->getGrantedPermissions())->contains('edit'));
+
+            return $this->success([
+                'child' => $childData,
+                'permissions' => $permissions,
+                'can_edit' => $canEditAny, // Convenience flag for frontend
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('showChild error: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+            return $this->error('Error loading child: ' . $e->getMessage(), 500);
+        }
     }
 
     /**

@@ -49,6 +49,12 @@
                         Privacy
                     </a>
                 </li>
+                <li>
+                    <a href="{{ route('subscription.index') }}" class="inline-flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 border-transparent text-base-content/60 hover:text-base-content hover:border-base-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                        Billing
+                    </a>
+                </li>
             </ul>
         </div>
     </div>
@@ -88,28 +94,42 @@
             <div class="card-body">
                 <h2 class="card-title mb-6">Profile Settings</h2>
 
+                {{-- Hidden form for removing avatar --}}
+                <form id="remove-avatar-form" action="{{ route('settings.profile.remove-avatar') }}" method="POST" class="hidden">
+                    @csrf
+                    @method('DELETE')
+                </form>
+
                 <form action="{{ route('settings.profile.update') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                     @csrf
 
                     <div class="flex items-center gap-6">
-                        <div class="avatar {{ $user->avatar ? '' : 'placeholder' }}">
+                        <div id="avatar-container">
                             @if($user->avatar)
-                                <div class="w-20 rounded-full">
-                                    <img src="{{ Storage::disk('do_spaces')->url($user->avatar) }}" alt="Avatar" />
+                                <div class="w-20 h-20 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2 overflow-hidden">
+                                    <img src="{{ Storage::disk('do_spaces')->url($user->avatar) }}" alt="Avatar" class="w-full h-full object-cover" />
                                 </div>
                             @else
-                                <div class="w-20 rounded-full bg-primary text-primary-content">
-                                    <span class="text-2xl">{{ substr($user->name ?? 'U', 0, 1) }}</span>
+                                <div class="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center shadow-lg">
+                                    <span class="text-3xl font-bold text-white">{{ strtoupper(substr($user->name ?? 'U', 0, 1)) }}</span>
                                 </div>
                             @endif
                         </div>
                         <div>
-                            <label class="btn btn-outline btn-sm cursor-pointer">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                                Upload Photo
-                                <input type="file" name="avatar" accept="image/jpeg,image/png,image/jpg,image/gif" class="hidden" onchange="previewAvatar(this)" />
-                            </label>
-                            <p class="text-sm text-base-content/60 mt-1">JPG, PNG, or GIF. Max 2MB.</p>
+                            <div class="flex flex-wrap gap-2">
+                                <label class="btn btn-outline btn-sm cursor-pointer gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                                    Upload Photo
+                                    <input type="file" name="avatar" accept="image/jpeg,image/png,image/jpg,image/gif" class="hidden" onchange="previewAvatar(this)" />
+                                </label>
+                                @if($user->avatar)
+                                <button type="button" onclick="confirmRemoveAvatar()" class="btn btn-ghost btn-sm text-error gap-2" id="remove-avatar-btn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    Remove
+                                </button>
+                                @endif
+                            </div>
+                            <p class="text-sm text-base-content/60 mt-2">JPG, PNG, or GIF. Max 2MB.</p>
                         </div>
                     </div>
 
@@ -272,20 +292,85 @@
                             </div>
                         </div>
 
-                        <div class="flex gap-2">
-                            @if($user->phone)
-                            <form action="/settings/mfa/sms/enable" method="POST">
-                                @csrf
-                                <button type="submit" class="btn btn-primary btn-sm gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-                                    Enable SMS 2FA
+                        <div class="space-y-3">
+                            <p class="text-sm text-base-content/70 font-medium">Choose a 2FA method:</p>
+                            <div class="flex flex-wrap gap-2">
+                                {{-- Authenticator App Option --}}
+                                <button type="button" onclick="initAuthenticatorSetup()" class="btn btn-primary btn-sm gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                                    Authenticator App
                                 </button>
-                            </form>
-                            @else
-                            <p class="text-sm text-base-content/60">Add a phone number in Profile settings to enable SMS 2FA</p>
-                            @endif
+
+                                {{-- SMS Option --}}
+                                @if($user->phone)
+                                <form action="/settings/mfa/sms/enable" method="POST" class="inline">
+                                    @csrf
+                                    <button type="submit" class="btn btn-outline btn-sm gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                                        SMS Code
+                                    </button>
+                                </form>
+                                @else
+                                <span class="text-sm text-base-content/50 self-center">Add a phone number in Profile to enable SMS 2FA</span>
+                                @endif
+                            </div>
                         </div>
                     @endif
+                </div>
+            </div>
+
+            {{-- Authenticator Setup Modal --}}
+            <div id="authenticatorSetupModal" class="fixed inset-0 z-50 hidden">
+                <div class="fixed inset-0 bg-black/50" onclick="closeAuthenticatorModal()"></div>
+                <div class="fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
+                    <div class="bg-base-100 rounded-xl shadow-xl max-w-md w-full p-6 pointer-events-auto">
+                        <h3 class="font-bold text-lg mb-4">Set Up Authenticator App</h3>
+
+                        {{-- Step 1: QR Code --}}
+                        <div id="authenticatorStep1">
+                            <p class="text-sm text-base-content/70 mb-4">
+                                Scan this QR code with your authenticator app (Google Authenticator, Authy, 1Password, etc.)
+                            </p>
+
+                            <div id="qrCodeContainer" class="flex justify-center items-center mb-4 min-h-[200px] bg-base-200 rounded-lg">
+                                <span class="loading loading-spinner loading-lg"></span>
+                            </div>
+
+                            <div class="bg-base-200 rounded-lg p-3 mb-4">
+                                <p class="text-xs text-base-content/60 mb-1">Can't scan? Enter this code manually:</p>
+                                <code id="secretKey" class="text-sm font-mono select-all break-all">Loading...</code>
+                            </div>
+
+                            <button type="button" onclick="showAuthenticatorStep2()" class="btn btn-primary w-full">
+                                I've Scanned the Code
+                            </button>
+                        </div>
+
+                        {{-- Step 2: Verify Code --}}
+                        <div id="authenticatorStep2" class="hidden">
+                            <p class="text-sm text-base-content/70 mb-4">
+                                Enter the 6-digit code from your authenticator app to verify the setup.
+                            </p>
+
+                            <div class="form-control mb-4">
+                                <input type="text" id="authenticatorCode" maxlength="6" placeholder="000000" class="input input-bordered text-center text-2xl tracking-widest font-mono" autocomplete="off" />
+                                <label class="label">
+                                    <span id="authenticatorError" class="label-text-alt text-error hidden"></span>
+                                </label>
+                            </div>
+
+                            <div class="flex gap-2">
+                                <button type="button" onclick="showAuthenticatorStep1()" class="btn btn-ghost flex-1">Back</button>
+                                <button type="button" onclick="verifyAuthenticatorCode()" id="verifyAuthBtn" class="btn btn-primary flex-1">
+                                    Verify & Enable
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-4 border-t flex justify-end">
+                            <button type="button" onclick="closeAuthenticatorModal()" class="btn btn-ghost btn-sm">Cancel</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -393,6 +478,141 @@
                 </div>
             </div>
 
+            {{-- Account Recovery Code --}}
+            <div class="card bg-base-100 shadow-sm">
+                <div class="card-body">
+                    <h2 class="card-title mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        Account Recovery Code
+                    </h2>
+
+                    @if($user->hasAccountRecoveryCode())
+                        <div class="flex items-center gap-3 p-4 bg-emerald-50 rounded-lg border border-emerald-200 mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <div>
+                                <p class="font-medium text-emerald-800">Recovery code is set</p>
+                                <p class="text-sm text-emerald-700">
+                                    Last updated: {{ $user->account_recovery_code_set_at?->format('M d, Y') }}
+                                </p>
+                            </div>
+                        </div>
+                    @else
+                        <div class="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200 mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <div>
+                                <p class="font-medium text-amber-800">No recovery code set</p>
+                                <p class="text-sm text-amber-700">Set a recovery code to help recover your account if needed</p>
+                            </div>
+                        </div>
+                    @endif
+
+                    <p class="text-sm text-base-content/70 mb-4">
+                        A 16-digit recovery code can be used to verify your identity when contacting support.
+                        Store it in a safe place - you'll need to provide it verbally or via chat if you need account recovery assistance.
+                    </p>
+
+                    <button type="button" onclick="openRecoveryCodeModal()" class="btn btn-outline btn-sm gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                        </svg>
+                        {{ $user->hasAccountRecoveryCode() ? 'Update Recovery Code' : 'Set Recovery Code' }}
+                    </button>
+                </div>
+            </div>
+
+            {{-- Recovery Code Modal --}}
+            <div id="recoveryCodeModal" class="fixed inset-0 z-50 hidden">
+                <div class="fixed inset-0 bg-black/50" onclick="closeRecoveryCodeModal()"></div>
+                <div class="fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
+                    <div class="bg-base-100 rounded-xl shadow-xl max-w-md w-full p-6 pointer-events-auto">
+                        <h3 class="font-bold text-lg mb-4">{{ $user->hasAccountRecoveryCode() ? 'Update' : 'Set' }} Recovery Code</h3>
+
+                        <p class="text-sm text-base-content/70 mb-4">
+                            Choose how you want to create your 16-digit recovery code.
+                        </p>
+
+                        <form id="recoveryCodeForm" action="{{ route('settings.recovery-code.save') }}" method="POST" class="space-y-4">
+                            @csrf
+
+                            {{-- Code Generation Method --}}
+                            <div class="space-y-3">
+                                <label class="flex items-start gap-3 p-3 border border-base-200 rounded-lg cursor-pointer hover:bg-base-50">
+                                    <input type="radio" name="code_method" value="generate" class="radio radio-primary mt-1" checked onchange="toggleCodeInput()" />
+                                    <div>
+                                        <p class="font-medium">Auto-generate code</p>
+                                        <p class="text-xs text-base-content/60">System generates a secure 16-digit code</p>
+                                    </div>
+                                </label>
+                                <label class="flex items-start gap-3 p-3 border border-base-200 rounded-lg cursor-pointer hover:bg-base-50">
+                                    <input type="radio" name="code_method" value="custom" class="radio radio-primary mt-1" onchange="toggleCodeInput()" />
+                                    <div>
+                                        <p class="font-medium">Enter my own code</p>
+                                        <p class="text-xs text-base-content/60">Create your own 16-digit numeric code</p>
+                                    </div>
+                                </label>
+                            </div>
+
+                            {{-- Generated Code Display --}}
+                            <div id="generatedCodeSection">
+                                <div class="bg-base-200 rounded-lg p-4 text-center">
+                                    <p class="text-xs text-base-content/60 mb-2">Your Recovery Code</p>
+                                    <div class="flex items-center justify-center gap-2">
+                                        <code id="generatedCode" class="text-2xl font-mono tracking-wider select-all">Click generate</code>
+                                        <button type="button" onclick="copyCode()" class="btn btn-ghost btn-xs" title="Copy code">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                        </button>
+                                    </div>
+                                    <button type="button" onclick="generateNewCode()" class="btn btn-ghost btn-xs mt-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                        Generate New
+                                    </button>
+                                </div>
+                                <input type="hidden" name="recovery_code" id="recoveryCodeInput" value="" />
+                            </div>
+
+                            {{-- Custom Code Input --}}
+                            <div id="customCodeSection" class="hidden">
+                                <div class="form-control">
+                                    <label class="label">
+                                        <span class="label-text">Enter 16-digit code</span>
+                                    </label>
+                                    <input type="text" id="customCodeInput" maxlength="16" pattern="[0-9]{16}" placeholder="0000000000000000" class="input input-bordered text-center text-xl tracking-wider font-mono" oninput="validateCustomCode()" />
+                                    <label class="label">
+                                        <span id="customCodeHint" class="label-text-alt text-base-content/60">Enter exactly 16 digits</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {{-- Password Confirmation --}}
+                            <div class="form-control">
+                                <label class="label">
+                                    <span class="label-text">Confirm your password</span>
+                                </label>
+                                <input type="password" name="current_password" class="input input-bordered" required />
+                                <label class="label">
+                                    <span class="label-text-alt text-base-content/60">Required to save changes</span>
+                                </label>
+                            </div>
+
+                            <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                                <strong>Important:</strong> Write down or save this code securely. You'll need it to verify your identity if you ever need account recovery assistance.
+                            </div>
+
+                            <div class="flex gap-2 pt-2">
+                                <button type="button" onclick="closeRecoveryCodeModal()" class="btn btn-ghost flex-1">Cancel</button>
+                                <button type="submit" id="saveRecoveryCodeBtn" class="btn btn-primary flex-1" disabled>Save Recovery Code</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
             {{-- Recent Login Activity --}}
             @if($loginAttempts->count() > 0)
             <div class="card bg-base-100 shadow-sm">
@@ -460,15 +680,15 @@
                                 <input type="checkbox" name="email_notifications" value="1" class="toggle toggle-primary" {{ $tenant->getSetting('notifications.email_notifications', true) ? 'checked' : '' }} />
                             </label>
 
-                            <label class="flex items-center justify-between p-3 border border-base-200 rounded-lg cursor-pointer hover:bg-base-50">
+                            <label class="flex items-center justify-between p-3 border border-base-200 rounded-lg opacity-60 cursor-not-allowed">
                                 <div class="flex items-center gap-3">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-base-content/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
                                     <div>
-                                        <p class="font-medium">SMS Notifications</p>
+                                        <p class="font-medium">SMS Notifications <span class="badge badge-sm badge-ghost ml-2">Coming Soon</span></p>
                                         <p class="text-xs text-base-content/60">Receive important alerts via SMS</p>
                                     </div>
                                 </div>
-                                <input type="checkbox" name="sms_notifications" value="1" class="toggle toggle-primary" {{ $tenant->getSetting('notifications.sms_notifications', false) ? 'checked' : '' }} />
+                                <input type="checkbox" name="sms_notifications" value="1" class="toggle toggle-primary" disabled />
                             </label>
                         </div>
                     </div>
@@ -525,22 +745,22 @@
 
                     {{-- Digest & Marketing --}}
                     <div>
-                        <h3 class="text-sm font-semibold text-base-content/80 mb-3">Summary & Updates</h3>
-                        <div class="space-y-3">
-                            <label class="flex items-center justify-between p-3 border border-base-200 rounded-lg cursor-pointer hover:bg-base-50">
+                        <h3 class="text-sm font-semibold text-base-content/80 mb-3">Summary & Updates <span class="badge badge-sm badge-ghost ml-2">Coming Soon</span></h3>
+                        <div class="space-y-3 opacity-60">
+                            <label class="flex items-center justify-between p-3 border border-base-200 rounded-lg cursor-not-allowed">
                                 <div>
                                     <p class="font-medium">Weekly Digest</p>
                                     <p class="text-xs text-base-content/60">Weekly summary of activity</p>
                                 </div>
-                                <input type="checkbox" name="weekly_digest" value="1" class="toggle toggle-primary" {{ $tenant->getSetting('notifications.weekly_digest', false) ? 'checked' : '' }} />
+                                <input type="checkbox" name="weekly_digest" value="1" class="toggle toggle-primary" disabled />
                             </label>
 
-                            <label class="flex items-center justify-between p-3 border border-base-200 rounded-lg cursor-pointer hover:bg-base-50">
+                            <label class="flex items-center justify-between p-3 border border-base-200 rounded-lg cursor-not-allowed">
                                 <div>
                                     <p class="font-medium">Product Updates</p>
                                     <p class="text-xs text-base-content/60">New features and announcements</p>
                                 </div>
-                                <input type="checkbox" name="marketing_emails" value="1" class="toggle toggle-primary" {{ $tenant->getSetting('notifications.marketing_emails', false) ? 'checked' : '' }} />
+                                <input type="checkbox" name="marketing_emails" value="1" class="toggle toggle-primary" disabled />
                             </label>
                         </div>
                     </div>
@@ -659,12 +879,12 @@
                                 <input type="checkbox" name="activity_tracking" value="1" class="toggle toggle-primary" {{ $tenant->getSetting('privacy.activity_tracking', true) ? 'checked' : '' }} />
                             </label>
 
-                            <label class="flex items-center justify-between p-3 border border-base-200 rounded-lg cursor-pointer hover:bg-base-50">
+                            <label class="flex items-center justify-between p-3 border border-base-200 rounded-lg opacity-60 cursor-not-allowed">
                                 <div>
-                                    <p class="font-medium">Anonymous Analytics</p>
+                                    <p class="font-medium">Anonymous Analytics <span class="badge badge-sm badge-ghost ml-2">Coming Soon</span></p>
                                     <p class="text-xs text-base-content/60">Help improve FamilyLedger with usage data</p>
                                 </div>
-                                <input type="checkbox" name="share_analytics" value="1" class="toggle toggle-primary" {{ $tenant->getSetting('privacy.share_analytics', false) ? 'checked' : '' }} />
+                                <input type="checkbox" name="share_analytics" value="1" class="toggle toggle-primary" disabled />
                             </label>
                         </div>
 
@@ -751,16 +971,290 @@ function previewAvatar(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
         reader.onload = function(e) {
-            const avatarContainer = input.closest('form').querySelector('.avatar');
+            const avatarContainer = document.getElementById('avatar-container');
             avatarContainer.classList.remove('placeholder');
             avatarContainer.innerHTML = `
-                <div class="w-20 rounded-full">
-                    <img src="${e.target.result}" alt="Avatar Preview" />
+                <div class="w-20 h-20 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
+                    <img src="${e.target.result}" alt="Avatar Preview" class="rounded-full object-cover" />
                 </div>
             `;
+            // Show remove button if it was hidden
+            const removeBtn = document.getElementById('remove-avatar-btn');
+            if (!removeBtn) {
+                // Add remove button dynamically
+                const btnContainer = input.closest('.flex.flex-wrap');
+                if (btnContainer) {
+                    const newBtn = document.createElement('button');
+                    newBtn.type = 'button';
+                    newBtn.id = 'remove-avatar-btn';
+                    newBtn.className = 'btn btn-ghost btn-sm text-error gap-2';
+                    newBtn.onclick = confirmRemoveAvatar;
+                    newBtn.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        Remove
+                    `;
+                    btnContainer.appendChild(newBtn);
+                }
+            }
         };
         reader.readAsDataURL(input.files[0]);
     }
+}
+
+function confirmRemoveAvatar() {
+    if (confirm('Are you sure you want to remove your profile photo?')) {
+        document.getElementById('remove-avatar-form').submit();
+    }
+}
+
+// Authenticator Setup
+let authenticatorSecret = '';
+
+function initAuthenticatorSetup() {
+    const modal = document.getElementById('authenticatorSetupModal');
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    // Reset to step 1
+    document.getElementById('authenticatorStep1').classList.remove('hidden');
+    document.getElementById('authenticatorStep2').classList.add('hidden');
+    document.getElementById('authenticatorCode').value = '';
+    document.getElementById('authenticatorError').classList.add('hidden');
+
+    // Show loading state
+    document.getElementById('qrCodeContainer').innerHTML = '<span class="loading loading-spinner loading-lg"></span>';
+    document.getElementById('secretKey').textContent = 'Loading...';
+
+    // Fetch QR code and secret from server
+    fetch('/settings/mfa/authenticator/setup', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            authenticatorSecret = data.secret;
+            document.getElementById('qrCodeContainer').innerHTML = data.qr_code;
+            document.getElementById('secretKey').textContent = data.secret;
+        } else {
+            document.getElementById('qrCodeContainer').innerHTML = '<p class="text-error text-sm">Failed to generate QR code. Please try again.</p>';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('qrCodeContainer').innerHTML = '<p class="text-error text-sm">Failed to generate QR code. Please try again.</p>';
+    });
+}
+
+function showAuthenticatorStep1() {
+    document.getElementById('authenticatorStep1').classList.remove('hidden');
+    document.getElementById('authenticatorStep2').classList.add('hidden');
+}
+
+function showAuthenticatorStep2() {
+    document.getElementById('authenticatorStep1').classList.add('hidden');
+    document.getElementById('authenticatorStep2').classList.remove('hidden');
+    document.getElementById('authenticatorCode').focus();
+}
+
+function verifyAuthenticatorCode() {
+    const code = document.getElementById('authenticatorCode').value.trim();
+    const errorEl = document.getElementById('authenticatorError');
+    const verifyBtn = document.getElementById('verifyAuthBtn');
+
+    if (code.length !== 6 || !/^\d+$/.test(code)) {
+        errorEl.textContent = 'Please enter a valid 6-digit code';
+        errorEl.classList.remove('hidden');
+        return;
+    }
+
+    // Disable button and show loading
+    verifyBtn.disabled = true;
+    verifyBtn.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Verifying...';
+    errorEl.classList.add('hidden');
+
+    fetch('/settings/mfa/authenticator/confirm', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            code: code,
+            secret: authenticatorSecret
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close modal and reload page to show success
+            closeAuthenticatorModal();
+            window.location.reload();
+        } else {
+            errorEl.textContent = data.message || 'Invalid code. Please try again.';
+            errorEl.classList.remove('hidden');
+            verifyBtn.disabled = false;
+            verifyBtn.innerHTML = 'Verify & Enable';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        errorEl.textContent = 'An error occurred. Please try again.';
+        errorEl.classList.remove('hidden');
+        verifyBtn.disabled = false;
+        verifyBtn.innerHTML = 'Verify & Enable';
+    });
+}
+
+function closeAuthenticatorModal() {
+    const modal = document.getElementById('authenticatorSetupModal');
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
+    authenticatorSecret = '';
+}
+
+// Allow Enter key to submit code and Escape to close modal
+document.addEventListener('DOMContentLoaded', function() {
+    const codeInput = document.getElementById('authenticatorCode');
+    if (codeInput) {
+        codeInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                verifyAuthenticatorCode();
+            }
+        });
+    }
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('authenticatorSetupModal');
+            if (modal && !modal.classList.contains('hidden')) {
+                closeAuthenticatorModal();
+            }
+            const recoveryModal = document.getElementById('recoveryCodeModal');
+            if (recoveryModal && !recoveryModal.classList.contains('hidden')) {
+                closeRecoveryCodeModal();
+            }
+        }
+    });
+});
+
+// Recovery Code Modal Functions
+function openRecoveryCodeModal() {
+    const modal = document.getElementById('recoveryCodeModal');
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    // Reset form
+    document.getElementById('recoveryCodeForm').reset();
+    document.getElementById('generatedCode').textContent = 'Click generate';
+    document.getElementById('recoveryCodeInput').value = '';
+    document.getElementById('saveRecoveryCodeBtn').disabled = true;
+    toggleCodeInput();
+
+    // Auto-generate a code on open
+    generateNewCode();
+}
+
+function closeRecoveryCodeModal() {
+    const modal = document.getElementById('recoveryCodeModal');
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+function toggleCodeInput() {
+    const method = document.querySelector('input[name="code_method"]:checked').value;
+    const generatedSection = document.getElementById('generatedCodeSection');
+    const customSection = document.getElementById('customCodeSection');
+    const saveBtn = document.getElementById('saveRecoveryCodeBtn');
+
+    if (method === 'generate') {
+        generatedSection.classList.remove('hidden');
+        customSection.classList.add('hidden');
+        // Enable save if we have a generated code
+        const code = document.getElementById('recoveryCodeInput').value;
+        saveBtn.disabled = !code || code.length !== 16;
+    } else {
+        generatedSection.classList.add('hidden');
+        customSection.classList.remove('hidden');
+        validateCustomCode();
+    }
+}
+
+function generateNewCode() {
+    const codeDisplay = document.getElementById('generatedCode');
+    const codeInput = document.getElementById('recoveryCodeInput');
+    const saveBtn = document.getElementById('saveRecoveryCodeBtn');
+
+    codeDisplay.textContent = 'Generating...';
+
+    fetch('{{ route("settings.recovery-code.generate") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.code) {
+            // Format the code with spaces for readability
+            const formattedCode = data.code.match(/.{1,4}/g).join(' ');
+            codeDisplay.textContent = formattedCode;
+            codeInput.value = data.code;
+            saveBtn.disabled = false;
+        } else {
+            codeDisplay.textContent = 'Error generating';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        codeDisplay.textContent = 'Error generating';
+    });
+}
+
+function validateCustomCode() {
+    const input = document.getElementById('customCodeInput');
+    const hint = document.getElementById('customCodeHint');
+    const saveBtn = document.getElementById('saveRecoveryCodeBtn');
+    const recoveryInput = document.getElementById('recoveryCodeInput');
+
+    const value = input.value.replace(/\D/g, ''); // Remove non-digits
+    input.value = value;
+
+    if (value.length === 16) {
+        hint.textContent = 'Valid code';
+        hint.classList.remove('text-base-content/60', 'text-error');
+        hint.classList.add('text-success');
+        saveBtn.disabled = false;
+        recoveryInput.value = value;
+    } else {
+        hint.textContent = `${value.length}/16 digits`;
+        hint.classList.remove('text-success', 'text-error');
+        hint.classList.add('text-base-content/60');
+        saveBtn.disabled = true;
+        recoveryInput.value = '';
+    }
+}
+
+function copyCode() {
+    const codeText = document.getElementById('generatedCode').textContent.replace(/\s/g, '');
+    navigator.clipboard.writeText(codeText).then(() => {
+        // Show brief feedback
+        const btn = event.currentTarget;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>';
+        setTimeout(() => {
+            btn.innerHTML = originalHtml;
+        }, 1500);
+    });
 }
 </script>
 @endsection

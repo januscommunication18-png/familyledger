@@ -45,13 +45,6 @@ class PetController extends Controller
 
         // Transform pets to match mobile app format
         $pets = $rawPets->map(function ($pet) {
-            $age = null;
-            if ($pet->date_of_birth) {
-                $years = $pet->date_of_birth->diffInYears(now());
-                $months = $pet->date_of_birth->diffInMonths(now()) % 12;
-                $age = $years > 0 ? "{$years} year" . ($years > 1 ? 's' : '') : "{$months} month" . ($months > 1 ? 's' : '');
-            }
-
             return [
                 'id' => $pet->id,
                 'name' => $pet->name,
@@ -60,7 +53,7 @@ class PetController extends Controller
                 'species_emoji' => self::SPECIES_EMOJIS[$pet->species] ?? '🐾',
                 'breed' => $pet->breed,
                 'date_of_birth' => $pet->date_of_birth?->format('Y-m-d'),
-                'age' => $age ?? $pet->approx_age,
+                'age' => $pet->age,
                 'gender' => $pet->gender,
                 'microchip_id' => $pet->microchip_id,
                 'photo_url' => $pet->photo_url,
@@ -117,13 +110,15 @@ class PetController extends Controller
 
         $pet->load(['vaccinations', 'medications']);
 
-        // Calculate age
-        $age = null;
+        // Calculate age short format
         $ageShort = null;
         if ($pet->date_of_birth) {
-            $years = $pet->date_of_birth->diffInYears(now());
-            $months = $pet->date_of_birth->diffInMonths(now()) % 12;
-            $age = $years > 0 ? "{$years} year" . ($years > 1 ? 's' : '') : "{$months} month" . ($months > 1 ? 's' : '');
+            $years = (int) $pet->date_of_birth->diffInYears(now());
+            $months = (int) ($pet->date_of_birth->diffInMonths(now()) % 12);
+            $ageShort = $years > 0 ? "{$years}y {$months}m" : "{$months}m";
+        } elseif ($pet->approx_age) {
+            $years = (int) floor($pet->approx_age);
+            $months = (int) round(($pet->approx_age - $years) * 12);
             $ageShort = $years > 0 ? "{$years}y {$months}m" : "{$months}m";
         }
 
@@ -184,7 +179,7 @@ class PetController extends Controller
                 'gender_label' => $pet->gender ? ucfirst($pet->gender) : null,
                 'date_of_birth' => $pet->date_of_birth?->format('M d, Y'),
                 'date_of_birth_raw' => $pet->date_of_birth?->format('Y-m-d'),
-                'age' => $age ?? $pet->approx_age,
+                'age' => $pet->age,
                 'age_short' => $ageShort,
                 'weight' => $pet->weight,
                 'color' => $pet->color,

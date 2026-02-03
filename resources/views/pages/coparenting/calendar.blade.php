@@ -435,8 +435,7 @@
 @endif
 
 @push('scripts')
-{{-- FullCalendar CDN --}}
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+@vite('resources/js/vendor/fullcalendar.js')
 
 <script>
     // Modal Functions

@@ -349,6 +349,149 @@
         </a>
     </div>
 
+    <!-- Additional Info Section -->
+    @if($selfMember)
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <!-- Education -->
+        <a href="{{ route('family-circle.member.education-info', [$circle, $selfMember]) }}" class="card bg-base-100 shadow-sm hover:shadow-md transition-all group cursor-pointer">
+            <div class="card-body p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                        </div>
+                        <h3 class="font-bold text-slate-800 text-sm">Education</h3>
+                    </div>
+                    <span class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                    </span>
+                </div>
+
+                @if($selfMember->schoolInfo)
+                    <div class="space-y-2 text-xs">
+                        @if($selfMember->schoolInfo->school_name)
+                            <div>
+                                <span class="text-slate-400 block mb-1">School</span>
+                                <span class="font-medium text-slate-700">{{ $selfMember->schoolInfo->school_name }}</span>
+                            </div>
+                        @endif
+                        @if($selfMember->schoolInfo->grade_level_name)
+                            <div>
+                                <span class="text-slate-400 block mb-1">Grade</span>
+                                <span class="badge badge-sm bg-blue-100 text-blue-700 border-0">{{ $selfMember->schoolInfo->grade_level_name }}</span>
+                            </div>
+                        @endif
+                    </div>
+                @else
+                    <div class="mt-1">
+                        <span class="btn btn-xs btn-primary w-full gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                            Add
+                        </span>
+                    </div>
+                @endif
+            </div>
+        </a>
+
+        <!-- Health & Medical -->
+        <a href="{{ route('family-circle.member.medical-info', [$circle, $selfMember]) }}" class="card bg-base-100 shadow-sm hover:shadow-md transition-all group cursor-pointer">
+            <div class="card-body p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-rose-600"><path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2h-2z"/></svg>
+                        </div>
+                        <h3 class="font-bold text-slate-800 text-sm">Health & Medical</h3>
+                    </div>
+                    <span class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                    </span>
+                </div>
+
+                @php
+                    $hasData = $selfMember->medications->count() > 0 || $selfMember->medicalConditions->count() > 0 || $selfMember->allergies->count() > 0;
+                @endphp
+
+                @if($hasData)
+                    <div class="space-y-2 text-xs">
+                        @if($selfMember->medications->count() > 0)
+                            <div>
+                                <span class="text-slate-400 block mb-1">Medications</span>
+                                <div class="flex flex-wrap gap-1">
+                                    @foreach($selfMember->medications->take(2) as $med)
+                                        <span class="badge badge-sm bg-violet-100 text-violet-700 border-0">{{ $med->name }}</span>
+                                    @endforeach
+                                    @if($selfMember->medications->count() > 2)
+                                        <span class="badge badge-sm bg-slate-100 text-slate-500 border-0">+{{ $selfMember->medications->count() - 2 }}</span>
+                                    @endif
+                                </div>
+                            </div>
+                        @endif
+                        @if($selfMember->allergies->count() > 0)
+                            <div>
+                                <span class="text-slate-400 block mb-1">Allergies</span>
+                                <div class="flex flex-wrap gap-1">
+                                    @foreach($selfMember->allergies->take(2) as $allergy)
+                                        <span class="badge badge-sm bg-rose-100 text-rose-700 border-0">{{ $allergy->allergen_name }}</span>
+                                    @endforeach
+                                    @if($selfMember->allergies->count() > 2)
+                                        <span class="badge badge-sm bg-slate-100 text-slate-500 border-0">+{{ $selfMember->allergies->count() - 2 }}</span>
+                                    @endif
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                @else
+                    <div class="mt-1">
+                        <span class="btn btn-xs btn-primary w-full gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                            Add
+                        </span>
+                    </div>
+                @endif
+            </div>
+        </a>
+
+        <!-- Emergency Contacts -->
+        <a href="{{ route('family-circle.member.emergency-contacts', [$circle, $selfMember]) }}" class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+            <div class="card-body p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-600"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        </div>
+                        <h3 class="font-bold text-slate-800 text-sm">Emergency Contacts</h3>
+                    </div>
+                    <span class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                    </span>
+                </div>
+
+                @if($selfMember->contacts->where('is_emergency_contact', true)->count() > 0)
+                    <div class="space-y-1.5">
+                        @foreach($selfMember->contacts->where('is_emergency_contact', true)->take(3) as $contact)
+                            <div class="flex items-center gap-2 text-xs">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                <span class="font-medium text-slate-700">{{ $contact->name }}</span>
+                            </div>
+                        @endforeach
+                        @if($selfMember->contacts->where('is_emergency_contact', true)->count() > 3)
+                            <span class="text-xs text-slate-400">+{{ $selfMember->contacts->where('is_emergency_contact', true)->count() - 3 }} more</span>
+                        @endif
+                    </div>
+                @else
+                    <div class="mt-1">
+                        <span class="btn btn-xs btn-primary w-full gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                            Add
+                        </span>
+                    </div>
+                @endif
+            </div>
+        </a>
+    </div>
+    @endif
+
     <!-- Insurance, Tax Returns & Assets Section -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <!-- Insurance Policies Card -->

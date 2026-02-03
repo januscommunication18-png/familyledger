@@ -506,4 +506,113 @@ class Budget extends Model
 
         return $spending;
     }
+
+    // ==================== SHARING HELPERS ====================
+
+    /**
+     * Check if this budget is owned by the given user.
+     */
+    public function isOwnedBy(?int $userId = null): bool
+    {
+        $userId = $userId ?? Auth::id();
+        return $this->created_by === $userId;
+    }
+
+    /**
+     * Check if this budget is shared with the given user.
+     */
+    public function isSharedWith(?int $userId = null): bool
+    {
+        $userId = $userId ?? Auth::id();
+
+        // If user owns the budget, it's not "shared with" them
+        if ($this->isOwnedBy($userId)) {
+            return false;
+        }
+
+        // Check if user has a collaborator record that has access to this budget
+        $collaboratorIds = Collaborator::where('user_id', $userId)->pluck('id')->toArray();
+
+        if (empty($collaboratorIds)) {
+            return false;
+        }
+
+        return $this->shares()->whereIn('collaborator_id', $collaboratorIds)->exists();
+    }
+
+    /**
+     * Get the share record for a given user (if shared with them).
+     */
+    public function getShareForUser(?int $userId = null): ?BudgetShare
+    {
+        $userId = $userId ?? Auth::id();
+
+        $collaboratorIds = Collaborator::where('user_id', $userId)->pluck('id')->toArray();
+
+        if (empty($collaboratorIds)) {
+            return null;
+        }
+
+        return $this->shares()->whereIn('collaborator_id', $collaboratorIds)->first();
+    }
+
+    /**
+     * Get the permission level for a given user.
+     * Returns 'owner' for the owner, or the share permission for shared users.
+     */
+    public function getUserPermission(?int $userId = null): string
+    {
+        $userId = $userId ?? Auth::id();
+
+        if ($this->isOwnedBy($userId)) {
+            return 'owner';
+        }
+
+        $share = $this->getShareForUser($userId);
+
+        return $share ? $share->permission : 'none';
+    }
+
+    /**
+     * Check if user can view this budget.
+     */
+    public function canUserView(?int $userId = null): bool
+    {
+        $permission = $this->getUserPermission($userId);
+        return in_array($permission, ['owner', 'view', 'edit', 'admin']);
+    }
+
+    /**
+     * Check if user can edit transactions in this budget.
+     */
+    public function canUserEdit(?int $userId = null): bool
+    {
+        $permission = $this->getUserPermission($userId);
+        return in_array($permission, ['owner', 'edit', 'admin']);
+    }
+
+    /**
+     * Check if user has admin access to this budget.
+     */
+    public function canUserAdmin(?int $userId = null): bool
+    {
+        $permission = $this->getUserPermission($userId);
+        return in_array($permission, ['owner', 'admin']);
+    }
+
+    /**
+     * Get the owner user of this budget.
+     */
+    public function getOwner(): ?User
+    {
+        return $this->creator;
+    }
+
+    /**
+     * Get the owner's name.
+     */
+    public function getOwnerName(): string
+    {
+        return $this->creator?->name ?? 'Unknown';
+    }
 }

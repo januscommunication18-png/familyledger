@@ -558,12 +558,20 @@ class ExpensesController extends Controller
 
         $children = $ownChildren->merge($coparentChildren)->unique('id')->sortBy('first_name')->values();
 
+        // Get user's permission for this budget
+        $userPermission = $budget->getUserPermission();
+        $isSharedBudget = $budget->isSharedWith();
+        $budgetOwnerName = $isSharedBudget ? $budget->getOwnerName() : null;
+
         return view('pages.expenses.transactions.index', [
             'budget' => $budget,
             'transactions' => $transactions,
             'categories' => $categories,
             'children' => $children,
             'filters' => $request->only(['category_id', 'type', 'start_date', 'end_date', 'search']),
+            'userPermission' => $userPermission,
+            'isSharedBudget' => $isSharedBudget,
+            'budgetOwnerName' => $budgetOwnerName,
         ]);
     }
 
@@ -578,6 +586,12 @@ class ExpensesController extends Controller
 
         if (!$budget) {
             return redirect()->route('expenses.intro');
+        }
+
+        // Check if user has permission to add transactions
+        if (!$budget->canUserEdit()) {
+            return redirect()->route('expenses.dashboard')
+                ->withErrors(['error' => 'You do not have permission to add transactions to this budget.']);
         }
 
         $categories = $budget->categories()->ordered()->get();
@@ -656,13 +670,19 @@ class ExpensesController extends Controller
             'payment_note' => 'nullable|string|max:500',
         ]);
 
-        // Handle receipt upload
+        // Handle receipt upload to Digital Ocean Spaces
         $receiptPath = null;
         $receiptOriginalFilename = null;
         if ($request->hasFile('receipt')) {
             $file = $request->file('receipt');
-            $receiptPath = $file->store('receipts/' . Auth::user()->tenant_id, 'public');
             $receiptOriginalFilename = $file->getClientOriginalName();
+            $filename = 'receipt_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            $receiptPath = 'receipts/' . Auth::user()->tenant_id . '/' . $filename;
+
+            // Store to Digital Ocean Spaces with public access
+            $disk = \Storage::disk('do_spaces');
+            $disk->put($receiptPath, file_get_contents($file->getRealPath()));
+            $disk->setVisibility($receiptPath, 'public');
         }
 
         $transaction = BudgetTransaction::create([
@@ -768,14 +788,21 @@ class ExpensesController extends Controller
             'shared_for_child_id' => $request->boolean('is_shared') ? ($validated['shared_for_child_id'] ?? null) : null,
         ];
 
-        // Handle receipt upload
+        // Handle receipt upload to Digital Ocean Spaces
         if ($request->hasFile('receipt')) {
             // Delete old receipt if exists
             if ($transaction->receipt_path) {
-                Storage::disk('public')->delete($transaction->receipt_path);
+                \Storage::disk('do_spaces')->delete($transaction->receipt_path);
             }
             $file = $request->file('receipt');
-            $updateData['receipt_path'] = $file->store('receipts/' . Auth::user()->tenant_id, 'public');
+            $filename = 'receipt_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            $receiptPath = 'receipts/' . Auth::user()->tenant_id . '/' . $filename;
+
+            $disk = \Storage::disk('do_spaces');
+            $disk->put($receiptPath, file_get_contents($file->getRealPath()));
+            $disk->setVisibility($receiptPath, 'public');
+
+            $updateData['receipt_path'] = $receiptPath;
             $updateData['receipt_original_filename'] = $file->getClientOriginalName();
         }
 
@@ -816,7 +843,7 @@ class ExpensesController extends Controller
         $this->authorizeBudgetAccess($transaction->budget, 'edit');
 
         if ($transaction->receipt_path) {
-            Storage::disk('public')->delete($transaction->receipt_path);
+            \Storage::disk('do_spaces')->delete($transaction->receipt_path);
             $transaction->update([
                 'receipt_path' => null,
                 'receipt_original_filename' => null,
@@ -835,7 +862,7 @@ class ExpensesController extends Controller
 
         $transaction->delete();
 
-        return back()->with('success', 'Transaction deleted successfully!');
+        return redirect()->route('expenses.transactions')->with('success', 'Transaction deleted successfully!');
     }
 
     // ==================== CSV IMPORT ====================
@@ -1333,6 +1360,25 @@ class ExpensesController extends Controller
             ->orderBy('first_name')
             ->get();
 
+        // Determine user's permission for the current budget
+        $userPermission = 'owner';
+        $isSharedBudget = false;
+        $budgetOwnerName = null;
+
+        if (!$showAllBudgets && $budget) {
+            $userPermission = $budget->getUserPermission();
+            $isSharedBudget = $budget->isSharedWith();
+            if ($isSharedBudget) {
+                $budgetOwnerName = $budget->getOwnerName();
+            }
+        }
+
+        // Add share info to all budgets for dropdown display
+        foreach ($allBudgets as $b) {
+            $b->is_shared_with_me = $b->isSharedWith();
+            $b->owner_name = $b->is_shared_with_me ? $b->getOwnerName() : null;
+        }
+
         return view('pages.expenses.dashboard', [
             'budget' => $budget,
             'allBudgets' => $allBudgets,
@@ -1355,6 +1401,10 @@ class ExpensesController extends Controller
             'currentPeriodLabel' => $currentPeriodLabel,
             // Goals for traditional budgets
             'goals' => $goals,
+            // Sharing info
+            'userPermission' => $userPermission,
+            'isSharedBudget' => $isSharedBudget,
+            'budgetOwnerName' => $budgetOwnerName,
         ]);
     }
 

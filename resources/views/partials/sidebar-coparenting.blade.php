@@ -66,6 +66,47 @@
             </a>
         </li>
 
+        {{-- Pending Edits --}}
+        @php
+            $user = auth()->user();
+            // Owner's pending edits (edits to review)
+            $ownerPendingCount = \App\Models\PendingCoparentEdit::where('tenant_id', $user->tenant_id)->pending()->count();
+            // Coparent's own submissions (edits awaiting approval from other owners)
+            $coparentTenantIds = \App\Models\Collaborator::where('user_id', $user->id)
+                ->where('coparenting_enabled', true)
+                ->where('is_active', true)
+                ->pluck('tenant_id')
+                ->toArray();
+            $mySubmissionsCount = \App\Models\PendingCoparentEdit::whereIn('tenant_id', $coparentTenantIds)
+                ->where('requested_by', $user->id)
+                ->pending()
+                ->count();
+            $totalPendingCount = $ownerPendingCount + $mySubmissionsCount;
+        @endphp
+        <li>
+            <a href="{{ route('coparenting.pending-edits.index') }}" class="group flex items-center gap-3 px-2 py-2.5 rounded-lg text-sm font-medium @if(request()->routeIs('coparenting.pending-edits.*')) bg-gradient-to-r from-violet-600 to-purple-600 text-white @else text-slate-400 hover:text-white hover:bg-slate-800 @endif">
+                <div class="w-5 h-5 shrink-0 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                </div>
+                <span class="nav-text flex items-center gap-2">
+                    Pending Edits
+                    @if($totalPendingCount > 0)
+                        <span class="badge badge-xs badge-warning" id="pending-edits-badge">{{ $totalPendingCount }}</span>
+                    @endif
+                </span>
+            </a>
+        </li>
+
+        {{-- Assets --}}
+        <li>
+            <a href="{{ route('coparenting.assets.index') }}" class="group flex items-center gap-3 px-2 py-2.5 rounded-lg text-sm font-medium @if(request()->routeIs('coparenting.assets.*')) bg-gradient-to-r from-violet-600 to-purple-600 text-white @else text-slate-400 hover:text-white hover:bg-slate-800 @endif">
+                <div class="w-5 h-5 shrink-0 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                </div>
+                <span class="nav-text">Assets</span>
+            </a>
+        </li>
+
         {{-- Expenses --}}
         <li>
             <a href="{{ route('coparenting.expenses') }}" class="group flex items-center gap-3 px-2 py-2.5 rounded-lg text-sm font-medium @if(request()->routeIs('coparenting.expenses')) bg-gradient-to-r from-violet-600 to-purple-600 text-white @else text-slate-400 hover:text-white hover:bg-slate-800 @endif">

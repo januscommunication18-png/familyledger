@@ -5,13 +5,15 @@ namespace App\Models;
 use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ShoppingItem extends Model
 {
-    use BelongsToTenant;
+    use BelongsToTenant, SoftDeletes;
 
     protected $fillable = [
         'tenant_id',
+        'user_id',
         'shopping_list_id',
         'name',
         'category',
@@ -22,6 +24,8 @@ class ShoppingItem extends Model
         'checked_by',
         'checked_at',
         'sort_order',
+        'version',
+        'last_modified_device',
     ];
 
     protected $casts = [

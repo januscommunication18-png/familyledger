@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\SafeEncrypted;
 use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -28,16 +29,17 @@ class MemberMedicalInfo extends Model
     ];
 
     protected $casts = [
-        // AES-256 encrypted PHI fields
-        'medications' => 'encrypted',
-        'allergies' => 'encrypted',
-        'medical_conditions' => 'encrypted',
-        'primary_physician' => 'encrypted',
-        'physician_phone' => 'encrypted',
-        'insurance_provider' => 'encrypted',
-        'insurance_policy_number' => 'encrypted',
-        'insurance_group_number' => 'encrypted',
-        'notes' => 'encrypted',
+        // AES-256 encrypted PHI fields (using SafeEncrypted for graceful error handling)
+        'blood_type' => SafeEncrypted::class,
+        'medications' => SafeEncrypted::class,
+        'allergies' => SafeEncrypted::class,
+        'medical_conditions' => SafeEncrypted::class,
+        'primary_physician' => SafeEncrypted::class,
+        'physician_phone' => SafeEncrypted::class,
+        'insurance_provider' => SafeEncrypted::class,
+        'insurance_policy_number' => SafeEncrypted::class,
+        'insurance_group_number' => SafeEncrypted::class,
+        'notes' => SafeEncrypted::class,
     ];
 
     /**

@@ -100,24 +100,6 @@ class OnboardingController extends Controller
         ],
     ];
 
-    public const QUICK_SETUP = [
-        'documents' => [
-            'title' => 'Upload important documents',
-            'description' => 'Birth certificates, insurance, legal papers',
-        ],
-        'expenses' => [
-            'title' => 'Track shared expenses',
-            'description' => 'Bills, budgets, and reimbursements',
-        ],
-        'lists' => [
-            'title' => 'Create family lists',
-            'description' => 'Shopping, to-dos, meal planning',
-        ],
-        'medical' => [
-            'title' => 'Add medical / insurance info',
-            'description' => 'Health records, providers, medications',
-        ],
-    ];
 
     public function show(Request $request)
     {
@@ -128,10 +110,45 @@ class OnboardingController extends Controller
             return redirect()->route('dashboard');
         }
 
+        // Handle payment success redirect from Paddle
+        if ($request->has('payment') && $request->payment === 'success') {
+            $planId = $request->input('plan_id');
+            $billingCycle = $request->input('billing_cycle', 'monthly');
+
+            if ($planId) {
+                $plan = \App\Models\PackagePlan::find($planId);
+                if ($plan && $plan->isPaid()) {
+                    $tenant->update([
+                        'package_plan_id' => $plan->id,
+                        'subscription_tier' => 'paid',
+                        'billing_cycle' => $billingCycle,
+                        'subscription_expires_at' => $billingCycle === 'yearly' ? now()->addYear() : now()->addMonth(),
+                        'onboarding_completed' => true,
+                        'onboarding_step' => self::TOTAL_STEPS,
+                    ]);
+
+                    Log::info('Onboarding completed via Paddle payment redirect', [
+                        'tenant_id' => $tenant->id,
+                        'user_id' => $user->id,
+                        'plan_id' => $plan->id,
+                        'billing_cycle' => $billingCycle,
+                    ]);
+
+                    return redirect()->route('dashboard')->with('success', 'Welcome! Your premium subscription is now active.');
+                }
+            }
+        }
+
         // Split name into first and last if not already set
         $nameParts = explode(' ', $user->name, 2);
         $firstName = $user->first_name ?? $nameParts[0] ?? '';
         $lastName = $user->last_name ?? ($nameParts[1] ?? '');
+
+        // Get plans for billing step (free plans first, then by sort_order)
+        $plans = \App\Models\PackagePlan::active()
+            ->orderByRaw("CASE WHEN type = 'free' THEN 0 ELSE 1 END")
+            ->ordered()
+            ->get();
 
         return view('onboarding.index', [
             'step' => $tenant->onboarding_step ?? 1,
@@ -141,7 +158,7 @@ class OnboardingController extends Controller
             'countryCodes' => self::COUNTRY_CODES,
             'familyTypes' => self::FAMILY_TYPES,
             'roles' => self::ROLES,
-            'quickSetup' => self::QUICK_SETUP,
+            'plans' => $plans,
             'tenant' => [
                 'id' => $tenant->id,
                 'name' => $tenant->name,
@@ -149,7 +166,6 @@ class OnboardingController extends Controller
                 'timezone' => $tenant->timezone,
                 'family_type' => $tenant->family_type,
                 'goals' => $tenant->goals ?? [],
-                'quick_setup' => $tenant->quick_setup ?? [],
             ],
             'user' => [
                 'id' => $user->id,
@@ -258,24 +274,6 @@ class OnboardingController extends Controller
 
     public function step4(Request $request)
     {
-        $request->validate([
-            'quick_setup' => 'required|array|min:1',
-            'quick_setup.*' => 'string|in:' . implode(',', array_keys(self::QUICK_SETUP)),
-        ]);
-
-        $tenant = $request->user()->tenant;
-        $tenant->update([
-            'quick_setup' => $request->quick_setup,
-            'onboarding_step' => 5,
-        ]);
-
-        Log::info('Onboarding step 4 completed', ['tenant_id' => $tenant->id]);
-
-        return redirect()->route('onboarding');
-    }
-
-    public function step5(Request $request)
-    {
         $user = $request->user();
         $tenant = $user->tenant;
 
@@ -291,16 +289,151 @@ class OnboardingController extends Controller
         ]);
 
         $tenant->update([
-            'onboarding_completed' => true,
-            'onboarding_step' => self::TOTAL_STEPS,
+            'onboarding_step' => 5,
         ]);
 
-        Log::info('Onboarding completed', [
+        Log::info('Onboarding step 4 completed', [
             'tenant_id' => $tenant->id,
             'user_id' => $user->id,
             'mfa_enabled' => $user->mfa_enabled,
             'phone_2fa_enabled' => $user->phone_2fa_enabled,
         ]);
+
+        return redirect()->route('onboarding');
+    }
+
+    public function step5(Request $request)
+    {
+        $user = $request->user();
+        $tenant = $user->tenant;
+
+        $selectedPlanId = $request->input('plan_id');
+        $billingCycle = $request->input('billing_cycle', 'monthly');
+
+        // Get the selected plan
+        $plan = \App\Models\PackagePlan::find($selectedPlanId);
+
+        if ($plan) {
+            // If free plan, just assign it and complete
+            if ($plan->isFree()) {
+                $tenant->update([
+                    'package_plan_id' => $plan->id,
+                    'subscription_tier' => 'free',
+                    'billing_cycle' => null,
+                    'onboarding_completed' => true,
+                    'onboarding_step' => self::TOTAL_STEPS,
+                ]);
+
+                Log::info('Onboarding completed with free plan', [
+                    'tenant_id' => $tenant->id,
+                    'user_id' => $user->id,
+                    'plan_id' => $plan->id,
+                ]);
+            } else {
+                // For paid plans, the payment will be handled via JavaScript/Paddle
+                // This endpoint is called after successful payment
+                $tenant->update([
+                    'package_plan_id' => $plan->id,
+                    'subscription_tier' => 'paid',
+                    'billing_cycle' => $billingCycle,
+                    'onboarding_completed' => true,
+                    'onboarding_step' => self::TOTAL_STEPS,
+                ]);
+
+                Log::info('Onboarding completed with paid plan', [
+                    'tenant_id' => $tenant->id,
+                    'user_id' => $user->id,
+                    'plan_id' => $plan->id,
+                    'billing_cycle' => $billingCycle,
+                ]);
+            }
+        } else {
+            // No plan selected, use default free plan
+            $freePlan = \App\Models\PackagePlan::where('type', 'free')->active()->first();
+            $tenant->update([
+                'package_plan_id' => $freePlan?->id,
+                'subscription_tier' => 'free',
+                'onboarding_completed' => true,
+                'onboarding_step' => self::TOTAL_STEPS,
+            ]);
+
+            Log::info('Onboarding completed with default free plan', [
+                'tenant_id' => $tenant->id,
+                'user_id' => $user->id,
+            ]);
+        }
+
+        // Check if there's a pending collaborator invite to accept
+        $pendingInviteRedirect = session('pending_invite_redirect');
+        if ($pendingInviteRedirect) {
+            session()->forget('pending_invite_redirect');
+            Log::info('Redirecting to pending invite after onboarding', ['user_id' => $user->id, 'redirect' => $pendingInviteRedirect]);
+            return redirect($pendingInviteRedirect)->with('success', 'Account setup complete! You can now accept the invitation.');
+        }
+
+        return redirect()->route('dashboard')->with('success', 'Welcome! Your account is all set up.');
+    }
+
+    public function step6(Request $request)
+    {
+        $user = $request->user();
+        $tenant = $user->tenant;
+
+        $selectedPlanId = $request->input('plan_id');
+        $billingCycle = $request->input('billing_cycle', 'monthly');
+
+        // Get the selected plan
+        $plan = \App\Models\PackagePlan::find($selectedPlanId);
+
+        if ($plan) {
+            // If free plan, just assign it and complete
+            if ($plan->isFree()) {
+                $tenant->update([
+                    'package_plan_id' => $plan->id,
+                    'subscription_tier' => 'free',
+                    'billing_cycle' => null,
+                    'onboarding_completed' => true,
+                    'onboarding_step' => self::TOTAL_STEPS,
+                ]);
+
+                Log::info('Onboarding completed with free plan', [
+                    'tenant_id' => $tenant->id,
+                    'user_id' => $user->id,
+                    'plan_id' => $plan->id,
+                ]);
+            } else {
+                // For paid plans, the payment will be handled via JavaScript/Paddle
+                // This endpoint is called after successful payment
+                $tenant->update([
+                    'package_plan_id' => $plan->id,
+                    'subscription_tier' => 'paid',
+                    'billing_cycle' => $billingCycle,
+                    'onboarding_completed' => true,
+                    'onboarding_step' => self::TOTAL_STEPS,
+                ]);
+
+                Log::info('Onboarding completed with paid plan', [
+                    'tenant_id' => $tenant->id,
+                    'user_id' => $user->id,
+                    'plan_id' => $plan->id,
+                    'billing_cycle' => $billingCycle,
+                ]);
+            }
+        } else {
+            // No plan selected, use default free plan
+            $freePlan = \App\Models\PackagePlan::where('type', 'free')->active()->first();
+            $tenant->update([
+                'package_plan_id' => $freePlan?->id,
+                'subscription_tier' => 'free',
+                'onboarding_completed' => true,
+                'onboarding_step' => self::TOTAL_STEPS,
+            ]);
+
+            Log::info('Onboarding completed with default free plan', [
+                'tenant_id' => $tenant->id,
+                'user_id' => $user->id,
+            ]);
+        }
 
         // Check if there's a pending collaborator invite to accept
         $pendingInviteRedirect = session('pending_invite_redirect');

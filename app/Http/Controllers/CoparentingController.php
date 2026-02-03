@@ -308,19 +308,43 @@ class CoparentingController extends Controller
     {
         session(['coparenting_mode' => true]);
 
-        $children = FamilyMember::forCurrentTenant()
+        $user = auth()->user();
+
+        // Get children with co-parenting enabled from user's own tenant
+        $ownChildren = FamilyMember::forCurrentTenant()
             ->minors()
             ->where('co_parenting_enabled', true)
             ->with('coparents.user')
             ->get();
+
+        // Get children the user has co-parent access to (from other tenants)
+        $coparentAccess = Collaborator::where('user_id', $user->id)
+            ->where('coparenting_enabled', true)
+            ->with(['coparentChildren' => function($query) {
+                $query->with(['coparents.user']);
+            }, 'inviter'])
+            ->get();
+
+        $sharedChildren = collect();
+        foreach ($coparentAccess as $collaborator) {
+            foreach ($collaborator->coparentChildren as $child) {
+                $child->is_shared = true;
+                $child->other_parent_name = $collaborator->inviter->name ?? 'Unknown';
+                $sharedChildren->push($child);
+            }
+        }
+
+        // Merge own children and shared children, avoiding duplicates
+        $children = $ownChildren->merge($sharedChildren)->unique('id');
 
         return view('pages.coparenting.children.index', compact('children'));
     }
 
     /**
      * Display a specific child's details.
+     * Redirects to the family-circle member view which has full edit functionality.
      */
-    public function showChild(FamilyMember $child): View
+    public function showChild(FamilyMember $child)
     {
         session(['coparenting_mode' => true]);
 
@@ -337,34 +361,9 @@ class CoparentingController extends Controller
 
         abort_unless($isOwner || $isCoparent, 403);
 
-        // Load co-parents and related data for this child
-        $child->load([
-            'coparents.user',
-            'medicalInfo',
-            'schoolInfo',
-            'emergencyContacts',
-            'allergies',
-            'medicalConditions',
-            'medications',
-            'healthcareProviders',
-            'documents',
-            'insurancePolicies',
-            'taxReturns',
-            'assets'
-        ]);
-
-        // Get the collaborator record if user is a co-parent (for permission checking)
-        $collaborator = null;
-        if ($isCoparent) {
-            $collaborator = Collaborator::where('user_id', $user->id)
-                ->where('coparenting_enabled', true)
-                ->whereHas('coparentChildren', function($query) use ($child) {
-                    $query->where('family_member_id', $child->id);
-                })
-                ->first();
-        }
-
-        return view('pages.coparenting.children.show', compact('child', 'isOwner', 'isCoparent', 'collaborator'));
+        // Redirect to the family-circle member view which has full edit functionality
+        // The family-circle view handles coparent permissions properly via the MemberAccessService
+        return redirect()->route('family-circle.member.show', [$child->family_circle_id, $child->id]);
     }
 
     /**
@@ -1183,11 +1182,31 @@ class CoparentingController extends Controller
     {
         session(['coparenting_mode' => true]);
 
-        // Get children with co-parenting enabled
-        $children = FamilyMember::forCurrentTenant()
+        $user = auth()->user();
+
+        // Get children with co-parenting enabled from user's own tenant
+        $ownChildren = FamilyMember::forCurrentTenant()
             ->minors()
             ->where('co_parenting_enabled', true)
             ->get();
+
+        // Get children the user has co-parent access to (from other tenants)
+        $coparentAccess = Collaborator::where('user_id', $user->id)
+            ->where('coparenting_enabled', true)
+            ->with('coparentChildren')
+            ->get();
+
+        $sharedChildren = collect();
+        foreach ($coparentAccess as $collaborator) {
+            foreach ($collaborator->coparentChildren as $child) {
+                $child->is_shared = true;
+                $child->other_parent_name = $collaborator->inviter->name ?? 'Unknown';
+                $sharedChildren->push($child);
+            }
+        }
+
+        // Merge own children and shared children, avoiding duplicates
+        $children = $ownChildren->merge($sharedChildren)->unique('id');
 
         return view('pages.coparenting.placeholders.child-info', compact('children'));
     }

@@ -151,9 +151,10 @@ class ExpenseController extends Controller
                 'remaining' => round($remaining, 2),
                 'formatted_remaining' => '$' . number_format($remaining, 2),
                 'spent_percentage' => $spentPercentage,
-                'total_this_month' => round($totalThisMonth, 2),
+                // iOS expects these field names
+                'this_month' => round($totalThisMonth, 2),
                 'formatted_this_month' => '$' . number_format($totalThisMonth, 2),
-                'total_last_month' => round($totalLastMonth, 2),
+                'last_month' => round($totalLastMonth, 2),
                 'formatted_last_month' => '$' . number_format($totalLastMonth, 2),
                 'month_over_month_change' => $totalLastMonth > 0
                     ? round((($totalThisMonth - $totalLastMonth) / $totalLastMonth) * 100, 1)
@@ -197,8 +198,41 @@ class ExpenseController extends Controller
             return $this->forbidden();
         }
 
+        $expense->load(['category', 'budget']);
+
         return $this->success([
-            'expense' => $expense->load(['category', 'budget']),
+            'expense' => [
+                'id' => $expense->id,
+                'description' => $expense->description,
+                'amount' => $expense->amount,
+                'formatted_amount' => '$' . number_format($expense->amount, 2),
+                'date' => $expense->transaction_date?->format('M d, Y'),
+                'transaction_date' => $expense->transaction_date,
+                'category' => $expense->category ? [
+                    'id' => $expense->category->id,
+                    'name' => $expense->category->name,
+                    'icon' => $expense->category->icon,
+                    'color' => $expense->category->color,
+                ] : null,
+                'budget' => $expense->budget ? [
+                    'id' => $expense->budget->id,
+                    'name' => $expense->budget->name,
+                ] : null,
+                'payee' => $expense->payee,
+                'is_shared' => $expense->is_shared,
+                'has_receipt' => !empty($expense->receipt_path),
+                'receipt_url' => $expense->receipt_path
+                    ? \Illuminate\Support\Facades\Storage::disk('do_spaces')->url($expense->receipt_path)
+                    : null,
+                // Additional fields
+                'notes' => $expense->metadata['notes'] ?? null,
+                'payment_method' => $expense->metadata['payment_method'] ?? null,
+                'is_recurring' => $expense->metadata['is_recurring'] ?? false,
+                'recurring_frequency' => $expense->metadata['recurring_frequency'] ?? null,
+                'source' => $expense->source,
+                'source_label' => $expense->source_label,
+                'created_at' => $expense->created_at?->format('M d, Y g:i A'),
+            ],
         ]);
     }
 
@@ -322,6 +356,11 @@ class ExpenseController extends Controller
             'budget_id' => 'nullable|exists:budgets,id',
             'transaction_date' => 'required|date',
             'receipt' => 'nullable|string', // Base64 encoded image
+            // Additional expense fields
+            'notes' => 'nullable|string|max:1000',
+            'payment_method' => 'nullable|string|max:50',
+            'is_recurring' => 'nullable|boolean',
+            'recurring_frequency' => 'nullable|string|in:daily,weekly,biweekly,monthly,quarterly,yearly',
             // Co-parenting fields
             'is_shared' => 'nullable|boolean',
             'shared_for_child_id' => 'nullable|exists:family_members,id',
@@ -367,7 +406,10 @@ class ExpenseController extends Controller
                 $receiptOriginalFilename = $filename;
 
                 // Store the file to Digital Ocean Spaces
-                \Illuminate\Support\Facades\Storage::disk('do_spaces')->put($receiptPath, $decodedImage);
+                $disk = \Illuminate\Support\Facades\Storage::disk('do_spaces');
+                $disk->put($receiptPath, $decodedImage);
+                // Explicitly set public visibility for S3-compatible storage
+                $disk->setVisibility($receiptPath, 'public');
             } catch (\Exception $e) {
                 // Log error but don't fail the transaction
                 \Log::error('Failed to save receipt: ' . $e->getMessage());
@@ -376,6 +418,21 @@ class ExpenseController extends Controller
 
         $isShared = $request->boolean('is_shared');
         $sharedForChildId = $isShared ? ($validated['shared_for_child_id'] ?? null) : null;
+
+        // Build metadata for additional fields
+        $metadata = [];
+        if (!empty($validated['notes'])) {
+            $metadata['notes'] = $validated['notes'];
+        }
+        if (!empty($validated['payment_method'])) {
+            $metadata['payment_method'] = $validated['payment_method'];
+        }
+        if ($request->has('is_recurring')) {
+            $metadata['is_recurring'] = $request->boolean('is_recurring');
+        }
+        if (!empty($validated['recurring_frequency'])) {
+            $metadata['recurring_frequency'] = $validated['recurring_frequency'];
+        }
 
         $transaction = BudgetTransaction::create([
             'tenant_id' => $tenant->id,
@@ -392,6 +449,7 @@ class ExpenseController extends Controller
             'shared_for_child_id' => $sharedForChildId,
             'receipt_path' => $receiptPath,
             'receipt_original_filename' => $receiptOriginalFilename,
+            'metadata' => !empty($metadata) ? $metadata : null,
         ]);
 
         // Create payment request if requested
@@ -445,6 +503,14 @@ class ExpenseController extends Controller
                 'has_receipt' => !empty($receiptPath),
                 'receipt_url' => $receiptPath ? \Illuminate\Support\Facades\Storage::disk('do_spaces')->url($receiptPath) : null,
                 'payment_requested' => $paymentRequest !== null,
+                // Additional fields
+                'notes' => $metadata['notes'] ?? null,
+                'payment_method' => $metadata['payment_method'] ?? null,
+                'is_recurring' => $metadata['is_recurring'] ?? false,
+                'recurring_frequency' => $metadata['recurring_frequency'] ?? null,
+                'source' => $transaction->source,
+                'source_label' => $transaction->source_label,
+                'created_at' => $transaction->created_at?->format('M d, Y g:i A'),
             ],
         ], 'Expense created successfully', 201);
     }

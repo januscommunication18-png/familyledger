@@ -11,35 +11,61 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700" rel="stylesheet" />
 
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            50: '#faf5ff',
-                            100: '#f3e8ff',
-                            200: '#e9d5ff',
-                            300: '#d8b4fe',
-                            400: '#c084fc',
-                            500: '#a855f7',
-                            600: '#9333ea',
-                            700: '#7e22ce',
-                            800: '#6b21a8',
-                            900: '#581c87',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <!-- Tailwind CSS (pre-built) via jsDelivr with SRI -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" integrity="sha256-tq2XQC7duQPnpdenPuR6Z5IE773aRSGjkcutnfUJuTI=" crossorigin="anonymous">
+
+    <!-- Custom primary colors & dark mode -->
+    <style>
+        .bg-primary-50 { background-color: #faf5ff; }
+        .bg-primary-100 { background-color: #f3e8ff; }
+        .bg-primary-600 { background-color: #9333ea; }
+        .bg-primary-900 { background-color: #581c87; }
+        .text-primary-300 { color: #d8b4fe; }
+        .text-primary-700 { color: #7e22ce; }
+        .hover\:bg-primary-700:hover { background-color: #7e22ce; }
+        .focus\:ring-primary-500:focus { --tw-ring-color: #a855f7; }
+        .focus\:border-primary-500:focus { border-color: #a855f7; }
+
+        /* Dark mode */
+        .dark .dark\:bg-gray-900 { background-color: #111827; }
+        .dark .dark\:bg-primary-900 { background-color: #581c87; }
+        .dark .dark\:text-white { color: #ffffff; }
+        .dark .dark\:text-gray-400 { color: #9ca3af; }
+    </style>
 
     <style>
         [x-cloak] { display: none !important; }
         body { font-family: 'Inter', sans-serif; }
+
+        /* Alert Text Color Fixes for Better Visibility */
+        .alert-success, .bg-green-50 {
+            background-color: #dcfce7 !important;
+            border-color: #86efac !important;
+        }
+        .alert-success *, .text-green-800, .text-green-700 {
+            color: #166534 !important;
+        }
+        .alert-error, .bg-red-50 {
+            background-color: #fee2e2 !important;
+            border-color: #fca5a5 !important;
+        }
+        .alert-error *, .text-red-800, .text-red-700 {
+            color: #991b1b !important;
+        }
+        .alert-warning, .bg-amber-50, .bg-yellow-50 {
+            background-color: #fef3c7 !important;
+            border-color: #fcd34d !important;
+        }
+        .alert-warning *, .text-amber-800, .text-yellow-800 {
+            color: #92400e !important;
+        }
+        .alert-info, .bg-blue-50 {
+            background-color: #dbeafe !important;
+            border-color: #93c5fd !important;
+        }
+        .alert-info *, .text-blue-800, .text-blue-700 {
+            color: #1e40af !important;
+        }
     </style>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 min-h-screen flex"
@@ -102,8 +128,8 @@
         </div>
     </div>
 
-    <!-- Alpine.js -->
-    <script src="//unpkg.com/alpinejs" defer></script>
+    <!-- Alpine.js via jsDelivr with SRI -->
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js" defer integrity="sha256-NTuMLF/sME9UZFNI4NeECGUuD/BQklDxKSXxPyrXCHM=" crossorigin="anonymous"></script>
 
     @stack('scripts')
 </body>

@@ -115,6 +115,10 @@ class CollaboratorInvite extends Model
         'insurance' => ['label' => 'Insurance Policies', 'group' => 'Financial'],
         'tax_returns' => ['label' => 'Tax Returns', 'group' => 'Financial'],
         'assets' => ['label' => 'Assets', 'group' => 'Financial'],
+        // Legal Documents
+        'legal_documents' => ['label' => 'Legal Documents', 'group' => 'Legal'],
+        // Family Resources
+        'family_resources' => ['label' => 'Family Resources', 'group' => 'Resources'],
     ];
 
     public const PERMISSION_LEVELS = [
@@ -232,28 +236,35 @@ class CollaboratorInvite extends Model
             'accepted_user_id' => $user->id,
         ]);
 
-        // Create collaborator record
-        $collaborator = Collaborator::create([
-            'tenant_id' => $this->tenant_id,
-            'user_id' => $user->id,
-            'invited_by' => $this->invited_by,
-            'invite_id' => $this->id,
-            'relationship_type' => $this->relationship_type,
-            'role' => $this->role,
-            'coparenting_enabled' => $this->is_coparent_invite,
-            'parent_role' => $this->parent_role,
-        ]);
+        // Find existing collaborator or create new one
+        // Use updateOrCreate to handle case where user already has a collaborator record in this tenant
+        $collaborator = Collaborator::updateOrCreate(
+            [
+                'tenant_id' => $this->tenant_id,
+                'user_id' => $user->id,
+            ],
+            [
+                'invited_by' => $this->invited_by,
+                'invite_id' => $this->id,
+                'relationship_type' => $this->relationship_type,
+                'role' => $this->role,
+                'coparenting_enabled' => $this->is_coparent_invite ? true : false,
+                'parent_role' => $this->parent_role,
+                'is_active' => true,
+            ]
+        );
 
         // Copy family member permissions
         foreach ($this->familyMembers as $member) {
-            $collaborator->familyMembers()->attach($member->id, [
-                'permissions' => $member->pivot->permissions,
+            // Use syncWithoutDetaching to avoid duplicates
+            $collaborator->familyMembers()->syncWithoutDetaching([
+                $member->id => ['permissions' => $member->pivot->permissions],
             ]);
 
             // Also attach to coparent_children table for co-parent invites
             if ($this->is_coparent_invite) {
-                $collaborator->coparentChildren()->attach($member->id, [
-                    'permissions' => $member->pivot->permissions,
+                $collaborator->coparentChildren()->syncWithoutDetaching([
+                    $member->id => ['permissions' => $member->pivot->permissions],
                 ]);
             }
         }

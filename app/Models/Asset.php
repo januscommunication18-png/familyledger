@@ -15,6 +15,7 @@ class Asset extends Model
     protected $fillable = [
         'tenant_id',
         'name',
+        'image',
         'asset_category',
         'asset_type',
         'ownership_type',
@@ -444,5 +445,16 @@ class Asset extends Model
             return false;
         }
         return $this->warranty_expiry->isBetween(now(), now()->addDays(30));
+    }
+
+    /**
+     * Get asset image URL.
+     */
+    public function getImageUrlAttribute(): ?string
+    {
+        if ($this->image) {
+            return \Illuminate\Support\Facades\Storage::disk('do_spaces')->url($this->image);
+        }
+        return null;
     }
 }

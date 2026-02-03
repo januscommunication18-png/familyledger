@@ -6,6 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Otp;
 use App\Models\User;
 use App\Services\SmsService;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -39,42 +43,77 @@ class MfaController extends Controller
         $user = User::find($userId);
 
         if (!$user) {
-            session()->forget(['mfa_required', 'mfa_user_id']);
+            session()->forget(['mfa_required', 'mfa_user_id', 'mfa_login_type', 'mfa_has_authenticator']);
             return redirect('/login');
         }
+
+        // Check if this is a password login requiring verification
+        $isPasswordLogin = session('mfa_login_type') === 'password';
+        $hasAuthenticator = session('mfa_has_authenticator', false);
 
         // Determine available MFA methods for this user
         $availableMethods = [];
 
-        // Check if authenticator is set up
-        if ($user->two_factor_secret && $user->two_factor_confirmed_at) {
-            $availableMethods[] = 'authenticator';
-        }
-
-        // Check if email is verified
-        if ($user->email && $user->email_verified_at) {
+        // For password logins, determine available methods based on authenticator setup
+        if ($isPasswordLogin) {
+            // Email is always available for password logins
             $availableMethods[] = 'email';
+
+            // Only show authenticator option if user has it set up
+            if ($hasAuthenticator) {
+                $availableMethods[] = 'authenticator';
+            }
+        } else {
+            // Original logic for other MFA scenarios
+            if ($user->two_factor_secret && $user->two_factor_confirmed_at) {
+                $availableMethods[] = 'authenticator';
+            }
+
+            if ($user->email && $user->email_verified_at) {
+                $availableMethods[] = 'email';
+            }
+
+            $smsAvailable = $user->phone && $user->phone_verified_at && $this->smsService->isConfigured();
+            if ($smsAvailable) {
+                $availableMethods[] = 'sms';
+            }
         }
 
-        // SMS is always shown but marked as coming soon if not configured
-        $smsAvailable = $user->phone && $user->phone_verified_at && $this->smsService->isConfigured();
-        if ($smsAvailable) {
-            $availableMethods[] = 'sms';
-        }
-
-        // Default method priority: authenticator > email > sms
+        // Default method priority for password logins
         $defaultMethod = null;
-        if (in_array('authenticator', $availableMethods)) {
-            $defaultMethod = 'authenticator';
-        } elseif (in_array('email', $availableMethods)) {
-            $defaultMethod = 'email';
-        } elseif (in_array('sms', $availableMethods)) {
-            $defaultMethod = 'sms';
+        $autoSendEmail = false;
+
+        if ($isPasswordLogin) {
+            if ($hasAuthenticator) {
+                // User has authenticator - let them choose, default to authenticator
+                $defaultMethod = 'authenticator';
+            } else {
+                // No authenticator - email only, auto-send code
+                $defaultMethod = 'email';
+                $autoSendEmail = true;
+            }
+        } else {
+            // Original logic for other scenarios
+            if (in_array('authenticator', $availableMethods)) {
+                $defaultMethod = 'authenticator';
+            } elseif (in_array('email', $availableMethods)) {
+                $defaultMethod = 'email';
+            } elseif (in_array('sms', $availableMethods)) {
+                $defaultMethod = 'sms';
+            }
+
+            if ($user->mfa_method && in_array($user->mfa_method, $availableMethods)) {
+                $defaultMethod = $user->mfa_method;
+            }
         }
 
-        // If user has a preferred method and it's available, use it
-        if ($user->mfa_method && in_array($user->mfa_method, $availableMethods)) {
-            $defaultMethod = $user->mfa_method;
+        // Auto-send email code if needed (no authenticator for password login)
+        $emailSent = false;
+        if ($autoSendEmail && !session('mfa_email_sent')) {
+            $emailSent = $this->autoSendEmailCode($user);
+            if ($emailSent) {
+                session(['mfa_email_sent' => true]);
+            }
         }
 
         return view('auth.mfa', [
@@ -84,7 +123,35 @@ class MfaController extends Controller
             'phone_last_four' => $user->phone ? substr($user->phone, -4) : null,
             'smsConfigured' => $this->smsService->isConfigured(),
             'hasPhone' => (bool) $user->phone,
+            'isPasswordLogin' => $isPasswordLogin,
+            'hasAuthenticator' => $hasAuthenticator,
+            'emailAutoSent' => $emailSent || session('mfa_email_sent', false),
         ]);
+    }
+
+    /**
+     * Auto-send email code for password login verification.
+     */
+    protected function autoSendEmailCode(User $user): bool
+    {
+        if (!$user->email) {
+            return false;
+        }
+
+        try {
+            $otp = Otp::generate($user->email, Otp::TYPE_EMAIL_MFA);
+
+            Mail::send('emails.mfa-code', ['code' => $otp->code, 'user' => $user], function ($message) use ($user) {
+                $message->to($user->email)
+                    ->subject('Your Family Ledger Login Code');
+            });
+
+            Log::info('Auto-sent MFA email for password login', ['user_id' => $user->id]);
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Failed to auto-send MFA email', ['error' => $e->getMessage()]);
+            return false;
+        }
     }
 
     /**
@@ -257,7 +324,7 @@ class MfaController extends Controller
 
         // Clear session and rate limits
         RateLimiter::clear($key);
-        session()->forget(['mfa_required', 'mfa_user_id', 'url.intended']);
+        session()->forget(['mfa_required', 'mfa_user_id', 'mfa_login_type', 'mfa_has_authenticator', 'mfa_email_sent', 'url.intended']);
 
         // Login user
         Auth::login($user, true);
@@ -369,6 +436,89 @@ class MfaController extends Controller
 
         return response()->json([
             'message' => 'Multi-factor authentication disabled',
+        ]);
+    }
+
+    /**
+     * Setup authenticator app for the current user.
+     * Generates a secret and QR code for scanning.
+     */
+    public function setupAuthenticator(Request $request)
+    {
+        $user = $request->user();
+        $google2fa = new Google2FA();
+
+        // Generate secret
+        $secret = $google2fa->generateSecretKey();
+
+        // Store temporarily in session
+        session(['pending_2fa_secret' => $secret]);
+
+        // Generate QR code URL
+        $qrCodeUrl = $google2fa->getQRCodeUrl(
+            config('app.name', 'FamilyLedger'),
+            $user->email,
+            $secret
+        );
+
+        // Generate SVG QR code
+        $renderer = new ImageRenderer(
+            new RendererStyle(200),
+            new SvgImageBackEnd()
+        );
+        $writer = new Writer($renderer);
+        $qrCodeSvg = $writer->writeString($qrCodeUrl);
+
+        Log::info('Authenticator setup initiated', ['user_id' => $user->id]);
+
+        return response()->json([
+            'success' => true,
+            'secret' => $secret,
+            'qr_code' => $qrCodeSvg,
+        ]);
+    }
+
+    /**
+     * Confirm authenticator app setup by verifying a code.
+     */
+    public function confirmAuthenticator(Request $request)
+    {
+        $request->validate([
+            'code' => 'required|string|size:6',
+            'secret' => 'required|string',
+        ]);
+
+        $user = $request->user();
+        $google2fa = new Google2FA();
+        $secret = $request->secret;
+        $code = $request->code;
+
+        // Verify the code
+        $valid = $google2fa->verifyKey($secret, $code);
+
+        if (!$valid) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid code. Please check and try again.',
+            ], 400);
+        }
+
+        // Save the secret to user and enable MFA
+        $user->update([
+            'two_factor_secret' => encrypt($secret),
+            'two_factor_confirmed_at' => now(),
+            'mfa_enabled' => true,
+            'mfa_method' => 'authenticator',
+        ]);
+
+        // Clear session
+        session()->forget('pending_2fa_secret');
+
+        Log::info('Authenticator MFA enabled from settings', ['user_id' => $user->id]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Authenticator app has been enabled successfully.',
         ]);
     }
 }

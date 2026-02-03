@@ -99,6 +99,9 @@ class PersonController extends Controller
         // Parse date formats before validation
         $this->parseDateInputs($request);
 
+        // Handle checkbox boolean - set to false if not present
+        $request->merge(['birthday_reminder' => $request->has('birthday_reminder')]);
+
         $validated = $this->validatePerson($request);
 
         $data = collect($validated)->except([
@@ -207,6 +210,9 @@ class PersonController extends Controller
         // Parse date formats before validation
         $this->parseDateInputs($request);
 
+        // Handle checkbox boolean - set to false if not present
+        $request->merge(['birthday_reminder' => $request->has('birthday_reminder')]);
+
         $validated = $this->validatePerson($request);
 
         $data = collect($validated)->except([
@@ -266,7 +272,7 @@ class PersonController extends Controller
 
         // Delete attachments
         foreach ($person->attachments as $attachment) {
-            Storage::disk('private')->delete($attachment->file_path);
+            Storage::disk('do_spaces')->delete($attachment->file_path);
         }
 
         $person->delete();
@@ -284,7 +290,7 @@ class PersonController extends Controller
             abort(403);
         }
 
-        Storage::disk('private')->delete($attachment->file_path);
+        Storage::disk('do_spaces')->delete($attachment->file_path);
         $attachment->delete();
 
         return back()->with('success', 'Attachment deleted successfully');
@@ -299,11 +305,11 @@ class PersonController extends Controller
             abort(403);
         }
 
-        if (!Storage::disk('private')->exists($attachment->file_path)) {
+        if (!Storage::disk('do_spaces')->exists($attachment->file_path)) {
             abort(404);
         }
 
-        return Storage::disk('private')->download($attachment->file_path, $attachment->original_filename);
+        return Storage::disk('do_spaces')->download($attachment->file_path, $attachment->original_filename);
     }
 
     /**
@@ -319,6 +325,7 @@ class PersonController extends Controller
             'company' => 'nullable|string|max:255',
             'job_title' => 'nullable|string|max:255',
             'birthday' => 'nullable|date',
+            'birthday_reminder' => 'nullable|boolean',
             'notes' => 'nullable|string',
             'how_we_know' => 'nullable|string|max:255',
             'tags_input' => 'nullable|string',
@@ -488,7 +495,7 @@ class PersonController extends Controller
         foreach ($files as $index => $file) {
             $path = $file->store(
                 'people/' . Auth::user()->tenant_id . '/' . $person->id,
-                'private'
+                'do_spaces'
             );
 
             PersonAttachment::create([
@@ -518,11 +525,19 @@ class PersonController extends Controller
             }
         }
 
-        // Parse important dates
+        // Parse important dates from separate month/day/year fields
         if ($request->has('important_dates')) {
             $importantDates = $request->input('important_dates');
             foreach ($importantDates as $index => $dateData) {
-                if (!empty($dateData['date'])) {
+                // Handle new format with separate month/day/year fields
+                if (!empty($dateData['date_month']) && !empty($dateData['date_day']) && !empty($dateData['date_year'])) {
+                    $month = str_pad($dateData['date_month'], 2, '0', STR_PAD_LEFT);
+                    $day = str_pad($dateData['date_day'], 2, '0', STR_PAD_LEFT);
+                    $year = $dateData['date_year'];
+                    $importantDates[$index]['date'] = "{$year}-{$month}-{$day}";
+                }
+                // Handle legacy format (m/d/Y string)
+                elseif (!empty($dateData['date'])) {
                     $parsed = \DateTime::createFromFormat('m/d/Y', $dateData['date']);
                     if ($parsed) {
                         $importantDates[$index]['date'] = $parsed->format('Y-m-d');

@@ -44,6 +44,35 @@ class ActivityLog extends Model
     public const ACTION_REQUEST_VIEW_CODE = 'request_view_code';
     public const ACTION_VERIFY_VIEW_CODE = 'verify_view_code';
     public const ACTION_TOGGLE_CLIENT_STATUS = 'toggle_client_status';
+    public const ACTION_DELETE_CLIENT = 'delete_client';
     public const ACTION_UPDATE_PROFILE = 'update_profile';
     public const ACTION_CHANGE_PASSWORD = 'change_password';
+
+    // Package Plan actions
+    public const ACTION_CREATE_PLAN = 'create_package_plan';
+    public const ACTION_UPDATE_PLAN = 'update_package_plan';
+    public const ACTION_DELETE_PLAN = 'delete_package_plan';
+
+    // Discount Code actions
+    public const ACTION_CREATE_DISCOUNT = 'create_discount_code';
+    public const ACTION_UPDATE_DISCOUNT = 'update_discount_code';
+    public const ACTION_DELETE_DISCOUNT = 'delete_discount_code';
+
+    // Account Recovery actions
+    public const ACTION_VIEW_RECOVERY_PAGE = 'view_recovery_page';
+    public const ACTION_RECOVERY_VERIFICATION_SUCCESS = 'recovery_verification_success';
+    public const ACTION_RECOVERY_VERIFICATION_FAILED = 'recovery_verification_failed';
+    public const ACTION_RECOVERY_CHANGE_EMAIL = 'recovery_change_email';
+    public const ACTION_RECOVERY_RESET_PASSWORD = 'recovery_reset_password';
+    public const ACTION_RECOVERY_DISABLE_2FA = 'recovery_disable_2fa';
+    public const ACTION_RECOVERY_RESET_PHONE = 'recovery_reset_phone';
+
+    // Drip Campaign actions
+    public const ACTION_CREATE_DRIP_CAMPAIGN = 'create_drip_campaign';
+    public const ACTION_UPDATE_DRIP_CAMPAIGN = 'update_drip_campaign';
+    public const ACTION_DELETE_DRIP_CAMPAIGN = 'delete_drip_campaign';
+    public const ACTION_SEND_TEST_DRIP_EMAIL = 'send_test_drip_email';
+
+    // System actions
+    public const ACTION_DB_RESET = 'database_reset';
 }

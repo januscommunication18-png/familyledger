@@ -7,6 +7,7 @@ use App\Models\AssetDocument;
 use App\Models\AssetOwner;
 use App\Models\FamilyCircle;
 use App\Models\FamilyMember;
+use App\Models\TodoItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -68,16 +69,8 @@ class AssetController extends Controller
     {
         $user = Auth::user();
         $familyMembers = $this->getUniqueFamilyMembers($user->tenant_id);
+        $familyCircles = FamilyCircle::where('tenant_id', $user->tenant_id)->with('members')->get();
         $category = $request->get('category', 'property');
-
-        // Get family circles with their members for joint ownership
-        $familyCircles = FamilyCircle::where('tenant_id', $user->tenant_id)
-            ->with(['members' => function ($query) use ($user) {
-                $query->where('linked_user_id', '!=', $user->id)
-                    ->orWhereNull('linked_user_id');
-            }])
-            ->orderBy('name')
-            ->get();
 
         return view('pages.assets.form', [
             'asset' => null,
@@ -105,6 +98,7 @@ class AssetController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'image' => 'nullable|image|max:5120', // 5MB max
             'asset_category' => 'required|string|in:' . implode(',', array_keys(Asset::CATEGORIES)),
             'asset_type' => 'required|string|max:100',
             'ownership_type' => 'nullable|string|in:' . implode(',', array_keys(Asset::OWNERSHIP_TYPES)),
@@ -145,8 +139,8 @@ class AssetController extends Controller
             'insurance_provider' => 'nullable|string|max:255',
             'insurance_policy_number' => 'nullable|string|max:100',
             'insurance_renewal_date' => 'nullable|date',
-            'insurance_reminder' => 'nullable|boolean',
             'is_insured' => 'nullable|boolean',
+            'add_renewal_reminder' => 'nullable|boolean',
             // Owners - Family members
             'family_owners' => 'nullable|array',
             'family_owners.*.selected' => 'nullable|in:1',
@@ -160,17 +154,34 @@ class AssetController extends Controller
             'external_owners.*.percentage' => 'nullable|numeric|min:0|max:100',
             // Documents
             'documents' => 'nullable|array',
-            'documents.*' => 'file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
+            'documents.*' => 'file|mimes:pdf,jpg,jpeg,png|max:10240',
             'document_types' => 'nullable|array',
             'document_types.*' => 'nullable|string|in:' . implode(',', array_keys(Asset::DOCUMENT_TYPES)),
         ]);
 
-        $data = collect($validated)->except(['family_owners', 'external_owners', 'documents', 'document_types'])->toArray();
+        // Custom validation for joint ownership percentages
+        if (($validated['ownership_type'] ?? 'individual') === 'joint') {
+            $errors = $this->validateOwnerPercentages(
+                $validated['family_owners'] ?? [],
+                $validated['external_owners'] ?? []
+            );
+
+            if (!empty($errors)) {
+                return back()->withErrors($errors)->withInput();
+            }
+        }
+
+        $data = collect($validated)->except(['family_owners', 'external_owners', 'documents', 'document_types', 'image'])->toArray();
         $data['tenant_id'] = Auth::user()->tenant_id;
         $data['status'] = $data['status'] ?? 'active';
         $data['ownership_type'] = $data['ownership_type'] ?? 'individual';
         $data['currency'] = $data['currency'] ?? 'USD';
         $data['is_insured'] = $request->boolean('is_insured');
+
+        // Handle image upload to Digital Ocean
+        if ($request->hasFile('image')) {
+            $data['image'] = $request->file('image')->storePublicly('family-ledger/assets/images', 'do_spaces');
+        }
 
         $asset = Asset::create($data);
 
@@ -185,7 +196,7 @@ class AssetController extends Controller
             foreach ($request->file('documents') as $index => $file) {
                 $path = $file->store(
                     'documents/assets/' . Auth::user()->tenant_id . '/' . $asset->id,
-                    'private'
+                    'do_spaces'
                 );
 
                 AssetDocument::create([
@@ -199,6 +210,20 @@ class AssetController extends Controller
                     'uploaded_by' => Auth::id(),
                 ]);
             }
+        }
+
+        // Create reminder for insurance renewal if requested
+        if ($request->boolean('add_renewal_reminder') && !empty($validated['insurance_renewal_date'])) {
+            TodoItem::create([
+                'tenant_id' => Auth::user()->tenant_id,
+                'title' => "Insurance renewal for {$asset->name}",
+                'description' => "Insurance policy renewal reminder for asset: {$asset->name}",
+                'category' => 'bills',
+                'priority' => 'medium',
+                'status' => 'open',
+                'due_date' => $validated['insurance_renewal_date'],
+                'created_by' => Auth::id(),
+            ]);
         }
 
         return redirect()->route('assets.index', ['tab' => $asset->asset_category])
@@ -229,23 +254,13 @@ class AssetController extends Controller
      */
     public function edit(Asset $asset)
     {
-        $user = Auth::user();
-
-        if ($asset->tenant_id !== $user->tenant_id) {
+        if ($asset->tenant_id !== Auth::user()->tenant_id) {
             abort(403);
         }
 
         $asset->load(['owners.familyMember', 'documents']);
-        $familyMembers = $this->getUniqueFamilyMembers($user->tenant_id);
-
-        // Get family circles with their members for joint ownership
-        $familyCircles = FamilyCircle::where('tenant_id', $user->tenant_id)
-            ->with(['members' => function ($query) use ($user) {
-                $query->where('linked_user_id', '!=', $user->id)
-                    ->orWhereNull('linked_user_id');
-            }])
-            ->orderBy('name')
-            ->get();
+        $familyMembers = $this->getUniqueFamilyMembers(Auth::user()->tenant_id);
+        $familyCircles = FamilyCircle::where('tenant_id', Auth::user()->tenant_id)->with('members')->get();
 
         return view('pages.assets.form', [
             'asset' => $asset,
@@ -277,6 +292,8 @@ class AssetController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'image' => 'nullable|image|max:5120', // 5MB max
+            'remove_image' => 'nullable|boolean',
             'asset_category' => 'required|string|in:' . implode(',', array_keys(Asset::CATEGORIES)),
             'asset_type' => 'required|string|max:100',
             'ownership_type' => 'nullable|string|in:' . implode(',', array_keys(Asset::OWNERSHIP_TYPES)),
@@ -317,8 +334,8 @@ class AssetController extends Controller
             'insurance_provider' => 'nullable|string|max:255',
             'insurance_policy_number' => 'nullable|string|max:100',
             'insurance_renewal_date' => 'nullable|date',
-            'insurance_reminder' => 'nullable|boolean',
             'is_insured' => 'nullable|boolean',
+            'add_renewal_reminder' => 'nullable|boolean',
             // Owners - Family members
             'family_owners' => 'nullable|array',
             'family_owners.*.selected' => 'nullable|in:1',
@@ -332,13 +349,40 @@ class AssetController extends Controller
             'external_owners.*.percentage' => 'nullable|numeric|min:0|max:100',
             // Documents
             'documents' => 'nullable|array',
-            'documents.*' => 'file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
+            'documents.*' => 'file|mimes:pdf,jpg,jpeg,png|max:10240',
             'document_types' => 'nullable|array',
             'document_types.*' => 'nullable|string|in:' . implode(',', array_keys(Asset::DOCUMENT_TYPES)),
         ]);
 
-        $data = collect($validated)->except(['family_owners', 'external_owners', 'documents', 'document_types'])->toArray();
+        // Custom validation for joint ownership percentages
+        if (($validated['ownership_type'] ?? 'individual') === 'joint') {
+            $errors = $this->validateOwnerPercentages(
+                $validated['family_owners'] ?? [],
+                $validated['external_owners'] ?? []
+            );
+
+            if (!empty($errors)) {
+                return back()->withErrors($errors)->withInput();
+            }
+        }
+
+        $data = collect($validated)->except(['family_owners', 'external_owners', 'documents', 'document_types', 'image', 'remove_image'])->toArray();
         $data['is_insured'] = $request->boolean('is_insured');
+
+        // Handle image upload to Digital Ocean
+        if ($request->hasFile('image')) {
+            // Delete old image
+            if ($asset->image) {
+                Storage::disk('do_spaces')->delete($asset->image);
+            }
+            $data['image'] = $request->file('image')->storePublicly('family-ledger/assets/images', 'do_spaces');
+        }
+
+        // Handle image removal
+        if ($request->boolean('remove_image') && $asset->image) {
+            Storage::disk('do_spaces')->delete($asset->image);
+            $data['image'] = null;
+        }
 
         $asset->update($data);
 
@@ -355,7 +399,7 @@ class AssetController extends Controller
             foreach ($request->file('documents') as $index => $file) {
                 $path = $file->store(
                     'documents/assets/' . Auth::user()->tenant_id . '/' . $asset->id,
-                    'private'
+                    'do_spaces'
                 );
 
                 AssetDocument::create([
@@ -371,6 +415,20 @@ class AssetController extends Controller
             }
         }
 
+        // Create reminder for insurance renewal if requested
+        if ($request->boolean('add_renewal_reminder') && !empty($validated['insurance_renewal_date'])) {
+            TodoItem::create([
+                'tenant_id' => Auth::user()->tenant_id,
+                'title' => "Insurance renewal for {$asset->name}",
+                'description' => "Insurance policy renewal reminder for asset: {$asset->name}",
+                'category' => 'bills',
+                'priority' => 'medium',
+                'status' => 'open',
+                'due_date' => $validated['insurance_renewal_date'],
+                'created_by' => Auth::id(),
+            ]);
+        }
+
         return redirect()->route('assets.index', ['tab' => $asset->asset_category])
             ->with('success', 'Asset updated successfully');
     }
@@ -384,10 +442,15 @@ class AssetController extends Controller
             abort(403);
         }
 
+        // Delete asset image from Digital Ocean
+        if ($asset->image) {
+            Storage::disk('do_spaces')->delete($asset->image);
+        }
+
         // Delete uploaded documents
         foreach ($asset->documents as $document) {
             if ($document->file_path) {
-                Storage::disk('private')->delete($document->file_path);
+                Storage::disk('do_spaces')->delete($document->file_path);
             }
         }
 
@@ -416,7 +479,7 @@ class AssetController extends Controller
         $file = $request->file('document');
         $path = $file->store(
             'documents/assets/' . Auth::user()->tenant_id . '/' . $asset->id,
-            'private'
+            'do_spaces'
         );
 
         $tags = null;
@@ -449,7 +512,7 @@ class AssetController extends Controller
         }
 
         if ($document->file_path) {
-            Storage::disk('private')->delete($document->file_path);
+            Storage::disk('do_spaces')->delete($document->file_path);
         }
 
         $document->delete();
@@ -466,11 +529,11 @@ class AssetController extends Controller
             abort(403);
         }
 
-        if (!$document->file_path || !Storage::disk('private')->exists($document->file_path)) {
+        if (!$document->file_path || !Storage::disk('do_spaces')->exists($document->file_path)) {
             abort(404);
         }
 
-        return Storage::disk('private')->download($document->file_path, $document->original_filename);
+        return Storage::disk('do_spaces')->download($document->file_path, $document->original_filename);
     }
 
     /**
@@ -482,11 +545,11 @@ class AssetController extends Controller
             abort(403);
         }
 
-        if (!$document->file_path || !Storage::disk('private')->exists($document->file_path)) {
+        if (!$document->file_path || !Storage::disk('do_spaces')->exists($document->file_path)) {
             abort(404);
         }
 
-        return Storage::disk('private')->response($document->file_path);
+        return Storage::disk('do_spaces')->response($document->file_path);
     }
 
     /**
@@ -507,6 +570,11 @@ class AssetController extends Controller
                 continue;
             }
 
+            // Convert empty string percentage to 0 (column is NOT NULL)
+            $percentage = isset($ownerData['percentage']) && $ownerData['percentage'] !== ''
+                ? (float) $ownerData['percentage']
+                : 0;
+
             // Handle the 'owner' pseudo-member (current logged-in user)
             if ($memberId === 'owner') {
                 AssetOwner::create([
@@ -515,7 +583,7 @@ class AssetController extends Controller
                     'family_member_id' => null,
                     'external_owner_name' => $currentUser->name ?? $currentUser->email,
                     'external_owner_email' => $currentUser->email,
-                    'ownership_percentage' => $ownerData['percentage'] ?? null,
+                    'ownership_percentage' => $percentage,
                     'is_primary_owner' => $isPrimary,
                 ]);
 
@@ -532,7 +600,7 @@ class AssetController extends Controller
                 'tenant_id' => $currentUser->tenant_id,
                 'asset_id' => $asset->id,
                 'family_member_id' => $memberId,
-                'ownership_percentage' => $ownerData['percentage'] ?? null,
+                'ownership_percentage' => $percentage,
                 'is_primary_owner' => $isPrimary,
             ]);
 
@@ -548,19 +616,84 @@ class AssetController extends Controller
 
             $fullName = trim(($ownerData['first_name'] ?? '') . ' ' . ($ownerData['last_name'] ?? ''));
 
+            // Convert empty string percentage to 0 (column is NOT NULL)
+            $percentage = isset($ownerData['percentage']) && $ownerData['percentage'] !== ''
+                ? (float) $ownerData['percentage']
+                : 0;
+
             AssetOwner::create([
                 'tenant_id' => $currentUser->tenant_id,
                 'asset_id' => $asset->id,
                 'family_member_id' => null,
                 'external_owner_name' => $fullName ?: null,
-                'external_owner_email' => $ownerData['email'] ?? null,
-                'external_owner_phone' => $ownerData['phone'] ?? null,
-                'ownership_percentage' => $ownerData['percentage'] ?? null,
+                'external_owner_email' => !empty($ownerData['email']) ? $ownerData['email'] : null,
+                'external_owner_phone' => !empty($ownerData['phone']) ? $ownerData['phone'] : null,
+                'ownership_percentage' => $percentage,
                 'is_primary_owner' => $isPrimary,
             ]);
 
             $isPrimary = false;
         }
+    }
+
+    /**
+     * Validate that all selected owners have percentage values and total equals 100%.
+     */
+    private function validateOwnerPercentages(array $familyOwners, array $externalOwners): array
+    {
+        $errors = [];
+        $totalPercentage = 0;
+
+        // Check family member owners
+        foreach ($familyOwners as $memberId => $ownerData) {
+            if (!empty($ownerData['selected'])) {
+                if (!isset($ownerData['percentage']) || $ownerData['percentage'] === '' || $ownerData['percentage'] === null) {
+                    $errors['family_owners'] = 'Please enter ownership percentage for all selected family members.';
+                    break;
+                }
+                $totalPercentage += (float) $ownerData['percentage'];
+            }
+        }
+
+        // Check external owners
+        foreach ($externalOwners as $index => $ownerData) {
+            $hasName = !empty($ownerData['first_name']) || !empty($ownerData['last_name']);
+            if ($hasName) {
+                if (!isset($ownerData['percentage']) || $ownerData['percentage'] === '' || $ownerData['percentage'] === null) {
+                    $errors['external_owners'] = 'Please enter ownership percentage for all external owners.';
+                    break;
+                }
+                $totalPercentage += (float) $ownerData['percentage'];
+            }
+        }
+
+        // Check that at least one owner is selected
+        $hasOwner = false;
+        foreach ($familyOwners as $ownerData) {
+            if (!empty($ownerData['selected'])) {
+                $hasOwner = true;
+                break;
+            }
+        }
+        if (!$hasOwner) {
+            foreach ($externalOwners as $ownerData) {
+                if (!empty($ownerData['first_name']) || !empty($ownerData['last_name'])) {
+                    $hasOwner = true;
+                    break;
+                }
+            }
+        }
+
+        if (!$hasOwner) {
+            $errors['ownership_type'] = 'Please select at least one joint owner or add an external owner.';
+        }
+
+        // Check that total percentage equals 100%
+        if ($hasOwner && empty($errors) && abs($totalPercentage - 100) > 0.01) {
+            $errors['ownership_percentage'] = 'Total ownership percentage must equal 100%. Current total: ' . number_format($totalPercentage, 2) . '%';
+        }
+
+        return $errors;
     }
 
     /**

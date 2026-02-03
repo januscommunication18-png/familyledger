@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MemberSchoolInfo extends Model
@@ -18,6 +19,10 @@ class MemberSchoolInfo extends Model
         'family_member_id',
         'school_name',
         'grade_level',
+        'school_year',
+        'is_current',
+        'start_date',
+        'end_date',
         'student_id',
         'school_address',
         'school_phone',
@@ -30,6 +35,12 @@ class MemberSchoolInfo extends Model
         'bus_pickup_time',
         'bus_dropoff_time',
         'notes',
+    ];
+
+    protected $casts = [
+        'is_current' => 'boolean',
+        'start_date' => 'date',
+        'end_date' => 'date',
     ];
 
     /**
@@ -90,5 +101,13 @@ class MemberSchoolInfo extends Model
     public function hasTeacherInfo(): bool
     {
         return !empty($this->teacher_name);
+    }
+
+    /**
+     * Get the documents for this school record.
+     */
+    public function documents(): HasMany
+    {
+        return $this->hasMany(MemberEducationDocument::class, 'school_record_id');
     }
 }

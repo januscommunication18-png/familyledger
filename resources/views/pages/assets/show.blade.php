@@ -26,9 +26,13 @@
         </div>
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-4">
-                <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shadow-lg">
-                    <span class="{{ $asset->getCategoryIcon() }} size-7 text-white"></span>
-                </div>
+                @if($asset->image)
+                    <img src="{{ $asset->image_url }}" alt="{{ $asset->name }}" class="w-20 h-20 rounded-xl object-cover shadow-lg border-2 border-white">
+                @else
+                    <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shadow-lg">
+                        <span class="{{ $asset->getCategoryIcon() }} size-7 text-white"></span>
+                    </div>
+                @endif
                 <div>
                     <h1 class="text-2xl font-bold text-slate-900">{{ $asset->name }}</h1>
                     <p class="text-slate-500">{{ $asset->category_name }} - {{ $asset->type_name }}</p>

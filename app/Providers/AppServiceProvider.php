@@ -18,6 +18,9 @@ use App\Observers\MemberHealthcareProviderObserver;
 use App\Observers\MemberMedicalConditionObserver;
 use App\Observers\MemberMedicalInfoObserver;
 use App\Observers\MemberMedicationObserver;
+use App\Events\FamilyCircleCreated;
+use App\Listeners\SendEventBasedDripEmail;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -44,5 +47,8 @@ class AppServiceProvider extends ServiceProvider
         MemberHealthcareProvider::observe(MemberHealthcareProviderObserver::class);
         MemberMedication::observe(MemberMedicationObserver::class);
         MemberMedicalCondition::observe(MemberMedicalConditionObserver::class);
+
+        // Register event listeners for drip campaigns
+        Event::listen(FamilyCircleCreated::class, SendEventBasedDripEmail::class);
     }
 }

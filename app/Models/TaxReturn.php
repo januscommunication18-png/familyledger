@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\SafeEncrypted;
 use App\Traits\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -43,12 +44,12 @@ class TaxReturn extends Model
         'federal_returns' => 'array',
         'state_returns' => 'array',
         'supporting_documents' => 'array',
-        // AES-256 encrypted PII fields
-        'cpa_name' => 'encrypted',
-        'cpa_phone' => 'encrypted',
-        'cpa_email' => 'encrypted',
-        'cpa_firm' => 'encrypted',
-        'notes' => 'encrypted',
+        // AES-256 encrypted PII fields (using SafeEncrypted for graceful error handling)
+        'cpa_name' => SafeEncrypted::class,
+        'cpa_phone' => SafeEncrypted::class,
+        'cpa_email' => SafeEncrypted::class,
+        'cpa_firm' => SafeEncrypted::class,
+        'notes' => SafeEncrypted::class,
     ];
 
     /**

@@ -21,6 +21,10 @@ use App\Http\Controllers\Api\V1\PeopleController;
 use App\Http\Controllers\Api\V1\ResourceController;
 use App\Http\Controllers\Api\V1\BudgetController;
 use App\Http\Controllers\Api\V1\CoparentingController;
+use App\Http\Controllers\Api\V1\LegalDocumentApiController;
+use App\Http\Controllers\Api\V1\SyncController;
+use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\Auth\MfaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -40,6 +44,9 @@ Route::prefix('v1')->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::prefix('auth')->group(function () {
+        // Registration
+        Route::post('/register', [AuthController::class, 'register']);
+
         // Password Login
         Route::post('/login', [AuthController::class, 'login']);
 
@@ -86,12 +93,74 @@ Route::prefix('v1')->group(function () {
 
         // Family Circles
         Route::get('/family-circles', [FamilyCircleController::class, 'index']);
+        Route::post('/family-circles', [FamilyCircleController::class, 'store']);
         Route::get('/family-circles/{familyCircle}', [FamilyCircleController::class, 'show']);
 
         // Family Members (nested under family circles)
         Route::prefix('family-circles/{familyCircle}')->group(function () {
             Route::get('/members', [FamilyMemberController::class, 'index']);
+            Route::post('/members', [FamilyMemberController::class, 'store']);
             Route::get('/members/{member}', [FamilyMemberController::class, 'show']);
+            Route::put('/members/{member}', [FamilyMemberController::class, 'update']);
+            Route::delete('/members/{member}', [FamilyMemberController::class, 'destroy']);
+            Route::get('/resources', [FamilyCircleController::class, 'resources']);
+            Route::get('/legal-documents', [FamilyCircleController::class, 'legalDocuments']);
+        });
+
+        // Family Member Lookup Data
+        Route::get('/family-members', [FamilyMemberController::class, 'allMembers']);
+        Route::get('/family-members/relationships', [FamilyMemberController::class, 'relationships']);
+        Route::get('/family-members/immigration-statuses', [FamilyMemberController::class, 'immigrationStatuses']);
+        Route::get('/family-members/blood-types', [FamilyMemberController::class, 'bloodTypes']);
+
+        // Member Documents (nested under family-circles)
+        Route::prefix('family-circles/{familyCircle}/members/{member}')->group(function () {
+            // Documents
+            Route::post('/documents', [FamilyMemberController::class, 'storeDocument']);
+            Route::put('/documents/{document}', [FamilyMemberController::class, 'updateDocument']);
+            Route::delete('/documents/{document}', [FamilyMemberController::class, 'deleteDocument']);
+
+            // Medical Info
+            Route::put('/medical-info', [FamilyMemberController::class, 'updateMedicalInfo']);
+
+            // Allergies
+            Route::post('/allergies', [FamilyMemberController::class, 'storeAllergy']);
+            Route::put('/allergies/{allergy}', [FamilyMemberController::class, 'updateAllergy']);
+            Route::delete('/allergies/{allergy}', [FamilyMemberController::class, 'deleteAllergy']);
+
+            // Medications
+            Route::post('/medications', [FamilyMemberController::class, 'storeMedication']);
+            Route::put('/medications/{medication}', [FamilyMemberController::class, 'updateMedication']);
+            Route::delete('/medications/{medication}', [FamilyMemberController::class, 'deleteMedication']);
+
+            // Medical Conditions
+            Route::post('/conditions', [FamilyMemberController::class, 'storeCondition']);
+            Route::put('/conditions/{condition}', [FamilyMemberController::class, 'updateCondition']);
+            Route::delete('/conditions/{condition}', [FamilyMemberController::class, 'deleteCondition']);
+
+            // Healthcare Providers
+            Route::post('/providers', [FamilyMemberController::class, 'storeProvider']);
+            Route::put('/providers/{provider}', [FamilyMemberController::class, 'updateProvider']);
+            Route::delete('/providers/{provider}', [FamilyMemberController::class, 'deleteProvider']);
+
+            // Vaccinations
+            Route::post('/vaccinations', [FamilyMemberController::class, 'storeVaccination']);
+            Route::put('/vaccinations/{vaccination}', [FamilyMemberController::class, 'updateVaccination']);
+            Route::delete('/vaccinations/{vaccination}', [FamilyMemberController::class, 'deleteVaccination']);
+
+            // Emergency Contacts
+            Route::post('/emergency-contacts', [FamilyMemberController::class, 'storeEmergencyContact']);
+            Route::put('/emergency-contacts/{contact}', [FamilyMemberController::class, 'updateEmergencyContact']);
+            Route::delete('/emergency-contacts/{contact}', [FamilyMemberController::class, 'deleteEmergencyContact']);
+
+            // School Records
+            Route::post('/school-records', [FamilyMemberController::class, 'storeSchoolRecord']);
+            Route::put('/school-records/{schoolRecord}', [FamilyMemberController::class, 'updateSchoolRecord']);
+            Route::delete('/school-records/{schoolRecord}', [FamilyMemberController::class, 'deleteSchoolRecord']);
+
+            // Education Documents
+            Route::post('/education-documents', [FamilyMemberController::class, 'storeEducationDocument']);
+            Route::delete('/education-documents/{document}', [FamilyMemberController::class, 'deleteEducationDocument']);
         });
 
         // Assets
@@ -103,8 +172,10 @@ Route::prefix('v1')->group(function () {
         // Documents (Insurance, Tax Returns)
         Route::get('/documents', [DocumentController::class, 'index']);
         Route::get('/documents/insurance', [DocumentController::class, 'insurancePolicies']);
+        Route::post('/documents/insurance', [DocumentController::class, 'storeInsurancePolicy']);
         Route::get('/documents/insurance/{policy}', [DocumentController::class, 'showInsurancePolicy']);
         Route::get('/documents/tax-returns', [DocumentController::class, 'taxReturns']);
+        Route::post('/documents/tax-returns', [DocumentController::class, 'storeTaxReturn']);
         Route::get('/documents/tax-returns/{taxReturn}', [DocumentController::class, 'showTaxReturn']);
 
         // Expenses
@@ -116,6 +187,7 @@ Route::prefix('v1')->group(function () {
 
         // Budgets
         Route::get('/budgets', [BudgetController::class, 'index']);
+        Route::post('/budgets', [BudgetController::class, 'store']);
         Route::get('/budgets/{budget}', [BudgetController::class, 'show']);
 
         // Goals & Tasks
@@ -176,6 +248,10 @@ Route::prefix('v1')->group(function () {
         Route::get('/resources/type/{type}', [ResourceController::class, 'byType']);
         Route::get('/resources/{resource}', [ResourceController::class, 'show']);
 
+        // Legal Documents
+        Route::get('/legal-documents', [LegalDocumentApiController::class, 'index']);
+        Route::get('/legal-documents/{legalDocument}', [LegalDocumentApiController::class, 'show']);
+
         // Co-parenting
         Route::prefix('coparenting')->group(function () {
             Route::get('/', [CoparentingController::class, 'index']);
@@ -188,6 +264,44 @@ Route::prefix('v1')->group(function () {
             Route::post('/conversations', [CoparentingController::class, 'createConversation']);
             Route::get('/conversations/{conversation}', [CoparentingController::class, 'showConversation']);
             Route::post('/conversations/{conversation}/messages', [CoparentingController::class, 'sendMessage']);
+        });
+
+        // Sync (Offline Mode)
+        Route::prefix('sync')->group(function () {
+            Route::get('/pull', [SyncController::class, 'pull']);
+            Route::post('/push', [SyncController::class, 'push']);
+            Route::post('/resolve', [SyncController::class, 'resolve']);
+            Route::get('/conflicts', [SyncController::class, 'conflicts']);
+        });
+
+        // Settings
+        Route::prefix('settings')->group(function () {
+            Route::get('/', [SettingsController::class, 'getSettingsApi']);
+            Route::post('/profile', [SettingsController::class, 'updateProfileApi']);
+            Route::delete('/profile/avatar', [SettingsController::class, 'removeAvatarApi']);
+            Route::post('/password', [SettingsController::class, 'updatePasswordApi']);
+            Route::get('/sessions', [SettingsController::class, 'getSessionsApi']);
+            Route::delete('/sessions/{session}', [SettingsController::class, 'revokeSessionApi']);
+            Route::post('/sessions/revoke-all', [SettingsController::class, 'revokeAllSessionsApi']);
+            Route::post('/notifications', [SettingsController::class, 'updateNotificationsApi']);
+            Route::post('/appearance', [SettingsController::class, 'updateAppearanceApi']);
+            Route::post('/privacy', [SettingsController::class, 'updatePrivacyApi']);
+            Route::get('/export-data', [SettingsController::class, 'exportDataApi']);
+            Route::post('/delete-account', [SettingsController::class, 'requestAccountDeletionApi']);
+            Route::get('/login-activity', [SettingsController::class, 'getLoginActivityApi']);
+            Route::post('/recovery-code/generate', [SettingsController::class, 'generateRecoveryCodeApi']);
+            Route::post('/recovery-code', [SettingsController::class, 'saveRecoveryCodeApi']);
+
+            // MFA Routes (existing methods return JSON)
+            Route::post('/mfa/authenticator/setup', [MfaController::class, 'setupAuthenticator']);
+            Route::post('/mfa/authenticator/confirm', [MfaController::class, 'confirmAuthenticator']);
+            Route::post('/mfa/sms/enable', [MfaController::class, 'enableSmsMfa']);
+            Route::post('/mfa/sms/confirm', [MfaController::class, 'confirmSmsMfa']);
+            Route::post('/mfa/disable', [MfaController::class, 'disableMfa']);
+
+            // Social Accounts
+            Route::get('/social-accounts', [SettingsController::class, 'getSocialAccountsApi']);
+            Route::delete('/social/{provider}', [SettingsController::class, 'disconnectSocialApi']);
         });
     });
 });

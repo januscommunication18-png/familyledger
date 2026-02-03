@@ -224,8 +224,13 @@
                 </div>
 
                 <div>
-                    <textarea name="notes" rows="4" class="textarea textarea-bordered w-full"
-                              placeholder="Any additional notes about this resource...">{{ old('notes', $resource?->notes) }}</textarea>
+                    <x-quill-editor
+                        name="notes"
+                        :value="$resource?->notes"
+                        placeholder="Any additional notes about this resource..."
+                        height="200px"
+                        toolbar="standard"
+                    />
                 </div>
             </div>
         </div>

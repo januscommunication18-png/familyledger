@@ -3,19 +3,35 @@
 @section('page-name', $child->full_name)
 
 @php
-    // Helper to check if co-parent can view a category
-    $canView = function($category) use ($isCoparent, $collaborator) {
-        if (!($isCoparent ?? false)) return true; // Owner can see everything
-        if (!$collaborator) return true;
-
-        // Get permissions from the pivot
+    // Get the coparent child pivot record for permission checking
+    $coparentChild = null;
+    if (($isCoparent ?? false) && $collaborator) {
         $coparentChild = \App\Models\CoparentChild::where('collaborator_id', $collaborator->id)
             ->where('family_member_id', request()->route('child')->id)
             ->first();
+    }
 
+    // Helper to check if co-parent can view a category
+    $canView = function($category) use ($isCoparent, $coparentChild) {
+        if (!($isCoparent ?? false)) return true; // Owner can see everything
         if (!$coparentChild) return false;
         return $coparentChild->canView($category);
     };
+
+    // Helper to check if co-parent can edit a category
+    $canEdit = function($category) use ($isOwner, $isCoparent, $coparentChild) {
+        if ($isOwner ?? false) return true; // Owner can edit everything
+        if (!($isCoparent ?? false)) return false;
+        if (!$coparentChild) return false;
+        return $coparentChild->canEdit($category);
+    };
+
+    // Check if user can edit anything (for showing general edit button)
+    $canEditAny = $isOwner ?? false;
+    if (!$canEditAny && $coparentChild) {
+        $permissions = $coparentChild->permissions ?? [];
+        $canEditAny = collect($permissions)->contains('edit');
+    }
 @endphp
 
 @section('content')
@@ -536,7 +552,7 @@
                 <div class="card-body">
                     <h3 class="font-semibold text-slate-800 mb-4">Quick Actions</h3>
                     <div class="space-y-2">
-                        @if($isOwner ?? true)
+                        @if($isOwner ?? false)
                         <a href="{{ route('coparenting.children.access', $child) }}" class="btn btn-block btn-outline gap-2 justify-start">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                             Manage Access
@@ -557,6 +573,47 @@
                     </div>
                 </div>
             </div>
+
+            {{-- Your Permissions (for co-parents) --}}
+            @if(($isCoparent ?? false) && $coparentChild)
+            <div class="card bg-base-100 shadow-sm">
+                <div class="card-body">
+                    <h3 class="font-semibold text-slate-800 mb-4">Your Permissions</h3>
+                    <div class="space-y-2">
+                        @php
+                            $permissionCategories = \App\Models\CoparentChild::PERMISSION_CATEGORIES;
+                            $userPermissions = $coparentChild->permissions ?? [];
+                        @endphp
+                        @foreach($permissionCategories as $category => $info)
+                            @php
+                                $level = $userPermissions[$category] ?? 'none';
+                                $levelColor = match($level) {
+                                    'edit' => 'badge-success',
+                                    'view' => 'badge-info',
+                                    default => 'badge-ghost',
+                                };
+                                $levelLabel = match($level) {
+                                    'edit' => 'Can Edit',
+                                    'view' => 'View Only',
+                                    default => 'No Access',
+                                };
+                            @endphp
+                            @if($level !== 'none')
+                            <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50">
+                                <span class="text-sm text-slate-700">{{ $info['label'] }}</span>
+                                <span class="badge {{ $levelColor }} badge-sm">{{ $levelLabel }}</span>
+                            </div>
+                            @endif
+                        @endforeach
+                    </div>
+                    @if($canEditAny)
+                    <div class="mt-4 pt-4 border-t border-slate-100">
+                        <p class="text-xs text-slate-500">You have edit access to some information. Changes you make will be visible to all co-parents.</p>
+                    </div>
+                    @endif
+                </div>
+            </div>
+            @endif
 
             {{-- Child Summary Stats --}}
             <div class="card bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-sm">

@@ -19,6 +19,18 @@
 
 @section('content')
 <div class="max-w-3xl mx-auto">
+    <!-- Page Header -->
+    <div class="mb-6">
+        <div class="flex items-center gap-4 mb-2">
+            <a href="{{ $pet ? route('pets.show', $pet) : route('pets.index') }}" class="btn btn-ghost btn-sm gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                Back
+            </a>
+        </div>
+        <h1 class="text-2xl font-bold text-slate-900">{{ $pet ? 'Edit ' . $pet->name : 'Add New Pet' }}</h1>
+        <p class="text-slate-500 mt-1">{{ $pet ? 'Update your pet\'s information' : 'Add a new furry family member' }}</p>
+    </div>
+
     <div class="card bg-base-100 shadow-sm">
         <div class="card-body">
             <form method="POST" action="{{ $pet ? route('pets.update', $pet) : route('pets.store') }}" enctype="multipart/form-data" x-data="petForm()">
@@ -122,28 +134,54 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div class="form-control">
-                            <label class="label">
-                                <span class="label-text">Date of Birth</span>
-                            </label>
-                            <input type="text" name="date_of_birth" value="{{ old('date_of_birth', $pet?->date_of_birth?->format('Y-m-d')) }}"
-                                   class="input input-bordered" data-datepicker placeholder="Select date">
-                            <label class="label">
-                                <span class="label-text-alt text-slate-500">Leave blank if unknown</span>
-                            </label>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Date of Birth</span>
+                        </label>
+                        @php
+                            $dobMonth = old('dob_month', $pet?->date_of_birth?->format('m'));
+                            $dobDay = old('dob_day', $pet?->date_of_birth?->format('d'));
+                            $dobYear = old('dob_year', $pet?->date_of_birth?->format('Y'));
+                        @endphp
+                        <div class="flex gap-2">
+                            <!-- Month -->
+                            <select name="dob_month" id="dob_month" class="select select-bordered flex-1">
+                                <option value="">Month</option>
+                                <option value="01" {{ $dobMonth == '01' ? 'selected' : '' }}>January</option>
+                                <option value="02" {{ $dobMonth == '02' ? 'selected' : '' }}>February</option>
+                                <option value="03" {{ $dobMonth == '03' ? 'selected' : '' }}>March</option>
+                                <option value="04" {{ $dobMonth == '04' ? 'selected' : '' }}>April</option>
+                                <option value="05" {{ $dobMonth == '05' ? 'selected' : '' }}>May</option>
+                                <option value="06" {{ $dobMonth == '06' ? 'selected' : '' }}>June</option>
+                                <option value="07" {{ $dobMonth == '07' ? 'selected' : '' }}>July</option>
+                                <option value="08" {{ $dobMonth == '08' ? 'selected' : '' }}>August</option>
+                                <option value="09" {{ $dobMonth == '09' ? 'selected' : '' }}>September</option>
+                                <option value="10" {{ $dobMonth == '10' ? 'selected' : '' }}>October</option>
+                                <option value="11" {{ $dobMonth == '11' ? 'selected' : '' }}>November</option>
+                                <option value="12" {{ $dobMonth == '12' ? 'selected' : '' }}>December</option>
+                            </select>
+                            <!-- Day -->
+                            <input type="number" name="dob_day" id="dob_day" value="{{ $dobDay }}" placeholder="Day" min="1" max="31"
+                                class="input input-bordered w-20">
+                            <!-- Year -->
+                            <input type="number" name="dob_year" id="dob_year" value="{{ $dobYear }}" placeholder="Year" min="1900" max="{{ date('Y') }}"
+                                class="input input-bordered w-24">
                         </div>
+                        <input type="hidden" name="date_of_birth" id="date_of_birth">
+                        <label class="label">
+                            <span class="label-text-alt text-slate-500">Leave blank if unknown</span>
+                        </label>
+                    </div>
 
-                        <div class="form-control">
-                            <label class="label">
-                                <span class="label-text">Approximate Age</span>
-                            </label>
-                            <input type="text" name="approx_age" value="{{ old('approx_age', $pet?->approx_age) }}"
-                                   class="input input-bordered" placeholder="e.g., ~3 years, Adult">
-                            <label class="label">
-                                <span class="label-text-alt text-slate-500">If exact DOB is unknown</span>
-                            </label>
-                        </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Approximate Age</span>
+                        </label>
+                        <input type="text" name="approx_age" value="{{ old('approx_age', $pet?->approx_age) }}"
+                               class="input input-bordered" placeholder="e.g., ~3 years, Adult">
+                        <label class="label">
+                            <span class="label-text-alt text-slate-500">If exact DOB is unknown</span>
+                        </label>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -364,8 +402,36 @@
                         <label class="label">
                             <span class="label-text">Last Vet Visit</span>
                         </label>
-                        <input type="text" name="last_vet_visit" value="{{ old('last_vet_visit', $pet?->last_vet_visit?->format('Y-m-d')) }}"
-                               class="input input-bordered w-auto" data-datepicker placeholder="Select date">
+                        @php
+                            $vetMonth = old('vet_month', $pet?->last_vet_visit?->format('m'));
+                            $vetDay = old('vet_day', $pet?->last_vet_visit?->format('d'));
+                            $vetYear = old('vet_year', $pet?->last_vet_visit?->format('Y'));
+                        @endphp
+                        <div class="flex gap-2">
+                            <!-- Month -->
+                            <select name="vet_month" id="vet_month" class="select select-bordered flex-1">
+                                <option value="">Month</option>
+                                <option value="01" {{ $vetMonth == '01' ? 'selected' : '' }}>January</option>
+                                <option value="02" {{ $vetMonth == '02' ? 'selected' : '' }}>February</option>
+                                <option value="03" {{ $vetMonth == '03' ? 'selected' : '' }}>March</option>
+                                <option value="04" {{ $vetMonth == '04' ? 'selected' : '' }}>April</option>
+                                <option value="05" {{ $vetMonth == '05' ? 'selected' : '' }}>May</option>
+                                <option value="06" {{ $vetMonth == '06' ? 'selected' : '' }}>June</option>
+                                <option value="07" {{ $vetMonth == '07' ? 'selected' : '' }}>July</option>
+                                <option value="08" {{ $vetMonth == '08' ? 'selected' : '' }}>August</option>
+                                <option value="09" {{ $vetMonth == '09' ? 'selected' : '' }}>September</option>
+                                <option value="10" {{ $vetMonth == '10' ? 'selected' : '' }}>October</option>
+                                <option value="11" {{ $vetMonth == '11' ? 'selected' : '' }}>November</option>
+                                <option value="12" {{ $vetMonth == '12' ? 'selected' : '' }}>December</option>
+                            </select>
+                            <!-- Day -->
+                            <input type="number" name="vet_day" id="vet_day" value="{{ $vetDay }}" placeholder="Day" min="1" max="31"
+                                class="input input-bordered w-20">
+                            <!-- Year -->
+                            <input type="number" name="vet_year" id="vet_year" value="{{ $vetYear }}" placeholder="Year" min="1900" max="{{ date('Y') }}"
+                                class="input input-bordered w-24">
+                        </div>
+                        <input type="hidden" name="last_vet_visit" id="last_vet_visit">
                     </div>
                 </div>
 
@@ -452,6 +518,54 @@
 </div>
 
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Date of Birth
+    const dobMonth = document.getElementById('dob_month');
+    const dobDay = document.getElementById('dob_day');
+    const dobYear = document.getElementById('dob_year');
+    const dobHidden = document.getElementById('date_of_birth');
+
+    function updateDateOfBirth() {
+        const month = dobMonth.value;
+        const day = dobDay.value ? dobDay.value.toString().padStart(2, '0') : '';
+        const year = dobYear.value;
+
+        if (month && day && year) {
+            dobHidden.value = `${year}-${month}-${day}`;
+        } else {
+            dobHidden.value = '';
+        }
+    }
+
+    dobMonth.addEventListener('change', updateDateOfBirth);
+    dobDay.addEventListener('input', updateDateOfBirth);
+    dobYear.addEventListener('input', updateDateOfBirth);
+    updateDateOfBirth();
+
+    // Last Vet Visit
+    const vetMonth = document.getElementById('vet_month');
+    const vetDay = document.getElementById('vet_day');
+    const vetYear = document.getElementById('vet_year');
+    const vetHidden = document.getElementById('last_vet_visit');
+
+    function updateLastVetVisit() {
+        const month = vetMonth.value;
+        const day = vetDay.value ? vetDay.value.toString().padStart(2, '0') : '';
+        const year = vetYear.value;
+
+        if (month && day && year) {
+            vetHidden.value = `${year}-${month}-${day}`;
+        } else {
+            vetHidden.value = '';
+        }
+    }
+
+    vetMonth.addEventListener('change', updateLastVetVisit);
+    vetDay.addEventListener('input', updateLastVetVisit);
+    vetYear.addEventListener('input', updateLastVetVisit);
+    updateLastVetVisit();
+});
+
 function petForm() {
     return {
         selectedSpecies: '{{ old('species', $pet?->species ?? '') }}',

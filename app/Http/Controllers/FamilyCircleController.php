@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\FamilyCircleCreated;
 use App\Models\Collaborator;
 use App\Models\CollaboratorInvite;
 use App\Models\FamilyCircle;
@@ -72,7 +73,7 @@ class FamilyCircleController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
-            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'include_me' => 'nullable|boolean',
         ]);
 
@@ -97,11 +98,14 @@ class FamilyCircleController extends Controller
         ];
 
         if ($request->hasFile('cover_image')) {
-            $path = $request->file('cover_image')->store('family-ledger/circles/covers', 'do_spaces');
+            $path = $request->file('cover_image')->storePublicly('family-ledger/circles/covers', 'do_spaces');
             $data['cover_image'] = $path;
         }
 
         $circle = FamilyCircle::create($data);
+
+        // Dispatch event for drip campaigns
+        FamilyCircleCreated::dispatch($circle, $user);
 
         // Add creator as a family member if "Include Me" is checked
         if ($request->boolean('include_me')) {
@@ -238,7 +242,7 @@ class FamilyCircleController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
-            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'include_me' => 'nullable|boolean',
         ]);
 
@@ -252,7 +256,7 @@ class FamilyCircleController extends Controller
             if ($familyCircle->cover_image) {
                 Storage::disk('do_spaces')->delete($familyCircle->cover_image);
             }
-            $path = $request->file('cover_image')->store('family-ledger/circles/covers', 'do_spaces');
+            $path = $request->file('cover_image')->storePublicly('family-ledger/circles/covers', 'do_spaces');
             $data['cover_image'] = $path;
         }
 

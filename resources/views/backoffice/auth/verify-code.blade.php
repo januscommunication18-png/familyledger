@@ -1,7 +1,7 @@
 @extends('backoffice.layouts.guest')
 
 @section('content')
-    <div x-data="{ code: '', autoSubmit: false }">
+    <div>
         <div class="mb-8">
             <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Security Verification</h2>
             <p class="text-gray-600 dark:text-gray-400">Enter the 6-digit code sent to your email</p>
@@ -37,15 +37,13 @@
                             maxlength="1"
                             class="w-12 h-14 text-center text-2xl font-bold border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
                             data-code-input="{{ $i }}"
-                            x-on:input="handleInput($event, {{ $i }})"
-                            x-on:keydown="handleKeydown($event, {{ $i }})"
-                            x-on:paste="handlePaste($event)"
                             inputmode="numeric"
                             pattern="[0-9]*"
+                            autocomplete="off"
                         >
                     @endfor
                 </div>
-                <input type="hidden" name="code" x-model="code">
+                <input type="hidden" name="code" id="hiddenCode">
             </div>
 
             <button
@@ -76,65 +74,24 @@
 
 @push('scripts')
 <script>
-document.addEventListener('alpine:init', () => {
-    Alpine.data('codeInput', () => ({
-        code: '',
-
-        handleInput(event, index) {
-            const input = event.target;
-            const value = input.value.replace(/[^0-9]/g, '');
-            input.value = value;
-
-            if (value && index < 5) {
-                const next = document.querySelector(`[data-code-input="${index + 1}"]`);
-                if (next) next.focus();
-            }
-
-            this.updateCode();
-        },
-
-        handleKeydown(event, index) {
-            if (event.key === 'Backspace' && !event.target.value && index > 0) {
-                const prev = document.querySelector(`[data-code-input="${index - 1}"]`);
-                if (prev) {
-                    prev.focus();
-                    prev.value = '';
-                }
-            }
-        },
-
-        handlePaste(event) {
-            event.preventDefault();
-            const paste = (event.clipboardData || window.clipboardData).getData('text');
-            const digits = paste.replace(/[^0-9]/g, '').slice(0, 6);
-
-            digits.split('').forEach((digit, i) => {
-                const input = document.querySelector(`[data-code-input="${i}"]`);
-                if (input) input.value = digit;
-            });
-
-            this.updateCode();
-
-            if (digits.length === 6) {
-                document.getElementById('verifyForm').submit();
-            }
-        },
-
-        updateCode() {
-            let code = '';
-            for (let i = 0; i < 6; i++) {
-                const input = document.querySelector(`[data-code-input="${i}"]`);
-                code += input ? input.value : '';
-            }
-            this.code = code;
-        }
-    }));
-});
-
-// Simple input handling without Alpine data binding issues
+// Input handling for verification code
 document.addEventListener('DOMContentLoaded', function() {
     const inputs = document.querySelectorAll('[data-code-input]');
-    const hiddenInput = document.querySelector('input[name="code"]');
+    const hiddenInput = document.getElementById('hiddenCode');
+    const form = document.getElementById('verifyForm');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    let isSubmitting = false;
+
+    // Prevent double submission
+    form.addEventListener('submit', function(e) {
+        if (isSubmitting) {
+            e.preventDefault();
+            return false;
+        }
+        isSubmitting = true;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Verifying...';
+    });
 
     inputs.forEach((input, index) => {
         input.addEventListener('input', function(e) {
@@ -165,8 +122,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
             updateHiddenInput();
 
-            if (digits.length === 6) {
-                document.getElementById('verifyForm').submit();
+            // Auto-submit on paste only if not already submitting
+            if (digits.length === 6 && !isSubmitting) {
+                form.submit();
             }
         });
     });

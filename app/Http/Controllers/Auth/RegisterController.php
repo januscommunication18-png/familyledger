@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SendImmediateDripEmails;
 use App\Models\Otp;
 use App\Models\Tenant;
 use App\Models\User;
@@ -41,7 +42,7 @@ class RegisterController extends Controller
     {
         try {
             $request->validate([
-                'name' => 'required|string|max:255',
+                'name' => ['required', 'string', 'max:255', 'regex:/^[a-zA-Z\s]+$/'],
                 'email' => 'required|email|max:255',
                 'password' => ['required', 'confirmed', Password::min(12)
                     ->mixedCase()
@@ -50,6 +51,8 @@ class RegisterController extends Controller
                 ],
                 // Honeypot fields
                 'website_url_hp' => 'max:0',
+            ], [
+                'name.regex' => 'Please enter a valid name (e.g., John Snow). Only letters and spaces are allowed.',
             ]);
 
             // Check if email already exists using email_hash (email is encrypted)
@@ -94,6 +97,13 @@ class RegisterController extends Controller
                 $user->notify(new OtpNotification($otp->code, 'verify'));
             } catch (\Exception $e) {
                 Log::warning('Failed to send verification email', ['error' => $e->getMessage()]);
+            }
+
+            // Trigger immediate drip campaign emails (welcome email, etc.)
+            try {
+                SendImmediateDripEmails::dispatch($user);
+            } catch (\Exception $e) {
+                Log::warning('Failed to dispatch drip emails', ['error' => $e->getMessage()]);
             }
 
             Log::info('New user registered', ['user_id' => $user->id]);

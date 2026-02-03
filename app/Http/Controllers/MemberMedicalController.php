@@ -11,6 +11,7 @@ use App\Models\MemberMedicalInfo;
 use App\Models\MemberMedication;
 use App\Models\MemberVaccination;
 use App\Services\CollaboratorPermissionService;
+use App\Services\CoparentEditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -69,8 +70,10 @@ class MemberMedicalController extends Controller
     {
         // Use centralized permission service
         $permissionService = CollaboratorPermissionService::forMember($member);
+        $editService = CoparentEditService::forMember($member);
 
-        if (!$permissionService->canEdit('medical')) {
+        // Allow if can edit OR is coparent needing approval
+        if (!$permissionService->canEdit('medical') && !$editService->needsApproval()) {
             abort(403);
         }
 
@@ -84,6 +87,49 @@ class MemberMedicalController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+        // If coparent, create pending edits for each changed field
+        if ($editService->needsApproval()) {
+            $medicalInfo = MemberMedicalInfo::where('family_member_id', $member->id)->first();
+            $pendingCount = 0;
+
+            $fieldsToCheck = ['blood_type', 'medications', 'medical_conditions', 'insurance_provider', 'insurance_policy_number', 'insurance_group_number', 'notes'];
+
+            foreach ($fieldsToCheck as $field) {
+                $oldValue = $medicalInfo ? $medicalInfo->$field : null;
+                $newValue = $validated[$field] ?? null;
+
+                $oldNormalized = is_null($oldValue) ? '' : (string) $oldValue;
+                $newNormalized = is_null($newValue) ? '' : (string) $newValue;
+
+                if ($oldNormalized !== $newNormalized) {
+                    // If no medical info exists yet, create pending for create
+                    if (!$medicalInfo) {
+                        $editService->handleCreate(MemberMedicalInfo::class, array_merge($validated, [
+                            'tenant_id' => $member->tenant_id,
+                            'family_member_id' => $member->id,
+                        ]));
+                        $pendingCount = count(array_filter($validated, fn($v) => !is_null($v) && $v !== ''));
+                        break;
+                    }
+                    $editService->handleUpdate($medicalInfo, $field, $newValue);
+                    $pendingCount++;
+                }
+            }
+
+            if ($pendingCount === 0) {
+                return redirect()->route('family-circle.member.medical-info', [
+                    $member->familyCircle,
+                    $member
+                ])->with('info', 'No changes detected.');
+            }
+
+            return redirect()->route('family-circle.member.medical-info', [
+                $member->familyCircle,
+                $member
+            ])->with('info', "{$pendingCount} edit(s) submitted for owner approval.");
+        }
+
+        // Owner can update directly
         $validated['tenant_id'] = Auth::user()->tenant_id;
         $validated['family_member_id'] = $member->id;
 
@@ -105,8 +151,10 @@ class MemberMedicalController extends Controller
     {
         // Use centralized permission service
         $permissionService = CollaboratorPermissionService::forMember($member);
+        $editService = CoparentEditService::forMember($member);
 
-        if (!$permissionService->canCreate('medical')) {
+        // Allow if can create OR is coparent needing approval
+        if (!$permissionService->canCreate('medical') && !$editService->needsApproval()) {
             abort(403);
         }
 
@@ -120,8 +168,18 @@ class MemberMedicalController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $validated['tenant_id'] = Auth::user()->tenant_id;
+        $validated['tenant_id'] = $member->tenant_id;
         $validated['family_member_id'] = $member->id;
+
+        // If coparent, create pending edit
+        if ($editService->needsApproval()) {
+            $editService->handleCreate(MemberAllergy::class, $validated);
+
+            return redirect()->route('family-circle.member.medical-info', [
+                $member->familyCircle,
+                $member
+            ])->with('info', 'Allergy submitted for owner approval.');
+        }
 
         MemberAllergy::create($validated);
 
@@ -168,9 +226,21 @@ class MemberMedicalController extends Controller
     {
         // Use centralized permission service
         $permissionService = CollaboratorPermissionService::forMember($member);
+        $editService = CoparentEditService::forMember($member);
 
-        if (!$permissionService->canDelete('medical')) {
+        // Allow if can delete OR is coparent needing approval
+        if (!$permissionService->canDelete('medical') && !$editService->needsApproval()) {
             abort(403);
+        }
+
+        // If coparent, create pending delete
+        if ($editService->needsApproval()) {
+            $editService->handleDelete($allergy);
+
+            return redirect()->route('family-circle.member.medical-info', [
+                $member->familyCircle,
+                $member
+            ])->with('info', 'Delete request submitted for owner approval.');
         }
 
         $allergy->delete();
@@ -188,8 +258,10 @@ class MemberMedicalController extends Controller
     {
         // Use centralized permission service
         $permissionService = CollaboratorPermissionService::forMember($member);
+        $editService = CoparentEditService::forMember($member);
 
-        if (!$permissionService->canCreate('medical')) {
+        // Allow if can create OR is coparent needing approval
+        if (!$permissionService->canCreate('medical') && !$editService->needsApproval()) {
             abort(403);
         }
 
@@ -207,9 +279,19 @@ class MemberMedicalController extends Controller
             'is_primary' => 'boolean',
         ]);
 
-        $validated['tenant_id'] = Auth::user()->tenant_id;
+        $validated['tenant_id'] = $member->tenant_id;
         $validated['family_member_id'] = $member->id;
         $validated['is_primary'] = $request->boolean('is_primary');
+
+        // If coparent, create pending edit
+        if ($editService->needsApproval()) {
+            $editService->handleCreate(MemberHealthcareProvider::class, $validated);
+
+            return redirect()->route('family-circle.member.medical-info', [
+                $member->familyCircle,
+                $member
+            ])->with('info', 'Healthcare provider submitted for owner approval.');
+        }
 
         MemberHealthcareProvider::create($validated);
 
@@ -262,9 +344,21 @@ class MemberMedicalController extends Controller
     {
         // Use centralized permission service
         $permissionService = CollaboratorPermissionService::forMember($member);
+        $editService = CoparentEditService::forMember($member);
 
-        if (!$permissionService->canDelete('medical')) {
+        // Allow if can delete OR is coparent needing approval
+        if (!$permissionService->canDelete('medical') && !$editService->needsApproval()) {
             abort(403);
+        }
+
+        // If coparent, create pending delete
+        if ($editService->needsApproval()) {
+            $editService->handleDelete($provider);
+
+            return redirect()->route('family-circle.member.medical-info', [
+                $member->familyCircle,
+                $member
+            ])->with('info', 'Delete request submitted for owner approval.');
         }
 
         $provider->delete();
@@ -282,8 +376,10 @@ class MemberMedicalController extends Controller
     {
         // Use centralized permission service
         $permissionService = CollaboratorPermissionService::forMember($member);
+        $editService = CoparentEditService::forMember($member);
 
-        if (!$permissionService->canCreate('medical')) {
+        // Allow if can create OR is coparent needing approval
+        if (!$permissionService->canCreate('medical') && !$editService->needsApproval()) {
             abort(403);
         }
 
@@ -294,8 +390,18 @@ class MemberMedicalController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $validated['tenant_id'] = Auth::user()->tenant_id;
+        $validated['tenant_id'] = $member->tenant_id;
         $validated['family_member_id'] = $member->id;
+
+        // If coparent, create pending edit
+        if ($editService->needsApproval()) {
+            $editService->handleCreate(MemberMedication::class, $validated);
+
+            return redirect()->route('family-circle.member.medical-info', [
+                $member->familyCircle,
+                $member
+            ])->with('info', 'Medication submitted for owner approval.');
+        }
 
         MemberMedication::create($validated);
 
@@ -339,9 +445,21 @@ class MemberMedicalController extends Controller
     {
         // Use centralized permission service
         $permissionService = CollaboratorPermissionService::forMember($member);
+        $editService = CoparentEditService::forMember($member);
 
-        if (!$permissionService->canDelete('medical')) {
+        // Allow if can delete OR is coparent needing approval
+        if (!$permissionService->canDelete('medical') && !$editService->needsApproval()) {
             abort(403);
+        }
+
+        // If coparent, create pending delete
+        if ($editService->needsApproval()) {
+            $editService->handleDelete($medication);
+
+            return redirect()->route('family-circle.member.medical-info', [
+                $member->familyCircle,
+                $member
+            ])->with('info', 'Delete request submitted for owner approval.');
         }
 
         $medication->delete();
@@ -359,8 +477,10 @@ class MemberMedicalController extends Controller
     {
         // Use centralized permission service
         $permissionService = CollaboratorPermissionService::forMember($member);
+        $editService = CoparentEditService::forMember($member);
 
-        if (!$permissionService->canCreate('medical')) {
+        // Allow if can create OR is coparent needing approval
+        if (!$permissionService->canCreate('medical') && !$editService->needsApproval()) {
             abort(403);
         }
 
@@ -381,8 +501,18 @@ class MemberMedicalController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $validated['tenant_id'] = Auth::user()->tenant_id;
+        $validated['tenant_id'] = $member->tenant_id;
         $validated['family_member_id'] = $member->id;
+
+        // If coparent, create pending edit
+        if ($editService->needsApproval()) {
+            $editService->handleCreate(MemberMedicalCondition::class, $validated);
+
+            return redirect()->route('family-circle.member.medical-info', [
+                $member->familyCircle,
+                $member
+            ])->with('info', 'Medical condition submitted for owner approval.');
+        }
 
         MemberMedicalCondition::create($validated);
 
@@ -436,9 +566,21 @@ class MemberMedicalController extends Controller
     {
         // Use centralized permission service
         $permissionService = CollaboratorPermissionService::forMember($member);
+        $editService = CoparentEditService::forMember($member);
 
-        if (!$permissionService->canDelete('medical')) {
+        // Allow if can delete OR is coparent needing approval
+        if (!$permissionService->canDelete('medical') && !$editService->needsApproval()) {
             abort(403);
+        }
+
+        // If coparent, create pending delete
+        if ($editService->needsApproval()) {
+            $editService->handleDelete($condition);
+
+            return redirect()->route('family-circle.member.medical-info', [
+                $member->familyCircle,
+                $member
+            ])->with('info', 'Delete request submitted for owner approval.');
         }
 
         $condition->delete();
@@ -456,8 +598,10 @@ class MemberMedicalController extends Controller
     {
         // Use centralized permission service
         $permissionService = CollaboratorPermissionService::forMember($member);
+        $editService = CoparentEditService::forMember($member);
 
-        if (!$permissionService->canCreate('medical')) {
+        // Allow if can create OR is coparent needing approval
+        if (!$permissionService->canCreate('medical') && !$editService->needsApproval()) {
             abort(403);
         }
 
@@ -476,18 +620,29 @@ class MemberMedicalController extends Controller
             'document' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
         ]);
 
-        $validated['tenant_id'] = Auth::user()->tenant_id;
+        $validated['tenant_id'] = $member->tenant_id;
         $validated['family_member_id'] = $member->id;
 
         // Handle file upload
         if ($request->hasFile('document')) {
             $file = $request->file('document');
-            $path = $file->store('vaccinations/' . $member->id, 'private');
+            $path = $file->store('vaccinations/' . $member->id, 'do_spaces');
             $validated['document_path'] = $path;
             $validated['document_name'] = $file->getClientOriginalName();
         }
 
         unset($validated['document']);
+
+        // If coparent, create pending edit
+        if ($editService->needsApproval()) {
+            $editService->handleCreate(MemberVaccination::class, $validated);
+
+            return redirect()->route('family-circle.member.medical-info', [
+                $member->familyCircle,
+                $member
+            ])->with('info', 'Vaccination record submitted for owner approval.');
+        }
+
         MemberVaccination::create($validated);
 
         return redirect()->route('family-circle.member.medical-info', [
@@ -527,10 +682,10 @@ class MemberMedicalController extends Controller
         if ($request->hasFile('document')) {
             // Delete old file if exists
             if ($vaccination->document_path) {
-                Storage::disk('private')->delete($vaccination->document_path);
+                Storage::disk('do_spaces')->delete($vaccination->document_path);
             }
             $file = $request->file('document');
-            $path = $file->store('vaccinations/' . $member->id, 'private');
+            $path = $file->store('vaccinations/' . $member->id, 'do_spaces');
             $validated['document_path'] = $path;
             $validated['document_name'] = $file->getClientOriginalName();
         }
@@ -551,14 +706,26 @@ class MemberMedicalController extends Controller
     {
         // Use centralized permission service
         $permissionService = CollaboratorPermissionService::forMember($member);
+        $editService = CoparentEditService::forMember($member);
 
-        if (!$permissionService->canDelete('medical')) {
+        // Allow if can delete OR is coparent needing approval
+        if (!$permissionService->canDelete('medical') && !$editService->needsApproval()) {
             abort(403);
+        }
+
+        // If coparent, create pending delete
+        if ($editService->needsApproval()) {
+            $editService->handleDelete($vaccination);
+
+            return redirect()->route('family-circle.member.medical-info', [
+                $member->familyCircle,
+                $member
+            ])->with('info', 'Delete request submitted for owner approval.');
         }
 
         // Delete file if exists
         if ($vaccination->document_path) {
-            Storage::disk('private')->delete($vaccination->document_path);
+            Storage::disk('do_spaces')->delete($vaccination->document_path);
         }
 
         $vaccination->delete();
@@ -581,11 +748,11 @@ class MemberMedicalController extends Controller
             abort(403);
         }
 
-        if (!$vaccination->document_path || !Storage::disk('private')->exists($vaccination->document_path)) {
+        if (!$vaccination->document_path || !Storage::disk('do_spaces')->exists($vaccination->document_path)) {
             abort(404);
         }
 
-        return Storage::disk('private')->download(
+        return Storage::disk('do_spaces')->download(
             $vaccination->document_path,
             $vaccination->document_name
         );

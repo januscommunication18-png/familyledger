@@ -15,7 +15,6 @@
 @endsection
 
 @push('styles')
-<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet" />
 <style>
     .ql-container {
         min-height: 120px;
@@ -213,8 +212,7 @@
 </div>
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+@vite('resources/js/vendor/quill.js')
 <script>
     // Initialize Quill editor
     const quill = new Quill('#descriptionEditor', {

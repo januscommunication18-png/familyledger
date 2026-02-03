@@ -160,7 +160,7 @@ class FamilyResourceController extends Controller
                         continue;
                     }
 
-                    $path = $file->store('documents/family-resources/' . $resource->id, 'private');
+                    $path = $file->store('documents/family-resources/' . $resource->id, 'do_spaces');
 
                     FamilyResourceFile::create([
                         'family_resource_id' => $resource->id,
@@ -289,7 +289,7 @@ class FamilyResourceController extends Controller
                         continue;
                     }
 
-                    $path = $file->store('documents/family-resources/' . $familyResource->id, 'private');
+                    $path = $file->store('documents/family-resources/' . $familyResource->id, 'do_spaces');
 
                     FamilyResourceFile::create([
                         'family_resource_id' => $familyResource->id,
@@ -318,7 +318,7 @@ class FamilyResourceController extends Controller
 
         // Delete all files from storage
         foreach ($familyResource->files as $file) {
-            Storage::disk('private')->delete($file->file_path);
+            Storage::disk('do_spaces')->delete($file->file_path);
         }
 
         $familyResource->delete();
@@ -340,11 +340,11 @@ class FamilyResourceController extends Controller
             abort(404);
         }
 
-        if (!Storage::disk('private')->exists($file->file_path)) {
+        if (!Storage::disk('do_spaces')->exists($file->file_path)) {
             abort(404);
         }
 
-        return Storage::disk('private')->download($file->file_path, $file->original_name);
+        return Storage::disk('do_spaces')->download($file->file_path, $file->original_name);
     }
 
     /**
@@ -360,11 +360,11 @@ class FamilyResourceController extends Controller
             abort(404);
         }
 
-        if (!Storage::disk('private')->exists($file->file_path)) {
+        if (!Storage::disk('do_spaces')->exists($file->file_path)) {
             abort(404);
         }
 
-        return Storage::disk('private')->response($file->file_path);
+        return Storage::disk('do_spaces')->response($file->file_path);
     }
 
     /**
@@ -380,7 +380,7 @@ class FamilyResourceController extends Controller
             abort(404);
         }
 
-        Storage::disk('private')->delete($file->file_path);
+        Storage::disk('do_spaces')->delete($file->file_path);
         $file->delete();
 
         return back()->with('success', 'File deleted successfully.');

@@ -28,9 +28,13 @@ use App\Http\Controllers\PetController;
 use App\Http\Controllers\JournalController;
 use App\Http\Controllers\CollaboratorController;
 use App\Http\Controllers\CoparentingController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\RemindersController;
 use App\Http\Controllers\CoparentMessagesController;
+use App\Http\Controllers\PendingCoparentEditController;
+use App\Http\Controllers\CoparentAssetController;
 use App\Http\Controllers\ExpensesController;
+use App\Http\Controllers\SubscriptionController;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
@@ -129,6 +133,8 @@ Route::middleware(['security.code', 'auth'])->group(function () {
     // MFA Settings
     Route::post('/settings/mfa/sms/enable', [MfaController::class, 'enableSmsMfa']);
     Route::post('/settings/mfa/sms/confirm', [MfaController::class, 'confirmSmsMfa']);
+    Route::post('/settings/mfa/authenticator/setup', [MfaController::class, 'setupAuthenticator']);
+    Route::post('/settings/mfa/authenticator/confirm', [MfaController::class, 'confirmAuthenticator']);
     Route::post('/settings/mfa/disable', [MfaController::class, 'disableMfa']);
 
     // Unlink Social Account
@@ -136,14 +142,19 @@ Route::middleware(['security.code', 'auth'])->group(function () {
         ->where('provider', 'google|apple|facebook');
 
     // Dashboard (requires email verification AND onboarding completion)
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->middleware(['verified', 'onboarding'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])
+        ->middleware(['verified', 'onboarding'])
+        ->name('dashboard');
+
+    // Global Search
+    Route::get('/search', [\App\Http\Controllers\GlobalSearchController::class, 'search'])
+        ->middleware(['verified', 'onboarding'])
+        ->name('search');
 
     // Family Circle
     Route::middleware(['verified', 'onboarding'])->prefix('family-circle')->name('family-circle.')->group(function () {
         Route::get('/', [FamilyCircleController::class, 'index'])->name('index');
-        Route::post('/', [FamilyCircleController::class, 'store'])->name('store');
+        Route::post('/', [FamilyCircleController::class, 'store'])->middleware('plan.limit:family_circles')->name('store');
         Route::get('/{familyCircle}', [FamilyCircleController::class, 'show'])->name('show');
         Route::get('/{familyCircle}/owner', [FamilyCircleController::class, 'showOwner'])->name('owner.show');
         Route::put('/{familyCircle}', [FamilyCircleController::class, 'update'])->name('update');
@@ -151,7 +162,7 @@ Route::middleware(['security.code', 'auth'])->group(function () {
 
         // Family Members
         Route::get('/{familyCircle}/members/create', [FamilyMemberController::class, 'create'])->name('member.create');
-        Route::post('/{familyCircle}/members', [FamilyMemberController::class, 'store'])->name('member.store');
+        Route::post('/{familyCircle}/members', [FamilyMemberController::class, 'store'])->middleware('plan.limit:family_members')->name('member.store');
         Route::get('/{familyCircle}/members/{member}', [FamilyMemberController::class, 'show'])->name('member.show');
         Route::get('/{familyCircle}/members/{member}/edit', [FamilyMemberController::class, 'edit'])->name('member.edit');
         Route::put('/{familyCircle}/members/{member}', [FamilyMemberController::class, 'update'])->name('member.update');
@@ -169,6 +180,22 @@ Route::middleware(['security.code', 'auth'])->group(function () {
 
         // Emergency Contacts Page
         Route::get('/{familyCircle}/members/{member}/emergency-contacts', [MemberEmergencyContactController::class, 'show'])->name('member.emergency-contacts');
+
+        // Education Info Page
+        Route::get('/{familyCircle}/members/{member}/education', [FamilyMemberController::class, 'educationInfo'])->name('member.education-info');
+
+        // School Records (multiple)
+        Route::get('/{familyCircle}/members/{member}/education/school/create', [FamilyMemberController::class, 'createSchoolRecord'])->name('member.education.school.create');
+        Route::post('/{familyCircle}/members/{member}/education/school', [FamilyMemberController::class, 'storeSchoolRecord'])->name('member.education.school.store');
+        Route::get('/{familyCircle}/members/{member}/education/school/{schoolRecord}', [FamilyMemberController::class, 'showSchoolRecord'])->name('member.education.school.show');
+        Route::get('/{familyCircle}/members/{member}/education/school/{schoolRecord}/edit', [FamilyMemberController::class, 'editSchoolRecord'])->name('member.education.school.edit');
+        Route::put('/{familyCircle}/members/{member}/education/school/{schoolRecord}', [FamilyMemberController::class, 'updateSchoolRecord'])->name('member.education.school.update');
+        Route::delete('/{familyCircle}/members/{member}/education/school/{schoolRecord}', [FamilyMemberController::class, 'destroySchoolRecord'])->name('member.education.school.destroy');
+
+        // Education Documents
+        Route::post('/{familyCircle}/members/{member}/education/documents', [FamilyMemberController::class, 'storeEducationDocument'])->middleware('plan.limit:documents')->name('member.education.document.store');
+        Route::get('/{familyCircle}/members/{member}/education/documents/{document}/download', [FamilyMemberController::class, 'downloadEducationDocument'])->name('member.education.document.download');
+        Route::delete('/{familyCircle}/members/{member}/education/documents/{document}', [FamilyMemberController::class, 'destroyEducationDocument'])->name('member.education.document.destroy');
     });
 
     // Member Documents (accessible directly via member ID)
@@ -218,7 +245,7 @@ Route::middleware(['security.code', 'auth'])->group(function () {
 
         // Documents
         Route::get('/{member}/documents', [MemberDocumentController::class, 'index'])->name('documents.index');
-        Route::post('/{member}/documents', [MemberDocumentController::class, 'store'])->name('documents.store');
+        Route::post('/{member}/documents', [MemberDocumentController::class, 'store'])->middleware('plan.limit:documents')->name('documents.store');
         Route::get('/{member}/documents/{document}', [MemberDocumentController::class, 'show'])->name('documents.show');
         Route::put('/{member}/documents/{document}', [MemberDocumentController::class, 'update'])->name('documents.update');
         Route::delete('/{member}/documents/{document}', [MemberDocumentController::class, 'destroy'])->name('documents.destroy');
@@ -238,7 +265,7 @@ Route::middleware(['security.code', 'auth'])->group(function () {
         Route::delete('/{asset}', [AssetController::class, 'destroy'])->name('destroy');
 
         // Document management
-        Route::post('/{asset}/documents', [AssetController::class, 'uploadDocument'])->name('documents.upload');
+        Route::post('/{asset}/documents', [AssetController::class, 'uploadDocument'])->middleware('plan.limit:documents')->name('documents.upload');
         Route::delete('/{asset}/documents/{document}', [AssetController::class, 'deleteDocument'])->name('documents.destroy');
         Route::get('/{asset}/documents/{document}/download', [AssetController::class, 'downloadDocument'])->name('documents.download');
         Route::get('/{asset}/documents/{document}/view', [AssetController::class, 'viewDocument'])->name('documents.view');
@@ -249,7 +276,7 @@ Route::middleware(['security.code', 'auth'])->group(function () {
 
     // Insurance Policies
     Route::get('/documents/insurance/create', [DocumentController::class, 'createInsurance'])->middleware(['verified', 'onboarding'])->name('documents.insurance.create');
-    Route::post('/documents/insurance', [DocumentController::class, 'storeInsurance'])->middleware(['verified', 'onboarding'])->name('documents.insurance.store');
+    Route::post('/documents/insurance', [DocumentController::class, 'storeInsurance'])->middleware(['verified', 'onboarding', 'plan.limit:documents'])->name('documents.insurance.store');
     Route::get('/documents/insurance/{insurance}', [DocumentController::class, 'showInsurance'])->middleware(['verified', 'onboarding'])->name('documents.insurance.show');
     Route::get('/documents/insurance/{insurance}/edit', [DocumentController::class, 'editInsurance'])->middleware(['verified', 'onboarding'])->name('documents.insurance.edit');
     Route::put('/documents/insurance/{insurance}', [DocumentController::class, 'updateInsurance'])->middleware(['verified', 'onboarding'])->name('documents.insurance.update');
@@ -258,7 +285,7 @@ Route::middleware(['security.code', 'auth'])->group(function () {
 
     // Tax Returns
     Route::get('/documents/tax-returns/create', [DocumentController::class, 'createTaxReturn'])->middleware(['verified', 'onboarding'])->name('documents.tax-returns.create');
-    Route::post('/documents/tax-returns', [DocumentController::class, 'storeTaxReturn'])->middleware(['verified', 'onboarding'])->name('documents.tax-returns.store');
+    Route::post('/documents/tax-returns', [DocumentController::class, 'storeTaxReturn'])->middleware(['verified', 'onboarding', 'plan.limit:documents'])->name('documents.tax-returns.store');
     Route::get('/documents/tax-returns/{taxReturn}', [DocumentController::class, 'showTaxReturn'])->middleware(['verified', 'onboarding'])->name('documents.tax-returns.show');
     Route::get('/documents/tax-returns/{taxReturn}/edit', [DocumentController::class, 'editTaxReturn'])->middleware(['verified', 'onboarding'])->name('documents.tax-returns.edit');
     Route::put('/documents/tax-returns/{taxReturn}', [DocumentController::class, 'updateTaxReturn'])->middleware(['verified', 'onboarding'])->name('documents.tax-returns.update');
@@ -269,7 +296,7 @@ Route::middleware(['security.code', 'auth'])->group(function () {
     Route::middleware(['verified', 'onboarding'])->prefix('legal')->name('legal.')->group(function () {
         Route::get('/', [LegalDocumentController::class, 'index'])->name('index');
         Route::get('/create', [LegalDocumentController::class, 'create'])->name('create');
-        Route::post('/', [LegalDocumentController::class, 'store'])->name('store');
+        Route::post('/', [LegalDocumentController::class, 'store'])->middleware('plan.limit:documents')->name('store');
         Route::get('/{legalDocument}', [LegalDocumentController::class, 'show'])->name('show');
         Route::get('/{legalDocument}/edit', [LegalDocumentController::class, 'edit'])->name('edit');
         Route::put('/{legalDocument}', [LegalDocumentController::class, 'update'])->name('update');
@@ -412,6 +439,14 @@ Route::middleware(['security.code', 'auth'])->group(function () {
         Route::get('/expenses', [CoparentingController::class, 'expenses'])->name('expenses');
         Route::get('/parenting-plan', [CoparentingController::class, 'parentingPlan'])->name('parenting-plan');
 
+        // Coparent Assets
+        Route::prefix('assets')->name('assets.')->group(function () {
+            Route::get('/', [CoparentAssetController::class, 'index'])->name('index');
+            Route::get('/create', [CoparentAssetController::class, 'create'])->name('create');
+            Route::post('/', [CoparentAssetController::class, 'store'])->name('store');
+            Route::get('/{asset}', [CoparentAssetController::class, 'show'])->name('show');
+        });
+
         // Secure Messages
         Route::prefix('messages')->name('messages.')->group(function () {
             // Static routes first (before wildcard routes)
@@ -431,6 +466,18 @@ Route::middleware(['security.code', 'auth'])->group(function () {
             Route::get('/{conversation}/export-pdf', [CoparentMessagesController::class, 'exportPdf'])->name('exportPdf');
             Route::get('/{conversation}/export-csv', [CoparentMessagesController::class, 'exportCsv'])->name('exportCsv');
             Route::post('/{conversation}/attachments', [CoparentMessagesController::class, 'uploadAttachment'])->name('uploadAttachment');
+        });
+
+        // Pending Edits (Owner review of coparent edit requests)
+        Route::prefix('pending-edits')->name('pending-edits.')->group(function () {
+            Route::get('/', [PendingCoparentEditController::class, 'index'])->name('index');
+            Route::get('/count', [PendingCoparentEditController::class, 'count'])->name('count');
+            Route::get('/history', [PendingCoparentEditController::class, 'history'])->name('history');
+            Route::get('/{pendingEdit}', [PendingCoparentEditController::class, 'show'])->name('show');
+            Route::post('/{pendingEdit}/approve', [PendingCoparentEditController::class, 'approve'])->name('approve');
+            Route::post('/{pendingEdit}/reject', [PendingCoparentEditController::class, 'reject'])->name('reject');
+            Route::post('/bulk-approve', [PendingCoparentEditController::class, 'bulkApprove'])->name('bulk-approve');
+            Route::post('/bulk-reject', [PendingCoparentEditController::class, 'bulkReject'])->name('bulk-reject');
         });
     });
 
@@ -539,6 +586,10 @@ Route::middleware(['security.code', 'auth'])->group(function () {
         Route::delete('/items/{item}', [ShoppingListController::class, 'deleteItem'])->name('items.destroy');
         Route::post('/{shoppingList}/clear-checked', [ShoppingListController::class, 'clearChecked'])->name('clear-checked');
 
+        // Share & Email
+        Route::post('/{shoppingList}/share', [ShoppingListController::class, 'share'])->name('share');
+        Route::post('/{shoppingList}/email', [ShoppingListController::class, 'email'])->name('email');
+
         // Suggestions
         Route::get('/api/suggestions', [ShoppingListController::class, 'suggestions'])->name('suggestions');
     });
@@ -583,6 +634,7 @@ Route::middleware(['security.code', 'auth'])->group(function () {
     Route::middleware(['verified', 'onboarding'])->prefix('settings')->name('settings.')->group(function () {
         Route::get('/', [SettingsController::class, 'index'])->name('index');
         Route::post('/profile', [SettingsController::class, 'updateProfile'])->name('profile.update');
+        Route::delete('/profile/avatar', [SettingsController::class, 'removeAvatar'])->name('profile.remove-avatar');
         Route::post('/password', [SettingsController::class, 'updatePassword'])->name('password.update');
         Route::delete('/sessions/{session}', [SettingsController::class, 'revokeSession'])->name('sessions.revoke');
         Route::post('/sessions/revoke-all', [SettingsController::class, 'revokeAllSessions'])->name('sessions.revoke-all');
@@ -591,6 +643,23 @@ Route::middleware(['security.code', 'auth'])->group(function () {
         Route::post('/privacy', [SettingsController::class, 'updatePrivacy'])->name('privacy.update');
         Route::get('/export-data', [SettingsController::class, 'exportData'])->name('export-data');
         Route::post('/delete-account', [SettingsController::class, 'requestAccountDeletion'])->name('delete-account');
+
+        // Account Recovery Code
+        Route::post('/recovery-code/generate', [SettingsController::class, 'generateRecoveryCode'])->name('recovery-code.generate');
+        Route::post('/recovery-code', [SettingsController::class, 'saveRecoveryCode'])->name('recovery-code.save');
+    });
+
+    // Subscription & Billing
+    Route::middleware(['verified', 'onboarding'])->prefix('subscription')->name('subscription.')->group(function () {
+        Route::get('/', [SubscriptionController::class, 'index'])->name('index');
+        Route::get('/pricing', [SubscriptionController::class, 'pricing'])->name('pricing');
+        Route::get('/checkout/{plan}', [SubscriptionController::class, 'checkout'])->name('checkout');
+        Route::post('/subscribe', [SubscriptionController::class, 'subscribe'])->name('subscribe');
+        Route::post('/apply-discount', [SubscriptionController::class, 'applyDiscount'])->name('apply-discount');
+        Route::post('/checkout-complete', [SubscriptionController::class, 'checkoutComplete'])->name('checkout-complete');
+        Route::post('/cancel', [SubscriptionController::class, 'cancel'])->name('cancel');
+        Route::post('/resume', [SubscriptionController::class, 'resume'])->name('resume');
+        Route::post('/billing-cycle', [SubscriptionController::class, 'changeBillingCycle'])->name('billing-cycle');
     });
 
     // Image Verification (for viewing sensitive documents/images)
@@ -605,6 +674,7 @@ Route::middleware(['security.code', 'auth'])->group(function () {
     Route::post('/onboarding/step3', [OnboardingController::class, 'step3']);
     Route::post('/onboarding/step4', [OnboardingController::class, 'step4']);
     Route::post('/onboarding/step5', [OnboardingController::class, 'step5']);
+    Route::post('/onboarding/step6', [OnboardingController::class, 'step6']);
     Route::post('/onboarding/back', [OnboardingController::class, 'back']);
     Route::post('/onboarding/skip', [OnboardingController::class, 'skip'])->name('onboarding.skip');
     Route::post('/onboarding/restart', [OnboardingController::class, 'restart'])->name('onboarding.restart');
@@ -614,3 +684,26 @@ Route::middleware(['security.code', 'auth'])->group(function () {
     Route::post('/onboarding/generate-2fa-secret', [OnboardingController::class, 'generate2FASecret']);
     Route::post('/onboarding/verify-2fa-code', [OnboardingController::class, 'verify2FACode']);
 });
+
+/*
+|--------------------------------------------------------------------------
+| Email Tracking Routes (No authentication - accessed from email clients)
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/email/track/open/{token}', [\App\Http\Controllers\EmailTrackingController::class, 'trackOpen'])
+    ->name('email.track.open');
+Route::get('/email/track/click/{token}', [\App\Http\Controllers\EmailTrackingController::class, 'trackClick'])
+    ->name('email.track.click');
+
+/*
+|--------------------------------------------------------------------------
+| Webhook Routes (No authentication - called by external services)
+|--------------------------------------------------------------------------
+*/
+
+Route::post('/webhooks/paddle', [SubscriptionController::class, 'handlePaddleWebhook'])
+    ->name('webhooks.paddle');
+
+// Alternative webhook URL (if configured differently in Paddle)
+Route::post('/paddle/webhook', [SubscriptionController::class, 'handlePaddleWebhook']);

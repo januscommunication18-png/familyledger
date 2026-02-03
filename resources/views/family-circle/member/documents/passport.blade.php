@@ -3,10 +3,12 @@
 @php
     $isOwnerSelf = $member->relationship === 'self' && $member->linked_user_id == auth()->id();
     $backUrl = $isOwnerSelf ? route('family-circle.owner.show', $circle) : route('family-circle.member.show', [$circle, $member]);
+    $canEdit = $access->canEdit('passport');
+    $isViewOnly = !$canEdit;
 @endphp
 
-@section('title', ($document ? 'Edit' : 'Add') . ' Passport')
-@section('page-name', ($document ? 'Edit' : 'Add') . ' Passport')
+@section('title', ($document ? ($canEdit ? 'Edit' : 'View') : 'Add') . ' Passport')
+@section('page-name', ($document ? ($canEdit ? 'Edit' : 'View') : 'Add') . ' Passport')
 
 @section('breadcrumbs')
     <li class="breadcrumbs-separator rtl:rotate-180">
@@ -32,19 +34,128 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                 Back
             </a>
+            @if($isViewOnly)
+            <span class="badge badge-ghost">View Only</span>
+            @endif
         </div>
         <div class="flex items-center gap-4">
             <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
                 <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M7 21v-2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/></svg>
             </div>
             <div>
-                <h1 class="text-2xl font-bold text-slate-900">{{ $document ? 'Edit' : 'Add' }} Passport</h1>
+                <h1 class="text-2xl font-bold text-slate-900">{{ $document ? ($canEdit ? 'Edit' : 'View') : 'Add' }} Passport</h1>
                 <p class="text-slate-500">{{ $member->full_name }}</p>
             </div>
         </div>
     </div>
 
-    <!-- Form Card -->
+    @if($isViewOnly && $document)
+    {{-- READ-ONLY VIEW --}}
+    <div class="card bg-base-100 shadow-sm">
+        <div class="card-body">
+            <!-- Passport Details Section -->
+            <div class="mb-6">
+                <h2 class="text-lg font-semibold text-slate-900 mb-1">Passport Details</h2>
+                <p class="text-sm text-slate-500 mb-4">Passport information</p>
+
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-slate-50 rounded-lg p-4">
+                            <p class="text-xs text-slate-500 uppercase tracking-wide mb-1">Passport Number</p>
+                            <p class="font-medium text-slate-900">{{ $document->document_number ?: '-' }}</p>
+                        </div>
+
+                        <div class="bg-slate-50 rounded-lg p-4">
+                            <p class="text-xs text-slate-500 uppercase tracking-wide mb-1">Country of Issue</p>
+                            <p class="font-medium text-slate-900">{{ $document->country_of_issue ?: '-' }}</p>
+                        </div>
+
+                        <div class="bg-slate-50 rounded-lg p-4">
+                            <p class="text-xs text-slate-500 uppercase tracking-wide mb-1">Issue Date</p>
+                            <p class="font-medium text-slate-900">{{ $document->issue_date ? $document->issue_date->format('M d, Y') : '-' }}</p>
+                        </div>
+
+                        <div class="bg-slate-50 rounded-lg p-4">
+                            <p class="text-xs text-slate-500 uppercase tracking-wide mb-1">Expiry Date</p>
+                            <p class="font-medium text-slate-900 {{ $document->expiry_date && $document->expiry_date->isPast() ? 'text-error' : '' }}">
+                                {{ $document->expiry_date ? $document->expiry_date->format('M d, Y') : '-' }}
+                                @if($document->expiry_date && $document->expiry_date->isPast())
+                                <span class="badge badge-error badge-sm ml-2">Expired</span>
+                                @endif
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document Images Section -->
+            @if($document->front_image || $document->back_image)
+            <div class="pt-6 border-t border-slate-200">
+                <h2 class="text-lg font-semibold text-slate-900 mb-1">Document Images</h2>
+                <p class="text-sm text-slate-500 mb-4">Passport photo page and additional pages</p>
+
+                <div class="grid grid-cols-2 gap-4">
+                    @if($document->front_image)
+                    <div>
+                        <p class="text-sm font-medium text-slate-700 mb-2">Photo Page</p>
+                        <div class="rounded-lg overflow-hidden border border-slate-200">
+                            <x-protected-image
+                                :src="route('member.documents.image', [$member, $document, 'front'])"
+                                alt="Photo Page"
+                                class="w-full h-40 object-contain"
+                                container-class="w-full h-40"
+                            />
+                        </div>
+                    </div>
+                    @endif
+
+                    @if($document->back_image)
+                    <div>
+                        <p class="text-sm font-medium text-slate-700 mb-2">Additional Page</p>
+                        <div class="rounded-lg overflow-hidden border border-slate-200">
+                            <x-protected-image
+                                :src="route('member.documents.image', [$member, $document, 'back'])"
+                                alt="Additional Page"
+                                class="w-full h-40 object-contain"
+                                container-class="w-full h-40"
+                            />
+                        </div>
+                    </div>
+                    @endif
+                </div>
+            </div>
+            @endif
+
+            <!-- Footer -->
+            <div class="pt-6 border-t border-slate-200">
+                <a href="{{ $backUrl }}" class="btn btn-ghost">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                    Back to Profile
+                </a>
+            </div>
+        </div>
+    </div>
+
+    @elseif($isViewOnly && !$document)
+    {{-- NO DATA AND VIEW ONLY --}}
+    <div class="card bg-base-100 shadow-sm">
+        <div class="card-body">
+            <div class="text-center py-8">
+                <div class="w-16 h-16 mx-auto rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgb(148 163 184)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M7 21v-2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/></svg>
+                </div>
+                <h3 class="font-semibold text-slate-800 mb-1">No Passport on File</h3>
+                <p class="text-sm text-slate-500 mb-4">No passport information has been added yet.</p>
+                <a href="{{ $backUrl }}" class="btn btn-ghost">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                    Back to Profile
+                </a>
+            </div>
+        </div>
+    </div>
+
+    @else
+    {{-- EDITABLE FORM --}}
     <div class="card bg-base-100 shadow-sm">
         <form action="{{ $document ? route('member.documents.update', [$member, $document]) : route('member.documents.store', $member) }}" method="POST" enctype="multipart/form-data">
             @csrf
@@ -174,6 +285,7 @@
             </div>
         </form>
     </div>
+    @endif
 </div>
 @endsection
 

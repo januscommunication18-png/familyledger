@@ -55,6 +55,10 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                         Edit
                     </button>
+                    <button type="button" onclick="showDeleteCircleModal()" class="btn btn-ghost btn-sm text-white/80 hover:text-white hover:bg-red-500/20">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                        Delete
+                    </button>
                     <a href="{{ route('family-circle.member.create', $circle) }}" class="btn btn-sm bg-white text-violet-600 hover:bg-white/90 gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
                         Add Member
@@ -145,7 +149,7 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                                 View
                             </a>
-                            <a href="{{ route('documents.index') }}" class="btn btn-sm btn-outline btn-primary gap-2">
+                            <a href="{{ route('documents.index') }}" class="btn btn-sm btn-primary gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
                                 Documents
                             </a>
@@ -400,6 +404,50 @@
     </div>
 </div>
 
+<!-- Delete Circle Modal -->
+@php
+    $hasCoParentingMembers = $circle->members->where('co_parenting_enabled', true)->count() > 0;
+@endphp
+<div id="deleteCircleModal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black/50" onclick="closeDeleteCircleModal()"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
+        <div class="bg-base-100 rounded-xl shadow-xl max-w-sm w-full p-6 pointer-events-auto">
+            @if($hasCoParentingMembers)
+                {{-- Cannot delete - has co-parenting members --}}
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-warning/10 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-warning"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                    </div>
+                    <h3 class="font-bold text-lg">Cannot Delete Circle</h3>
+                </div>
+                <p class="text-sm text-base-content/70 mb-4">This family circle contains members with co-parenting enabled. You cannot delete a circle that has co-parenting arrangements.</p>
+                <p class="text-sm text-base-content/60 mb-6">Please remove or disable co-parenting for all members before deleting this circle.</p>
+                <div class="flex justify-end">
+                    <button type="button" onclick="closeDeleteCircleModal()" class="btn btn-primary">Understood</button>
+                </div>
+            @else
+                {{-- Can delete - confirm deletion --}}
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-error/10 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-error"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                    </div>
+                    <h3 class="font-bold text-lg text-error">Delete Family Circle</h3>
+                </div>
+                <p class="text-sm text-base-content/70 mb-2">Are you sure you want to delete <strong>{{ $circle->name }}</strong>?</p>
+                <p class="text-sm text-base-content/60 mb-6">This will permanently delete the circle and all its members, documents, and related data. This action cannot be undone.</p>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeDeleteCircleModal()" class="btn btn-ghost">Cancel</button>
+                    <form action="{{ route('family-circle.destroy', $circle) }}" method="POST" class="inline">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-error">Delete Circle</button>
+                    </form>
+                </div>
+            @endif
+        </div>
+    </div>
+</div>
+
 <!-- Edit Circle Modal -->
 <div id="editCircleModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999;">
     <!-- Backdrop -->
@@ -516,6 +564,17 @@ function closeEditCircleModal() {
     }
 }
 
+// Delete Circle Modal functions
+function showDeleteCircleModal() {
+    document.getElementById('deleteCircleModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeDeleteCircleModal() {
+    document.getElementById('deleteCircleModal').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Edit Circle Modal backdrop click
     const editBackdrop = document.getElementById('editCircleBackdrop');
@@ -529,6 +588,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closeEditCircleModal();
+            closeDeleteCircleModal();
         }
     });
 

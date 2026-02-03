@@ -571,6 +571,8 @@ class CollaboratorController extends Controller
                 'insurance' => 'none',
                 'tax_returns' => 'none',
                 'assets' => 'none',
+                'legal_documents' => 'none',
+                'family_resources' => 'none',
             ],
         ];
 

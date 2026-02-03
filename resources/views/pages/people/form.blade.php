@@ -119,18 +119,52 @@
                         :value="$person?->birthday"
                     />
 
+                    <div class="flex items-center gap-3 -mt-2">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="birthday_reminder" value="1"
+                                   class="checkbox checkbox-sm checkbox-primary"
+                                   {{ old('birthday_reminder', $person?->birthday_reminder) ? 'checked' : '' }}>
+                            <span class="text-sm text-slate-600">Send birthday reminder</span>
+                        </label>
+                    </div>
+
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">How We Know Each Other</label>
                         <input type="text" name="how_we_know" value="{{ old('how_we_know', $person?->how_we_know) }}"
                                class="input w-full" placeholder="e.g., Met at church, Kids' school" />
                     </div>
 
-                    <div>
+                    <div x-data="tagsInput(@js($person?->tags ?? []))">
                         <label class="block text-sm font-medium text-slate-700 mb-1">Tags</label>
-                        <input type="text" name="tags_input"
-                               value="{{ old('tags_input', $person?->tags ? implode(', ', $person->tags) : '') }}"
-                               class="input w-full" placeholder="e.g., VIP, Neighbor, Emergency (comma separated)" />
-                        <p class="text-xs text-slate-400 mt-1">Separate tags with commas</p>
+
+                        <!-- Selected Tags Display -->
+                        <div class="flex flex-wrap gap-2 mb-2" x-show="tags.length > 0">
+                            <template x-for="(tag, index) in tags" :key="index">
+                                <span class="inline-flex items-center gap-1 px-3 py-1 bg-violet-100 text-violet-700 rounded-full text-sm">
+                                    <span x-text="tag"></span>
+                                    <button type="button" @click="removeTag(index)" class="hover:text-violet-900">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                    </button>
+                                </span>
+                            </template>
+                        </div>
+
+                        <!-- Tag Input -->
+                        <div class="flex gap-2">
+                            <input type="text" x-model="newTag"
+                                   @keydown.enter.prevent="addTag()"
+                                   @keydown.comma.prevent="addTag()"
+                                   class="input flex-1"
+                                   placeholder="Type a tag and press Enter" />
+                            <button type="button" @click="addTag()" class="btn btn-outline btn-sm gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                                Add
+                            </button>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-1">Press Enter or click Add to add a tag</p>
+
+                        <!-- Hidden input for form submission -->
+                        <input type="hidden" name="tags_input" :value="tags.join(', ')">
                     </div>
 
                     <!-- Profile Photo -->
@@ -279,7 +313,7 @@
                 <div id="addresses-container" class="space-y-4">
                     @if($person && $person->addresses->count() > 0)
                         @foreach($person->addresses as $index => $address)
-                            <div class="address-row p-3 bg-slate-50 rounded-lg relative">
+                            <div class="address-row p-3 bg-slate-50 rounded-lg relative" data-address-index="{{ $index }}">
                                 <button type="button" onclick="this.closest('.address-row').remove()" class="absolute top-2 right-2 btn btn-ghost btn-xs btn-square text-error">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                                 </button>
@@ -291,18 +325,26 @@
                                             @endforeach
                                         </select>
                                     </div>
-                                    <div class="col-span-2">
-                                        <input type="text" name="addresses[{{ $index }}][street_address]" value="{{ $address->street_address }}" class="input input-sm w-full" placeholder="Street address">
+                                    <div class="col-span-2 relative">
+                                        <input type="text" name="addresses[{{ $index }}][street_address]" value="{{ $address->street_address }}"
+                                               class="input input-sm w-full smarty-street-input"
+                                               placeholder="Start typing address..."
+                                               autocomplete="off">
+                                        <div class="smarty-suggestions hidden absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"></div>
                                     </div>
-                                    <input type="text" name="addresses[{{ $index }}][city]" value="{{ $address->city }}" class="input input-sm" placeholder="City">
-                                    <input type="text" name="addresses[{{ $index }}][state]" value="{{ $address->state }}" class="input input-sm" placeholder="State">
-                                    <input type="text" name="addresses[{{ $index }}][zip_code]" value="{{ $address->zip_code }}" class="input input-sm" placeholder="ZIP">
-                                    <input type="text" name="addresses[{{ $index }}][country]" value="{{ $address->country }}" class="input input-sm" placeholder="Country">
+                                    <input type="text" name="addresses[{{ $index }}][city]" value="{{ $address->city }}" class="input input-sm smarty-city" placeholder="City">
+                                    <input type="text" name="addresses[{{ $index }}][state]" value="{{ $address->state }}" class="input input-sm smarty-state" placeholder="State">
+                                    <input type="text" name="addresses[{{ $index }}][zip_code]" value="{{ $address->zip_code }}" class="input input-sm smarty-zip" placeholder="ZIP">
+                                    <input type="text" name="addresses[{{ $index }}][country]" value="{{ $address->country }}" class="input input-sm smarty-country" placeholder="Country">
                                 </div>
                             </div>
                         @endforeach
                     @endif
                 </div>
+                <p class="text-xs text-slate-400 mt-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="inline-block mr-1"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                    Start typing to search for addresses
+                </p>
             </div>
         </div>
 
@@ -368,14 +410,33 @@
                 <div id="important-dates-container" class="space-y-2">
                     @if($person && $person->importantDates->count() > 0)
                         @foreach($person->importantDates as $index => $date)
-                            <div class="date-row space-y-2 p-3 bg-slate-50 rounded-lg relative">
+                            <div class="date-row space-y-3 p-3 bg-slate-50 rounded-lg relative">
                                 <button type="button" onclick="this.closest('.date-row').remove()" class="absolute top-2 right-2 btn btn-ghost btn-xs btn-square text-error">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                                 </button>
                                 <input type="text" name="important_dates[{{ $index }}][label]" value="{{ $date->label }}"
                                        class="input input-sm w-full" placeholder="Label (e.g., Anniversary)">
-                                <input type="text" name="important_dates[{{ $index }}][date]" value="{{ $date->date->format('m/d/Y') }}"
-                                       class="input input-sm w-full date-picker" placeholder="MM/DD/YYYY" readonly>
+                                <div class="flex gap-2">
+                                    <select name="important_dates[{{ $index }}][date_month]" class="select select-sm flex-1">
+                                        <option value="">Month</option>
+                                        <option value="01" {{ $date->date->format('m') == '01' ? 'selected' : '' }}>January</option>
+                                        <option value="02" {{ $date->date->format('m') == '02' ? 'selected' : '' }}>February</option>
+                                        <option value="03" {{ $date->date->format('m') == '03' ? 'selected' : '' }}>March</option>
+                                        <option value="04" {{ $date->date->format('m') == '04' ? 'selected' : '' }}>April</option>
+                                        <option value="05" {{ $date->date->format('m') == '05' ? 'selected' : '' }}>May</option>
+                                        <option value="06" {{ $date->date->format('m') == '06' ? 'selected' : '' }}>June</option>
+                                        <option value="07" {{ $date->date->format('m') == '07' ? 'selected' : '' }}>July</option>
+                                        <option value="08" {{ $date->date->format('m') == '08' ? 'selected' : '' }}>August</option>
+                                        <option value="09" {{ $date->date->format('m') == '09' ? 'selected' : '' }}>September</option>
+                                        <option value="10" {{ $date->date->format('m') == '10' ? 'selected' : '' }}>October</option>
+                                        <option value="11" {{ $date->date->format('m') == '11' ? 'selected' : '' }}>November</option>
+                                        <option value="12" {{ $date->date->format('m') == '12' ? 'selected' : '' }}>December</option>
+                                    </select>
+                                    <input type="number" name="important_dates[{{ $index }}][date_day]" value="{{ $date->date->format('d') }}"
+                                           class="input input-sm w-16" placeholder="Day" min="1" max="31">
+                                    <input type="number" name="important_dates[{{ $index }}][date_year]" value="{{ $date->date->format('Y') }}"
+                                           class="input input-sm w-20" placeholder="Year" min="1900" max="{{ date('Y') + 20 }}">
+                                </div>
                                 <label class="flex items-center gap-2 cursor-pointer">
                                     <input type="checkbox" name="important_dates[{{ $index }}][recurring_yearly]" value="1"
                                            class="checkbox checkbox-sm checkbox-primary" {{ $date->recurring_yearly ? 'checked' : '' }}>
@@ -528,8 +589,25 @@
     </form>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
+    // Tags Input Component
+    function tagsInput(initialTags = []) {
+        return {
+            tags: initialTags || [],
+            newTag: '',
+            addTag() {
+                const tag = this.newTag.trim();
+                if (tag && !this.tags.includes(tag)) {
+                    this.tags.push(tag);
+                }
+                this.newTag = '';
+            },
+            removeTag(index) {
+                this.tags.splice(index, 1);
+            }
+        }
+    }
+
     let emailIndex = {{ $person ? $person->emails->count() : 1 }};
     let phoneIndex = {{ $person ? $person->phones->count() : 1 }};
     let addressIndex = {{ $person ? $person->addresses->count() : 0 }};
@@ -576,7 +654,7 @@
     function addAddress() {
         const container = document.getElementById('addresses-container');
         const html = `
-            <div class="address-row p-3 bg-slate-50 rounded-lg relative">
+            <div class="address-row p-3 bg-slate-50 rounded-lg relative" data-address-index="${addressIndex}">
                 <button type="button" onclick="this.closest('.address-row').remove()" class="absolute top-2 right-2 btn btn-ghost btn-xs btn-square text-error">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
@@ -586,16 +664,25 @@
                             ${Object.entries(addressLabels).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}
                         </select>
                     </div>
-                    <div class="col-span-2">
-                        <input type="text" name="addresses[${addressIndex}][street_address]" class="input input-sm w-full" placeholder="Street address">
+                    <div class="col-span-2 relative">
+                        <input type="text" name="addresses[${addressIndex}][street_address]"
+                               class="input input-sm w-full smarty-street-input"
+                               placeholder="Start typing address..."
+                               autocomplete="off">
+                        <div class="smarty-suggestions hidden absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"></div>
                     </div>
-                    <input type="text" name="addresses[${addressIndex}][city]" class="input input-sm" placeholder="City">
-                    <input type="text" name="addresses[${addressIndex}][state]" class="input input-sm" placeholder="State">
-                    <input type="text" name="addresses[${addressIndex}][zip_code]" class="input input-sm" placeholder="ZIP">
-                    <input type="text" name="addresses[${addressIndex}][country]" class="input input-sm" placeholder="Country">
+                    <input type="text" name="addresses[${addressIndex}][city]" class="input input-sm smarty-city" placeholder="City">
+                    <input type="text" name="addresses[${addressIndex}][state]" class="input input-sm smarty-state" placeholder="State">
+                    <input type="text" name="addresses[${addressIndex}][zip_code]" class="input input-sm smarty-zip" placeholder="ZIP">
+                    <input type="text" name="addresses[${addressIndex}][country]" class="input input-sm smarty-country" placeholder="Country">
                 </div>
             </div>`;
         container.insertAdjacentHTML('beforeend', html);
+
+        // Initialize Smarty autocomplete for the new address row
+        const newRow = container.querySelector(`.address-row[data-address-index="${addressIndex}"]`);
+        initSmartyAutocompleteForRow(newRow);
+
         addressIndex++;
     }
 
@@ -618,12 +705,30 @@
     function addImportantDate() {
         const container = document.getElementById('important-dates-container');
         const html = `
-            <div class="date-row space-y-2 p-3 bg-slate-50 rounded-lg relative">
+            <div class="date-row space-y-3 p-3 bg-slate-50 rounded-lg relative">
                 <button type="button" onclick="this.closest('.date-row').remove()" class="absolute top-2 right-2 btn btn-ghost btn-xs btn-square text-error">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
                 <input type="text" name="important_dates[${dateIndex}][label]" class="input input-sm w-full" placeholder="Label (e.g., Anniversary)">
-                <input type="text" name="important_dates[${dateIndex}][date]" class="input input-sm w-full date-picker" placeholder="MM/DD/YYYY" readonly>
+                <div class="flex gap-2">
+                    <select name="important_dates[${dateIndex}][date_month]" class="select select-sm flex-1">
+                        <option value="">Month</option>
+                        <option value="01">January</option>
+                        <option value="02">February</option>
+                        <option value="03">March</option>
+                        <option value="04">April</option>
+                        <option value="05">May</option>
+                        <option value="06">June</option>
+                        <option value="07">July</option>
+                        <option value="08">August</option>
+                        <option value="09">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
+                    </select>
+                    <input type="number" name="important_dates[${dateIndex}][date_day]" class="input input-sm w-16" placeholder="Day" min="1" max="31">
+                    <input type="number" name="important_dates[${dateIndex}][date_year]" class="input input-sm w-20" placeholder="Year" min="1900" max="{{ date('Y') + 20 }}">
+                </div>
                 <label class="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" name="important_dates[${dateIndex}][recurring_yearly]" value="1" class="checkbox checkbox-sm checkbox-primary">
                     <span class="text-sm text-slate-600">Recurring yearly</span>
@@ -631,14 +736,9 @@
             </div>`;
         container.insertAdjacentHTML('beforeend', html);
         dateIndex++;
-        initDatePickers();
     }
 
-    // Initialize Flatpickr for important dates
     document.addEventListener('DOMContentLoaded', function() {
-        // Important dates
-        initDatePickers();
-
         // Profile image preview
         const profileInput = document.getElementById('profile_image_input');
         if (profileInput) {
@@ -670,16 +770,237 @@
         });
     });
 
-    function initDatePickers() {
-        document.querySelectorAll('.date-picker').forEach(el => {
-            if (!el._flatpickr) {
-                flatpickr(el, {
-                    dateFormat: 'm/d/Y',
-                    allowInput: true,
-                    disableMobile: true
-                });
+    // ==========================================
+    // Smarty Address Autocomplete
+    // ==========================================
+    const smartyWebsiteKey = '{{ config("services.smarty.website_key") }}';
+    let smartyDebounceTimers = {};
+
+    // Initialize Smarty autocomplete for all existing address rows
+    function initAllSmartyAutocomplete() {
+        document.querySelectorAll('.address-row').forEach(row => {
+            initSmartyAutocompleteForRow(row);
+        });
+    }
+
+    // Initialize Smarty autocomplete for a single address row
+    function initSmartyAutocompleteForRow(row) {
+        const streetInput = row.querySelector('.smarty-street-input');
+        const suggestionsContainer = row.querySelector('.smarty-suggestions');
+
+        if (!streetInput || !suggestionsContainer || !smartyWebsiteKey) {
+            return;
+        }
+
+        // Skip if already initialized
+        if (streetInput.dataset.smartyInitialized) {
+            return;
+        }
+        streetInput.dataset.smartyInitialized = 'true';
+
+        const rowId = row.dataset.addressIndex || Date.now();
+
+        // Handle input on street address field
+        streetInput.addEventListener('input', function() {
+            const query = this.value.trim();
+
+            // Clear previous timer for this row
+            if (smartyDebounceTimers[rowId]) {
+                clearTimeout(smartyDebounceTimers[rowId]);
+            }
+
+            // Hide suggestions if query is too short
+            if (query.length < 3) {
+                suggestionsContainer.classList.add('hidden');
+                suggestionsContainer.innerHTML = '';
+                return;
+            }
+
+            // Debounce API calls (300ms)
+            smartyDebounceTimers[rowId] = setTimeout(() => {
+                fetchSmartyAddresses(query, suggestionsContainer, row);
+            }, 300);
+        });
+
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!streetInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                suggestionsContainer.classList.add('hidden');
+            }
+        });
+
+        // Handle keyboard navigation
+        streetInput.addEventListener('keydown', function(e) {
+            const items = suggestionsContainer.querySelectorAll('.smarty-suggestion');
+            const activeItem = suggestionsContainer.querySelector('.smarty-suggestion.bg-amber-50');
+            let currentIndex = -1;
+
+            items.forEach((item, index) => {
+                if (item.classList.contains('bg-amber-50')) {
+                    currentIndex = index;
+                }
+            });
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (currentIndex < items.length - 1) {
+                    if (activeItem) activeItem.classList.remove('bg-amber-50');
+                    items[currentIndex + 1].classList.add('bg-amber-50');
+                    items[currentIndex + 1].scrollIntoView({ block: 'nearest' });
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (currentIndex > 0) {
+                    if (activeItem) activeItem.classList.remove('bg-amber-50');
+                    items[currentIndex - 1].classList.add('bg-amber-50');
+                    items[currentIndex - 1].scrollIntoView({ block: 'nearest' });
+                }
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (activeItem) {
+                    activeItem.click();
+                }
+            } else if (e.key === 'Escape') {
+                suggestionsContainer.classList.add('hidden');
             }
         });
     }
+
+    // Fetch addresses from Smarty API
+    async function fetchSmartyAddresses(query, suggestionsContainer, row) {
+        try {
+            // Show loading state
+            suggestionsContainer.innerHTML = `
+                <div class="p-3 text-sm text-slate-500 flex items-center gap-2">
+                    <svg class="animate-spin h-4 w-4 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Searching addresses...
+                </div>
+            `;
+            suggestionsContainer.classList.remove('hidden');
+
+            // Call Smarty US Autocomplete Pro API
+            const url = `https://us-autocomplete-pro.api.smarty.com/lookup?key=${encodeURIComponent(smartyWebsiteKey)}&search=${encodeURIComponent(query)}&max_results=10`;
+
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch addresses');
+            }
+
+            const data = await response.json();
+
+            if (data.suggestions && data.suggestions.length > 0) {
+                displayAddressSuggestions(data.suggestions, suggestionsContainer, row);
+            } else {
+                suggestionsContainer.innerHTML = `
+                    <div class="p-3 text-sm text-slate-500">
+                        No addresses found. Try a different search.
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Smarty API error:', error);
+            suggestionsContainer.innerHTML = `
+                <div class="p-3 text-sm text-slate-500">
+                    Could not search addresses. Please enter manually.
+                </div>
+            `;
+        }
+    }
+
+    // Display suggestions in dropdown
+    function displayAddressSuggestions(suggestions, suggestionsContainer, row) {
+        suggestionsContainer.innerHTML = '';
+
+        suggestions.forEach((suggestion) => {
+            const div = document.createElement('div');
+            div.className = 'smarty-suggestion p-3 hover:bg-amber-50 cursor-pointer border-b border-slate-100 last:border-b-0 transition-colors';
+
+            // Build full address display
+            const streetLine = suggestion.street_line || '';
+            const secondary = suggestion.secondary ? ` ${suggestion.secondary}` : '';
+            const city = suggestion.city || '';
+            const state = suggestion.state || '';
+            const zipcode = suggestion.zipcode || '';
+
+            const fullAddress = `${streetLine}${secondary}`;
+            const cityStateZip = `${city}, ${state} ${zipcode}`;
+
+            div.innerHTML = `
+                <div class="flex items-start gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-500 mt-0.5 flex-shrink-0">
+                        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+                        <circle cx="12" cy="10" r="3"/>
+                    </svg>
+                    <div>
+                        <div class="text-sm font-medium text-slate-800">${fullAddress}</div>
+                        <div class="text-xs text-slate-500">${cityStateZip}</div>
+                    </div>
+                </div>
+            `;
+
+            // Store suggestion data for selection
+            div.dataset.streetLine = streetLine;
+            div.dataset.secondary = suggestion.secondary || '';
+            div.dataset.city = city;
+            div.dataset.state = state;
+            div.dataset.zipcode = zipcode;
+
+            div.addEventListener('click', function() {
+                selectAddressSuggestion(this, row, suggestionsContainer);
+            });
+
+            suggestionsContainer.appendChild(div);
+        });
+
+        suggestionsContainer.classList.remove('hidden');
+    }
+
+    // Select a suggestion and fill form fields
+    function selectAddressSuggestion(element, row, suggestionsContainer) {
+        const streetLine = element.dataset.streetLine || '';
+        const secondary = element.dataset.secondary || '';
+        const city = element.dataset.city || '';
+        const state = element.dataset.state || '';
+        const zipcode = element.dataset.zipcode || '';
+
+        // Build full street address
+        let fullStreet = streetLine;
+        if (secondary) {
+            fullStreet += ' ' + secondary;
+        }
+
+        // Fill in the fields
+        const streetInput = row.querySelector('.smarty-street-input');
+        const cityInput = row.querySelector('.smarty-city');
+        const stateInput = row.querySelector('.smarty-state');
+        const zipInput = row.querySelector('.smarty-zip');
+        const countryInput = row.querySelector('.smarty-country');
+
+        if (streetInput) streetInput.value = fullStreet;
+        if (cityInput) cityInput.value = city;
+        if (stateInput) stateInput.value = state;
+        if (zipInput) zipInput.value = zipcode;
+        if (countryInput) countryInput.value = 'USA';
+
+        // Hide suggestions
+        suggestionsContainer.classList.add('hidden');
+
+        // Visual feedback
+        if (streetInput) {
+            streetInput.classList.add('border-emerald-500', 'ring-2', 'ring-emerald-500/20');
+            setTimeout(() => {
+                streetInput.classList.remove('border-emerald-500', 'ring-2', 'ring-emerald-500/20');
+            }, 1500);
+        }
+    }
+
+    // Initialize Smarty autocomplete on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        initAllSmartyAutocomplete();
+    });
 </script>
 @endsection

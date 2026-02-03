@@ -1,4 +1,4 @@
-<div id="item-{{ $item->id }}" class="item-row {{ $item->is_checked ? 'item-checked' : '' }} flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 group transition-colors">
+<div id="item-{{ $item->id }}" class="item-row {{ $item->is_checked ? 'item-checked' : '' }} flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 group transition-colors" data-category="{{ $item->category }}">
     <!-- Checkbox -->
     <button type="button" onclick="toggleItem({{ $item->id }})"
         class="flex-shrink-0 w-6 h-6 rounded-full border-2 {{ $item->is_checked ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300 hover:border-emerald-400' }} flex items-center justify-center transition-colors">

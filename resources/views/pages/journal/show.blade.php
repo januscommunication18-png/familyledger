@@ -16,6 +16,10 @@
 
 @section('page-actions')
     <div class="flex items-center gap-2">
+        <a href="{{ route('journal.index') }}" class="btn btn-ghost btn-sm gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            Back
+        </a>
         <form method="POST" action="{{ route('journal.toggle-pin', $entry) }}" class="inline">
             @csrf
             @method('PATCH')
@@ -31,14 +35,9 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
             Edit
         </a>
-        <form method="POST" action="{{ route('journal.destroy', $entry) }}" class="inline"
-              onsubmit="return confirm('Are you sure you want to delete this entry?')">
-            @csrf
-            @method('DELETE')
-            <button type="submit" class="btn btn-ghost btn-sm text-error gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-            </button>
-        </form>
+        <button type="button" onclick="toggleDeleteModal()" class="btn btn-ghost btn-sm text-error gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+        </button>
     </div>
 @endsection
 
@@ -109,26 +108,99 @@
 
             <!-- Body -->
             <div class="prose prose-slate max-w-none mb-6">
-                {!! nl2br(e($entry->body)) !!}
+                {!! $entry->body !!}
             </div>
 
             <!-- Photos Gallery -->
             @if($entry->attachments->where('type', 'photo')->count())
-                <div class="mb-6">
+                <div class="mb-6" x-data="imageGallery()">
                     <h3 class="text-sm font-semibold text-slate-600 mb-3 flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
                         Photos
                     </h3>
                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        @foreach($entry->attachments->where('type', 'photo') as $photo)
-                            <a href="{{ $photo->url }}" target="_blank"
-                               class="aspect-square rounded-xl overflow-hidden bg-slate-100 hover:opacity-90 transition-opacity">
+                        @foreach($entry->attachments->where('type', 'photo') as $index => $photo)
+                            <button type="button" @click="openModal('{{ $photo->url }}', {{ $index }})"
+                               class="aspect-square rounded-xl overflow-hidden bg-slate-100 hover:opacity-90 transition-opacity cursor-pointer">
                                 <img src="{{ $photo->thumbnail_url }}" alt=""
                                      class="w-full h-full object-cover">
-                            </a>
+                            </button>
                         @endforeach
                     </div>
+
+                    <!-- Image Modal -->
+                    <div x-show="isOpen" x-cloak
+                         class="fixed inset-0 z-50 flex items-center justify-center"
+                         @keydown.escape.window="closeModal()"
+                         @keydown.arrow-left.window="prevImage()"
+                         @keydown.arrow-right.window="nextImage()">
+                        <!-- Backdrop -->
+                        <div class="absolute inset-0 bg-black/90" @click="closeModal()"></div>
+
+                        <!-- Modal Content -->
+                        <div class="relative z-10 max-w-5xl max-h-[90vh] w-full mx-4">
+                            <!-- Close Button -->
+                            <button @click="closeModal()" class="absolute -top-12 right-0 text-white hover:text-slate-300 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                            </button>
+
+                            <!-- Image -->
+                            <img :src="currentImage" alt="" class="max-w-full max-h-[85vh] mx-auto rounded-lg shadow-2xl object-contain">
+
+                            <!-- Navigation Arrows -->
+                            @if($entry->attachments->where('type', 'photo')->count() > 1)
+                                <button @click="prevImage()" class="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 md:-translate-x-16 p-2 text-white hover:text-slate-300 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                                </button>
+                                <button @click="nextImage()" class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 md:translate-x-16 p-2 text-white hover:text-slate-300 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                                </button>
+                            @endif
+
+                            <!-- Image Counter -->
+                            <div class="absolute -bottom-10 left-1/2 -translate-x-1/2 text-white text-sm">
+                                <span x-text="currentIndex + 1"></span> / <span>{{ $entry->attachments->where('type', 'photo')->count() }}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
+                @push('scripts')
+                <script>
+                function imageGallery() {
+                    return {
+                        isOpen: false,
+                        currentImage: '',
+                        currentIndex: 0,
+                        images: [
+                            @foreach($entry->attachments->where('type', 'photo') as $photo)
+                                '{{ $photo->url }}',
+                            @endforeach
+                        ],
+                        openModal(url, index) {
+                            this.currentImage = url;
+                            this.currentIndex = index;
+                            this.isOpen = true;
+                            document.body.style.overflow = 'hidden';
+                        },
+                        closeModal() {
+                            this.isOpen = false;
+                            document.body.style.overflow = '';
+                        },
+                        nextImage() {
+                            if (!this.isOpen) return;
+                            this.currentIndex = (this.currentIndex + 1) % this.images.length;
+                            this.currentImage = this.images[this.currentIndex];
+                        },
+                        prevImage() {
+                            if (!this.isOpen) return;
+                            this.currentIndex = (this.currentIndex - 1 + this.images.length) % this.images.length;
+                            this.currentImage = this.images[this.currentIndex];
+                        }
+                    }
+                }
+                </script>
+                @endpush
             @endif
 
             <!-- File Attachments -->
@@ -216,4 +288,56 @@
         </div>
     </div>
 </div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="toggleDeleteModal()"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div class="p-6">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-rose-600"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-900">Delete Entry</h3>
+                        <p class="text-sm text-slate-500">This action cannot be undone</p>
+                    </div>
+                </div>
+                <p class="text-slate-600 mb-6">Are you sure you want to delete this journal entry? All photos and attachments will also be permanently removed.</p>
+                <div class="flex gap-3">
+                    <button type="button" onclick="toggleDeleteModal()" class="flex-1 btn btn-ghost">Cancel</button>
+                    <form method="POST" action="{{ route('journal.destroy', $entry) }}" class="flex-1">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="w-full btn btn-error gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                            Delete Entry
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    [x-cloak] { display: none !important; }
+</style>
+
+@push('scripts')
+<script>
+function toggleDeleteModal() {
+    const modal = document.getElementById('deleteModal');
+    modal.classList.toggle('hidden');
+    document.body.style.overflow = modal.classList.contains('hidden') ? '' : 'hidden';
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && !document.getElementById('deleteModal').classList.contains('hidden')) {
+        toggleDeleteModal();
+    }
+});
+</script>
+@endpush
 @endsection

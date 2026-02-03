@@ -20,11 +20,17 @@
 
 @section('content')
 <div class="space-y-6">
-    @if($access->isCollaborator)
-        <!-- Collaborator Notice -->
+    @if($access->isCollaborator && !$access->hasFullAccess)
+        <!-- Collaborator Notice (limited access) -->
+        <div class="alert bg-amber-50 border border-amber-200">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span class="text-sm text-amber-700">You're viewing as a co-parent. Some sections may be hidden or read-only based on your permissions.</span>
+        </div>
+    @elseif($access->isCollaborator && $access->hasFullAccess)
+        <!-- Co-parent Notice (full edit access) -->
         <div class="alert bg-emerald-50 border border-emerald-200">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            <span class="text-sm text-emerald-700">You're viewing this as a collaborator. Some sections may be hidden or read-only based on your permissions.</span>
+            <span class="text-sm text-emerald-700">You're viewing as a co-parent with full edit access.</span>
         </div>
     @endif
 
@@ -42,10 +48,18 @@
                     </div>
                 </div>
                 @if($access->hasFullAccess)
-                    <a href="{{ route('family-circle.member.edit', [$circle, $member]) }}" class="btn btn-sm btn-ghost gap-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                        Edit
-                    </a>
+                    <div class="flex items-center gap-2">
+                        <a href="{{ route('family-circle.member.edit', [$circle, $member]) }}" class="btn btn-sm btn-ghost gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                            Edit
+                        </a>
+                        @if($access->isOwner)
+                        <button type="button" onclick="showDeleteMemberModal()" class="btn btn-sm btn-ghost text-error gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                            Delete
+                        </button>
+                        @endif
+                    </div>
                 @endif
             </div>
 
@@ -201,7 +215,7 @@
                         <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M6 9h4"/><path d="M14 9h4"/></svg>
                         </div>
-                        @if($access->canCreate('drivers_license'))
+                        @if($access->canEdit('drivers_license'))
                             <span class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                             </span>
@@ -234,7 +248,7 @@
                         </div>
                     @else
                         <div class="mt-3">
-                            @if($access->canCreate('drivers_license'))
+                            @if($access->canEdit('drivers_license'))
                                 <span class="btn btn-xs btn-primary w-full gap-1">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                                     Add
@@ -256,7 +270,7 @@
                         <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M7 21v-2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/></svg>
                         </div>
-                        @if($access->canCreate('passport'))
+                        @if($access->canEdit('passport'))
                             <span class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                             </span>
@@ -289,7 +303,7 @@
                         </div>
                     @else
                         <div class="mt-3">
-                            @if($access->canCreate('passport'))
+                            @if($access->canEdit('passport'))
                                 <span class="btn btn-xs btn-primary w-full gap-1">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                                     Add
@@ -311,7 +325,7 @@
                         <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M12 12h.01"/></svg>
                         </div>
-                        @if($access->canCreate('ssn'))
+                        @if($access->canEdit('ssn'))
                             <span class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                             </span>
@@ -336,7 +350,7 @@
                         </div>
                     @else
                         <div class="mt-3">
-                            @if($access->canCreate('ssn'))
+                            @if($access->canEdit('ssn'))
                                 <span class="btn btn-xs btn-primary w-full gap-1">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                                     Add
@@ -358,7 +372,7 @@
                         <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-md">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
                         </div>
-                        @if($access->canCreate('birth_certificate'))
+                        @if($access->canEdit('birth_certificate'))
                             <span class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                             </span>
@@ -383,7 +397,7 @@
                         </div>
                     @else
                         <div class="mt-3">
-                            @if($access->canCreate('birth_certificate'))
+                            @if($access->canEdit('birth_certificate'))
                                 <span class="btn btn-xs btn-primary w-full gap-1">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                                     Add
@@ -447,7 +461,72 @@
     @endif
 
     <!-- Additional Info Section -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        <!-- Education -->
+        @if($access->canView('school'))
+        <a href="{{ route('family-circle.member.education-info', [$circle, $member]) }}" class="card bg-base-100 shadow-sm hover:shadow-md transition-all group cursor-pointer">
+            <div class="card-body p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                        </div>
+                        <h3 class="font-bold text-slate-800 text-sm">Education</h3>
+                    </div>
+                    @if($access->canEdit('school'))
+                        <span class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                        </span>
+                    @elseif($access->canEdit('school'))
+                        <span class="badge badge-success badge-xs">Can Edit</span>
+                    @elseif($access->isCollaborator)
+                        <span class="badge badge-ghost badge-xs">View Only</span>
+                    @endif
+                </div>
+
+                @if($member->schoolRecords && $member->schoolRecords->count() > 0)
+                    <div class="space-y-2 text-xs">
+                        @foreach($member->schoolRecords->take(3) as $record)
+                            <div class="flex items-center justify-between gap-2 {{ !$loop->first ? 'pt-2 border-t border-slate-100' : '' }}">
+                                <div class="min-w-0 flex-1">
+                                    <p class="font-medium text-slate-700 truncate">{{ $record->school_name }}</p>
+                                    <div class="flex items-center gap-1 mt-0.5">
+                                        @if($record->grade_level_name)
+                                            <span class="text-slate-400">{{ $record->grade_level_name }}</span>
+                                        @endif
+                                        @if($record->school_year)
+                                            <span class="text-slate-300">&bull;</span>
+                                            <span class="text-slate-400">{{ $record->school_year }}</span>
+                                        @endif
+                                    </div>
+                                </div>
+                                @if($record->is_current)
+                                    <span class="badge badge-primary badge-xs flex-shrink-0">Current</span>
+                                @endif
+                            </div>
+                        @endforeach
+                        @if($member->schoolRecords->count() > 3)
+                            <div class="text-center pt-1">
+                                <span class="text-slate-400">+{{ $member->schoolRecords->count() - 3 }} more</span>
+                            </div>
+                        @endif
+                    </div>
+                @else
+                    <div class="mt-1">
+                        @if($access->canEdit('school'))
+                            <span class="btn btn-xs btn-primary w-full gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                                Add
+                            </span>
+                        @else
+                            <span class="text-xs text-slate-400">No data</span>
+                        @endif
+                    </div>
+                @endif
+            </div>
+        </a>
+        @endif
+
         <!-- Health & Medical -->
         @if($access->canView('medical'))
         <a href="{{ route('family-circle.member.medical-info', [$circle, $member]) }}" class="card bg-base-100 shadow-sm hover:shadow-md transition-all group cursor-pointer">
@@ -459,7 +538,7 @@
                         </div>
                         <h3 class="font-bold text-slate-800 text-sm">Health & Medical</h3>
                     </div>
-                    @if($access->canCreate('medical'))
+                    @if($access->canEdit('medical'))
                         <span class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                         </span>
@@ -541,7 +620,7 @@
                     </div>
                 @else
                     <div class="mt-1">
-                        @if($access->canCreate('medical'))
+                        @if($access->canEdit('medical'))
                             <span class="btn btn-xs btn-primary w-full gap-1">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                                 Add
@@ -566,7 +645,7 @@
                         </div>
                         <h3 class="font-bold text-slate-800 text-sm">Emergency Contacts</h3>
                     </div>
-                    @if($access->canCreate('emergency_contacts'))
+                    @if($access->canEdit('emergency_contacts'))
                         <span class="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                         </span>
@@ -594,7 +673,7 @@
                     </div>
                 @else
                     <div class="mt-1">
-                        @if($access->canCreate('emergency_contacts'))
+                        @if($access->canEdit('emergency_contacts'))
                             <span class="btn btn-xs btn-primary w-full gap-1">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                                 Add
@@ -654,7 +733,7 @@
                         </div>
                         <h3 class="font-bold text-slate-800 text-sm">Insurance Policies</h3>
                     </div>
-                    @if($access->canCreate('insurance'))
+                    @if($access->canEdit('insurance'))
                         <a href="{{ route('documents.index', ['tab' => 'insurance']) }}" class="btn btn-ghost btn-xs text-blue-600">
                             View All
                         </a>
@@ -688,7 +767,7 @@
                 @else
                     <div class="text-center py-4">
                         <p class="text-xs text-slate-400 mb-2">No insurance policies linked</p>
-                        @if($access->canCreate('insurance'))
+                        @if($access->canEdit('insurance'))
                             <a href="{{ route('documents.insurance.create') }}" class="btn btn-xs btn-primary gap-1">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                                 Add Insurance
@@ -711,7 +790,7 @@
                         </div>
                         <h3 class="font-bold text-slate-800 text-sm">Tax Returns</h3>
                     </div>
-                    @if($access->canCreate('tax_returns'))
+                    @if($access->canEdit('tax_returns'))
                         <a href="{{ route('documents.index', ['tab' => 'tax-returns']) }}" class="btn btn-ghost btn-xs text-emerald-600">
                             View All
                         </a>
@@ -745,7 +824,7 @@
                 @else
                     <div class="text-center py-4">
                         <p class="text-xs text-slate-400 mb-2">No tax returns linked</p>
-                        @if($access->canCreate('tax_returns'))
+                        @if($access->canEdit('tax_returns'))
                             <a href="{{ route('documents.tax-returns.create') }}" class="btn btn-xs btn-primary gap-1">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                                 Add Tax Return
@@ -768,14 +847,14 @@
                         </div>
                         <h3 class="font-bold text-slate-800 text-sm">Assets</h3>
                     </div>
-                    @if($access->canCreate('assets'))
-                        <a href="{{ route('assets.index') }}" class="btn btn-ghost btn-xs text-amber-600">
+                    @if($access->isCollaborator)
+                        <a href="{{ route('coparenting.assets.index') }}" class="btn btn-ghost btn-xs text-amber-600">
                             View All
                         </a>
                     @elseif($access->canEdit('assets'))
-                        <span class="badge badge-success badge-xs">Can Edit</span>
-                    @elseif($access->isCollaborator)
-                        <span class="badge badge-ghost badge-xs">View Only</span>
+                        <a href="{{ route('assets.index') }}" class="btn btn-ghost btn-xs text-amber-600">
+                            View All
+                        </a>
                     @endif
                 </div>
 
@@ -804,17 +883,49 @@
                 @else
                     <div class="text-center py-4">
                         <p class="text-xs text-slate-400 mb-2">No assets linked</p>
-                        @if($access->canCreate('assets'))
-                            <a href="{{ route('assets.create') }}" class="btn btn-xs btn-primary gap-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                                Add Asset
-                            </a>
+                        @if($access->canEdit('assets'))
+                            @if($access->isCollaborator)
+                                <a href="{{ route('coparenting.assets.create') }}?family_member_id={{ $member->id }}" class="btn btn-xs btn-primary gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                                    Request Asset
+                                </a>
+                            @else
+                                <a href="{{ route('assets.create') }}" class="btn btn-xs btn-primary gap-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                                    Add Asset
+                                </a>
+                            @endif
                         @endif
                     </div>
                 @endif
             </div>
         </div>
         @endif
+    </div>
+</div>
+
+<!-- Delete Member Confirmation Modal -->
+<div id="deleteMemberModal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black/50" onclick="closeDeleteMemberModal()"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
+        <div class="bg-base-100 rounded-xl shadow-xl max-w-sm w-full p-6 pointer-events-auto">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded-full bg-error/10 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-error"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                </div>
+                <h3 class="font-bold text-lg text-error">Delete Member</h3>
+            </div>
+            <p class="text-sm text-base-content/70 mb-2">Are you sure you want to delete <strong>{{ $member->full_name }}</strong>?</p>
+            <p class="text-sm text-base-content/60 mb-6">This will also remove all associated documents, medical records, and other related data. This action cannot be undone.</p>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="closeDeleteMemberModal()" class="btn btn-ghost">Cancel</button>
+                <form action="{{ route('family-circle.member.destroy', [$circle, $member]) }}" method="POST" class="inline">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-error">Delete Member</button>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -836,5 +947,26 @@ function toggleImmigrationEdit() {
     display.classList.toggle('hidden');
     edit.classList.toggle('hidden');
 }
+
+// Delete member modal functions
+function showDeleteMemberModal() {
+    document.getElementById('deleteMemberModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeDeleteMemberModal() {
+    document.getElementById('deleteMemberModal').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('deleteMemberModal');
+        if (modal && !modal.classList.contains('hidden')) {
+            closeDeleteMemberModal();
+        }
+    }
+});
 </script>
 @endpush

@@ -1,5 +1,10 @@
 @extends('layouts.dashboard')
 
+@php
+    $canEdit = $access->canEdit('medical');
+    $isViewOnly = !$canEdit;
+@endphp
+
 @section('title', 'Health & Medical')
 @section('page-name', 'Health & Medical')
 
@@ -33,7 +38,12 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2h-2z"/></svg>
             </div>
             <div>
-                <h1 class="text-2xl font-bold text-slate-900">Health & Medical</h1>
+                <div class="flex items-center gap-3">
+                    <h1 class="text-2xl font-bold text-slate-900">Health & Medical</h1>
+                    @if($isViewOnly)
+                        <span class="badge badge-soft badge-secondary text-xs">View Only</span>
+                    @endif
+                </div>
                 <p class="text-slate-500">{{ $member->full_name }}</p>
             </div>
         </div>
@@ -113,7 +123,7 @@
                         <p class="text-xs text-slate-400">Track medications and dosages</p>
                     </div>
                 </div>
-                @if($access->canCreate('medical'))
+                @if($access->canEdit('medical'))
                     <button type="button" onclick="toggleMedicationForm()" class="btn btn-primary btn-sm gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                         Add
@@ -122,7 +132,7 @@
             </div>
 
             <!-- Add Medication Form (Hidden by default) -->
-            @if($access->canCreate('medical'))
+            @if($access->canEdit('medical'))
             <div id="medicationForm" class="hidden mb-4 p-4 bg-violet-50 rounded-xl border border-violet-200">
                 <form action="{{ route('member.medication.store', $member) }}" method="POST">
                     @csrf
@@ -255,7 +265,7 @@
                         <p class="text-xs text-slate-400">Ongoing health conditions</p>
                     </div>
                 </div>
-                @if($access->canCreate('medical'))
+                @if($access->canEdit('medical'))
                     <button type="button" onclick="toggleConditionForm()" class="btn btn-primary btn-sm gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                         Add
@@ -396,7 +406,7 @@
                         <p class="text-xs text-slate-400">Track immunization records</p>
                     </div>
                 </div>
-                @if($access->canCreate('medical'))
+                @if($access->canEdit('medical'))
                     <button type="button" onclick="toggleVaccinationForm()" class="btn btn-primary btn-sm gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                         Add
@@ -683,7 +693,7 @@
                         <p class="text-xs text-slate-400">Track allergies and reactions</p>
                     </div>
                 </div>
-                @if($access->canCreate('medical'))
+                @if($access->canEdit('medical'))
                     <button type="button" onclick="toggleAllergyForm()" class="btn btn-primary btn-sm gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                         Add
@@ -859,7 +869,7 @@
                         <p class="text-xs text-slate-400">Doctors and care providers</p>
                     </div>
                 </div>
-                @if($access->canCreate('medical'))
+                @if($access->canEdit('medical'))
                     <button type="button" onclick="toggleProviderForm()" class="btn btn-primary btn-sm gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                         Add
