@@ -129,7 +129,7 @@
     </div>
 
     <!-- Alpine.js via jsDelivr with SRI -->
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js" defer integrity="sha256-NTuMLF/sME9UZFNI4NeECGUuD/BQklDxKSXxPyrXCHM=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js" defer integrity="sha256-tgDjY9mdlURNtUrL+y3v/smueSqpmgkim82geOW1VkM=" crossorigin="anonymous"></script>
 
     @stack('scripts')
 </body>

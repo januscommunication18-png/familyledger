@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Collection;
+use App\Models\CoparentingDailyCheckin;
 
 class CoparentingActualTime extends Model
 {
@@ -92,24 +93,55 @@ class CoparentingActualTime extends Model
 
     /**
      * Calculate time statistics for a date range.
+     * Combines data from both Actual Time records AND Daily Check-ins.
      */
     public static function calculateStats(string $tenantId, ?int $childId, Carbon $start, Carbon $end): array
     {
-        $query = self::where('tenant_id', $tenantId)
+        // Get Actual Time records
+        $actualTimeQuery = self::where('tenant_id', $tenantId)
             ->inDateRange($start, $end);
 
         if ($childId) {
-            $query->forChild($childId);
+            $actualTimeQuery->forChild($childId);
         }
 
-        $records = $query->get();
+        $actualTimeRecords = $actualTimeQuery->get();
 
-        $motherDays = $records->where('parent_role', 'mother')->count();
-        $fatherDays = $records->where('parent_role', 'father')->count();
+        // Get Daily Check-in records
+        $checkinQuery = CoparentingDailyCheckin::where('tenant_id', $tenantId)
+            ->whereBetween('checkin_date', [$start->format('Y-m-d'), $end->format('Y-m-d')]);
+
+        if ($childId) {
+            $checkinQuery->where('family_member_id', $childId);
+        }
+
+        $checkinRecords = $checkinQuery->get();
+
+        // Combine unique days from both sources (prefer actual time if both exist for same day)
+        $daysByParent = [];
+
+        // First add actual time records
+        foreach ($actualTimeRecords as $record) {
+            $dateKey = $record->date->format('Y-m-d');
+            $daysByParent[$dateKey] = $record->parent_role;
+        }
+
+        // Then add daily check-ins (only if no actual time record exists for that day)
+        foreach ($checkinRecords as $checkin) {
+            $dateKey = $checkin->checkin_date->format('Y-m-d');
+            if (!isset($daysByParent[$dateKey])) {
+                $daysByParent[$dateKey] = $checkin->parent_role;
+            }
+        }
+
+        // Calculate stats from combined data
+        $motherDays = count(array_filter($daysByParent, fn($role) => $role === 'mother'));
+        $fatherDays = count(array_filter($daysByParent, fn($role) => $role === 'father'));
         $totalDays = $motherDays + $fatherDays;
 
-        $motherHours = $records->where('parent_role', 'mother')->sum('hours');
-        $fatherHours = $records->where('parent_role', 'father')->sum('hours');
+        // Hours only from actual time records (check-ins don't track hours)
+        $motherHours = $actualTimeRecords->where('parent_role', 'mother')->sum('hours');
+        $fatherHours = $actualTimeRecords->where('parent_role', 'father')->sum('hours');
 
         return [
             'mother' => [

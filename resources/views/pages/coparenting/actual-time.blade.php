@@ -3,7 +3,10 @@
 @section('page-name', 'Actual Time')
 
 @section('content')
-<div class="p-4 lg:p-6">
+{{-- Child Picker Modal --}}
+@include('partials.coparent-child-picker')
+
+<div class="p-4 lg:p-6" x-data>
     {{-- Success Message --}}
     @if(session('success'))
     <div class="alert alert-success mb-6">
@@ -18,47 +21,38 @@
             <h1 class="text-2xl font-bold text-slate-800">Actual Time</h1>
             <p class="text-slate-500">Track and compare actual custody time with your planned schedule.</p>
         </div>
+        <div class="flex items-center gap-3">
+            {{-- Child Switcher --}}
+            @include('partials.coparent-child-switcher')
+        </div>
     </div>
 
     {{-- Filters --}}
     <div class="card bg-base-100 shadow-sm mb-6">
         <div class="card-body py-4">
-            <form method="GET" class="flex flex-wrap items-end gap-4">
-                {{-- Child Selector --}}
-                @if($children->count() > 1)
+            <form id="date-filter-form" method="GET" class="flex flex-wrap items-end gap-4">
+                {{-- Date Selector --}}
                 <div class="form-control">
                     <label class="label">
-                        <span class="label-text font-medium">Child</span>
+                        <span class="label-text font-medium">Date</span>
                     </label>
-                    <select name="child_id" class="select select-bordered select-sm" onchange="this.form.submit()">
-                        @foreach($children as $child)
-                        <option value="{{ $child->id }}" {{ $selectedChildId == $child->id ? 'selected' : '' }}>{{ $child->full_name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                @endif
-
-                {{-- Month Selector --}}
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text font-medium">Month</span>
-                    </label>
-                    <input type="month" name="month_picker" value="{{ $year }}-{{ str_pad($month, 2, '0', STR_PAD_LEFT) }}" class="input input-bordered input-sm" onchange="updateMonthYear(this)">
-                    <input type="hidden" name="year" value="{{ $year }}">
-                    <input type="hidden" name="month" value="{{ $month }}">
+                    <div class="relative">
+                        <input type="text" id="date-picker" name="date" value="{{ $selectedDate->format('Y-m-d') }}" class="input input-bordered input-sm pl-10 w-48" readonly>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                    </div>
                 </div>
 
                 {{-- Navigation --}}
                 <div class="flex items-center gap-2">
                     @php
-                        $prevMonth = $monthStart->copy()->subMonth();
-                        $nextMonth = $monthStart->copy()->addMonth();
+                        $prevDay = $selectedDate->copy()->subDay();
+                        $nextDay = $selectedDate->copy()->addDay();
                     @endphp
-                    <a href="{{ route('coparenting.actual-time', ['year' => $prevMonth->year, 'month' => $prevMonth->month, 'child_id' => $selectedChildId]) }}" class="btn btn-sm btn-ghost">
+                    <a href="{{ route('coparenting.actual-time', ['date' => $prevDay->format('Y-m-d')]) }}" class="btn btn-sm btn-ghost">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                     </a>
-                    <a href="{{ route('coparenting.actual-time', ['year' => now()->year, 'month' => now()->month, 'child_id' => $selectedChildId]) }}" class="btn btn-sm btn-outline">Today</a>
-                    <a href="{{ route('coparenting.actual-time', ['year' => $nextMonth->year, 'month' => $nextMonth->month, 'child_id' => $selectedChildId]) }}" class="btn btn-sm btn-ghost">
+                    <a href="{{ route('coparenting.actual-time', ['date' => now()->format('Y-m-d')]) }}" class="btn btn-sm btn-outline">Today</a>
+                    <a href="{{ route('coparenting.actual-time', ['date' => $nextDay->format('Y-m-d')]) }}" class="btn btn-sm btn-ghost">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                     </a>
                 </div>
@@ -175,197 +169,243 @@
             </div>
         </div>
 
-        {{-- Daily Check-in Calendar --}}
+        {{-- Check-ins for Selected Date --}}
         <div class="xl:col-span-2">
             <div class="card bg-base-100 shadow-sm">
                 <div class="card-body">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-semibold text-slate-800 text-lg">Daily Check-in - {{ $monthStart->format('F Y') }}</h3>
-                        <div class="flex items-center gap-3 text-sm">
-                            <div class="flex items-center gap-1">
-                                <div class="w-4 h-4 rounded bg-pink-500"></div>
-                                <span class="text-slate-600">Mother</span>
-                            </div>
-                            <div class="flex items-center gap-1">
-                                <div class="w-4 h-4 rounded bg-blue-500"></div>
-                                <span class="text-slate-600">Father</span>
-                            </div>
+                        <div>
+                            <h3 class="font-semibold text-slate-800 text-lg">
+                                @if($selectedDate->isToday())
+                                    Today's Check-ins
+                                @else
+                                    Check-ins
+                                @endif
+                            </h3>
+                            <p class="text-sm text-slate-500">{{ $selectedDate->format('l, F j, Y') }}</p>
                         </div>
-                    </div>
-
-                    {{-- Calendar Grid --}}
-                    <div class="grid grid-cols-7 gap-1">
-                        {{-- Day Headers --}}
-                        @foreach(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as $day)
-                        <div class="text-center text-sm font-medium text-slate-500 py-2">{{ $day }}</div>
-                        @endforeach
-
-                        {{-- Empty cells for start of month --}}
-                        @for($i = 0; $i < $monthStart->dayOfWeek; $i++)
-                        <div class="aspect-square"></div>
-                        @endfor
-
-                        {{-- Days of the month --}}
-                        @foreach($calendarDays as $day)
-                        @php
-                            $isWeekend = $day['date']->isWeekend();
-                            $bgClass = 'bg-slate-50';
-                            $textClass = 'text-slate-400';
-
-                            if ($day['checkin']) {
-                                $bgClass = $day['checkin']->parent_role === 'mother' ? 'bg-pink-500' : 'bg-blue-500';
-                                $textClass = 'text-white';
-                            } elseif ($day['is_today']) {
-                                $bgClass = 'bg-violet-100 ring-2 ring-violet-500';
-                                $textClass = 'text-violet-700';
-                            } elseif ($day['is_past']) {
-                                $bgClass = 'bg-slate-100';
-                                $textClass = 'text-slate-500';
-                            }
-                        @endphp
+                        @if($selectedDate->isToday())
                         <button
                             type="button"
-                            onclick="openCheckinModal('{{ $day['date']->format('Y-m-d') }}', '{{ $day['checkin']?->parent_role ?? '' }}')"
-                            class="aspect-square rounded-lg {{ $bgClass }} {{ $textClass }} flex flex-col items-center justify-center text-sm font-medium hover:ring-2 hover:ring-slate-400 transition-all relative group"
+                            onclick="window.dispatchEvent(new CustomEvent('open-daily-checkin'))"
+                            class="btn btn-primary gap-2"
                         >
-                            <span>{{ $day['date']->day }}</span>
-                            @if($day['checkin'])
-                            <span class="text-[10px] opacity-75">{{ ucfirst(substr($day['checkin']->parent_role, 0, 1)) }}</span>
-                            @endif
-
-                            {{-- Tooltip --}}
-                            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 pointer-events-none">
-                                <div class="bg-slate-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap">
-                                    {{ $day['date']->format('M j, Y') }}
-                                    @if($day['checkin'])
-                                        - {{ ucfirst($day['checkin']->parent_role) }}
-                                    @else
-                                        - Not recorded
-                                    @endif
-                                </div>
-                            </div>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            Daily Check-in
                         </button>
-                        @endforeach
+                        @endif
                     </div>
 
-                    <div class="mt-4 pt-4 border-t border-slate-200">
-                        <p class="text-sm text-slate-500">Click on any day to record or update who had the child that day.</p>
+                    @if($dateCheckins->count() > 0)
+                        {{-- Check-ins List --}}
+                        <div class="space-y-3">
+                            @foreach($dateCheckins as $checkin)
+                            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                                <div class="flex items-start gap-4">
+                                    {{-- Mood Emoji --}}
+                                    <div class="w-14 h-14 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-3xl shrink-0">
+                                        {{ $checkin->mood_emoji }}
+                                    </div>
+
+                                    {{-- Content --}}
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="font-semibold text-slate-800">{{ $checkin->mood_label }}</span>
+                                            @if($checkin->child)
+                                            <span class="text-slate-400">&bull;</span>
+                                            <span class="text-sm text-slate-600">{{ $checkin->child->first_name }}</span>
+                                            @endif
+                                        </div>
+
+                                        @if($checkin->notes)
+                                        <p class="text-slate-600 text-sm mb-2">{{ $checkin->notes }}</p>
+                                        @endif
+
+                                        <div class="flex items-center gap-4 text-sm text-slate-500">
+                                            <span class="flex items-center gap-1">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                                {{ $checkin->created_at->format('g:i A') }}
+                                            </span>
+                                            <span class="flex items-center gap-1">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                                {{ $checkin->checkedBy->name ?? 'Unknown' }}
+                                            </span>
+                                            @if($checkin->parent_role)
+                                            <span class="badge badge-sm" style="background-color: {{ $checkin->parent_role === 'mother' ? '#fce7f3' : '#dbeafe' }}; color: {{ $checkin->parent_role === 'mother' ? '#be185d' : '#1d4ed8' }};">
+                                                {{ ucfirst($checkin->parent_role) }}
+                                            </span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
+                    @else
+                        {{-- Empty State --}}
+                        <div class="text-center py-8">
+                            <div class="w-16 h-16 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgb(148 163 184)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            </div>
+                            <p class="text-slate-500 mb-1">No check-ins recorded for this date</p>
+                            @if($selectedDate->isToday())
+                            <p class="text-sm text-slate-400">Click the button above to add a check-in</p>
+                            @endif
+                        </div>
+                    @endif
+
+                    {{-- View History Link --}}
+                    <div class="mt-4 pt-4 border-t border-slate-200 text-center">
+                        <a href="{{ route('coparenting.checkins') }}" class="text-primary hover:underline text-sm">
+                            View Check-in History
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    {{-- Month Calendar --}}
+    <div class="card bg-base-100 shadow-sm mt-6">
+        <div class="card-body">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-semibold text-slate-800 text-lg">{{ $monthStart->format('F Y') }}</h3>
+                <div class="flex items-center gap-3 text-sm">
+                    <div class="flex items-center gap-1">
+                        <div class="w-4 h-4 rounded bg-pink-500"></div>
+                        <span class="text-slate-600">Mother</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <div class="w-4 h-4 rounded bg-blue-500"></div>
+                        <span class="text-slate-600">Father</span>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Calendar Grid --}}
+            <div class="border border-slate-200 rounded-xl overflow-hidden">
+                {{-- Day Headers --}}
+                <div class="grid grid-cols-7 bg-slate-50 border-b border-slate-200">
+                    @foreach(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as $day)
+                    <div class="py-3 text-center text-sm font-medium text-slate-600">{{ $day }}</div>
+                    @endforeach
+                </div>
+
+                {{-- Calendar Days --}}
+                @php
+                    $startOfCalendar = $monthStart->copy()->startOfWeek(Carbon\Carbon::SUNDAY);
+                    $endOfCalendar = $monthEnd->copy()->endOfWeek(Carbon\Carbon::SATURDAY);
+                    $today = now()->format('Y-m-d');
+                @endphp
+
+                <div class="grid grid-cols-7">
+                    @for($date = $startOfCalendar->copy(); $date->lte($endOfCalendar); $date->addDay())
+                        @php
+                            $dateKey = $date->format('Y-m-d');
+                            $isCurrentMonth = $date->month === $monthStart->month;
+                            $isToday = $dateKey === $today;
+                            $isSelected = $dateKey === $selectedDate->format('Y-m-d');
+                            $dayCheckins = $monthCheckins[$dateKey] ?? collect();
+                            $hasCheckins = $dayCheckins->isNotEmpty();
+                            $parentRole = $hasCheckins ? $dayCheckins->first()->parent_role : null;
+                        @endphp
+                        <a href="{{ route('coparenting.actual-time', ['date' => $dateKey]) }}"
+                           class="min-h-[80px] border-b border-r border-slate-200 p-2 transition-colors hover:bg-slate-50 {{ !$isCurrentMonth ? 'bg-slate-50/50' : '' }} {{ $isSelected ? 'ring-2 ring-primary ring-inset' : '' }}">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-sm {{ $isToday ? 'bg-primary text-white w-6 h-6 rounded-full flex items-center justify-center font-bold' : ($isCurrentMonth ? 'text-slate-700' : 'text-slate-400') }}">
+                                    {{ $date->day }}
+                                </span>
+                                @if($hasCheckins)
+                                <span class="w-2 h-2 rounded-full {{ $parentRole === 'mother' ? 'bg-pink-500' : 'bg-blue-500' }}"></span>
+                                @endif
+                            </div>
+                            @if($hasCheckins)
+                            <div class="space-y-1">
+                                @foreach($dayCheckins->take(2) as $checkin)
+                                <div class="text-xs px-1.5 py-0.5 rounded truncate {{ $checkin->parent_role === 'mother' ? 'bg-pink-100 text-pink-700' : 'bg-blue-100 text-blue-700' }}">
+                                    {{ $checkin->mood_emoji }} {{ $checkin->child->first_name ?? '' }}
+                                </div>
+                                @endforeach
+                                @if($dayCheckins->count() > 2)
+                                <div class="text-xs text-slate-500 px-1">+{{ $dayCheckins->count() - 2 }} more</div>
+                                @endif
+                            </div>
+                            @endif
+                        </a>
+                    @endfor
+                </div>
+            </div>
+
+            {{-- Month Navigation --}}
+            <div class="flex items-center justify-center gap-4 mt-4">
+                @php
+                    $prevMonth = $monthStart->copy()->subMonth();
+                    $nextMonth = $monthStart->copy()->addMonth();
+                @endphp
+                <a href="{{ route('coparenting.actual-time', ['date' => $prevMonth->format('Y-m-d')]) }}" class="btn btn-sm btn-ghost gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                    {{ $prevMonth->format('M') }}
+                </a>
+                <a href="{{ route('coparenting.actual-time', ['date' => now()->format('Y-m-d')]) }}" class="btn btn-sm btn-outline">This Month</a>
+                <a href="{{ route('coparenting.actual-time', ['date' => $nextMonth->format('Y-m-d')]) }}" class="btn btn-sm btn-ghost gap-1">
+                    {{ $nextMonth->format('M') }}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
 
-{{-- Check-in Modal --}}
-<dialog id="checkin-modal" class="modal">
-    <div class="modal-box">
-        <form method="dialog">
-            <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">X</button>
-        </form>
-
-        <h3 class="font-bold text-lg mb-2">Record Check-in</h3>
-        <p class="text-slate-500 text-sm mb-4" id="checkin-date-display"></p>
-
-        <form id="checkin-form" action="{{ route('coparenting.actual-time.store') }}" method="POST">
-            @csrf
-            <input type="hidden" name="family_member_id" value="{{ $selectedChildId }}">
-            <input type="hidden" name="date" id="checkin-date">
-
-            <div class="form-control mb-4">
-                <label class="label">
-                    <span class="label-text font-medium">Who had the child? <span class="text-error">*</span></span>
-                </label>
-                <div class="flex gap-4">
-                    <label class="flex-1 cursor-pointer">
-                        <input type="radio" name="parent_role" value="mother" class="hidden peer" required>
-                        <div class="p-4 rounded-lg border-2 border-slate-200 peer-checked:border-pink-500 peer-checked:bg-pink-50 text-center transition-all">
-                            <div class="w-12 h-12 mx-auto rounded-full bg-pink-100 flex items-center justify-center mb-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgb(236 72 153)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-                            </div>
-                            <span class="font-medium text-slate-700">Mother</span>
-                        </div>
-                    </label>
-                    <label class="flex-1 cursor-pointer">
-                        <input type="radio" name="parent_role" value="father" class="hidden peer">
-                        <div class="p-4 rounded-lg border-2 border-slate-200 peer-checked:border-blue-500 peer-checked:bg-blue-50 text-center transition-all">
-                            <div class="w-12 h-12 mx-auto rounded-full bg-blue-100 flex items-center justify-center mb-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgb(59 130 246)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-                            </div>
-                            <span class="font-medium text-slate-700">Father</span>
-                        </div>
-                    </label>
-                </div>
-            </div>
-
-            <div class="form-control mb-4">
-                <label class="label cursor-pointer justify-start gap-3">
-                    <input type="checkbox" name="is_full_day" id="checkin-full-day" class="checkbox checkbox-primary" checked onchange="toggleTimeFields()">
-                    <span class="label-text">Full day</span>
-                </label>
-            </div>
-
-            <div id="time-fields" class="hidden grid grid-cols-2 gap-4 mb-4">
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text font-medium">Check-in Time</span>
-                    </label>
-                    <input type="time" name="check_in_time" class="input input-bordered">
-                </div>
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text font-medium">Check-out Time</span>
-                    </label>
-                    <input type="time" name="check_out_time" class="input input-bordered">
-                </div>
-            </div>
-
-            <div class="form-control mb-4">
-                <label class="label">
-                    <span class="label-text font-medium">Notes</span>
-                </label>
-                <textarea name="notes" class="textarea textarea-bordered" rows="2" placeholder="Optional notes..."></textarea>
-            </div>
-
-            <div class="flex justify-end gap-2">
-                <button type="button" onclick="document.getElementById('checkin-modal').close()" class="btn btn-ghost">Cancel</button>
-                <button type="submit" class="btn btn-primary">Save</button>
-            </div>
-        </form>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-        <button>close</button>
-    </form>
-</dialog>
+{{-- Daily Check-in Modal --}}
+@include('partials.modals.daily-checkin-modal')
 
 <script>
-    function updateMonthYear(input) {
-        const [year, month] = input.value.split('-');
-        document.querySelector('input[name="year"]').value = year;
-        document.querySelector('input[name="month"]').value = parseInt(month);
-        input.form.submit();
-    }
-
-    function openCheckinModal(date, currentParent) {
-        const dateObj = new Date(date + 'T00:00:00');
-        const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
-        document.getElementById('checkin-date').value = date;
-        document.getElementById('checkin-date-display').textContent = formattedDate;
-
-        // Pre-select parent if exists
-        if (currentParent) {
-            document.querySelector(`input[name="parent_role"][value="${currentParent}"]`).checked = true;
-        } else {
-            document.querySelectorAll('input[name="parent_role"]').forEach(r => r.checked = false);
-        }
-
-        document.getElementById('checkin-modal').showModal();
-    }
-
-    function toggleTimeFields() {
-        const isFullDay = document.getElementById('checkin-full-day').checked;
-        document.getElementById('time-fields').classList.toggle('hidden', isFullDay);
-    }
+    document.addEventListener('DOMContentLoaded', function() {
+        flatpickr('#date-picker', {
+            dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'M j, Y',
+            monthSelectorType: 'static',
+            defaultDate: '{{ $selectedDate->format('Y-m-d') }}',
+            onChange: function(selectedDates, dateStr) {
+                if (dateStr) {
+                    document.getElementById('date-filter-form').submit();
+                }
+            }
+        });
+    });
 </script>
+
+<style>
+    /* Flatpickr custom styling */
+    .flatpickr-calendar {
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        border: 1px solid #e2e8f0;
+    }
+    .flatpickr-calendar.open {
+        z-index: 9999;
+    }
+    .flatpickr-day.selected,
+    .flatpickr-day.selected:hover {
+        background: #6366f1;
+        border-color: #6366f1;
+    }
+    .flatpickr-day:hover {
+        background: #e0e7ff;
+    }
+    .flatpickr-day.today {
+        border-color: #6366f1;
+    }
+    .flatpickr-months .flatpickr-month {
+        background: #f8fafc;
+        border-radius: 12px 12px 0 0;
+    }
+    .flatpickr-current-month {
+        font-weight: 600;
+    }
+    .flatpickr-weekdays {
+        background: #f8fafc;
+    }
+</style>
 @endsection

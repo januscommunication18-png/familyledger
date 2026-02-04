@@ -3,7 +3,10 @@
 @section('page-name', 'Co-parenting Dashboard')
 
 @section('content')
-<div class="p-4 lg:p-6">
+{{-- Child Picker Modal (for multi-child navigation) --}}
+@include('partials.coparent-child-picker')
+
+<div class="p-4 lg:p-6" x-data
     {{-- Success Message --}}
     @if(session('success'))
     <div class="alert alert-success mb-6">

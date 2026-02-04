@@ -63,8 +63,15 @@ class AuthController extends Controller
         // Send access code email
         Mail::to($admin->email)->send(new BackofficeAccessCode($code, $admin->name));
 
-        return redirect()->route('backoffice.verify-access')
+        // In local environment, flash code to session for display
+        $redirect = redirect()->route('backoffice.verify-access')
             ->with('message', 'An access code has been sent to your email.');
+
+        if (app()->environment('local')) {
+            $redirect->with('dev_code', $code);
+        }
+
+        return $redirect;
     }
 
     /**
@@ -135,7 +142,13 @@ class AuthController extends Controller
         // Send access code email
         Mail::to($admin->email)->send(new BackofficeAccessCode($code, $admin->name));
 
-        return back()->with('message', 'A new access code has been sent to your email.');
+        $redirect = back()->with('message', 'A new access code has been sent to your email.');
+
+        if (app()->environment('local')) {
+            $redirect->with('dev_code', $code);
+        }
+
+        return $redirect;
     }
 
     /**
@@ -192,8 +205,14 @@ class AuthController extends Controller
         // Send security code email
         Mail::to($admin->email)->send(new BackofficeSecurityCode($code, $admin->name));
 
-        return redirect()->route('backoffice.verify-code')
+        $redirect = redirect()->route('backoffice.verify-code')
             ->with('message', 'A security code has been sent to your email.');
+
+        if (app()->environment('local')) {
+            $redirect->with('dev_code', $code);
+        }
+
+        return $redirect;
     }
 
     /**
@@ -277,7 +296,13 @@ class AuthController extends Controller
         // Send security code email
         Mail::to($admin->email)->send(new BackofficeSecurityCode($code, $admin->name));
 
-        return back()->with('message', 'A new security code has been sent to your email.');
+        $redirect = back()->with('message', 'A new security code has been sent to your email.');
+
+        if (app()->environment('local')) {
+            $redirect->with('dev_code', $code);
+        }
+
+        return $redirect;
     }
 
     /**

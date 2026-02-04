@@ -110,103 +110,92 @@
             <div class="flex items-center justify-between mb-6">
                 <div>
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Client Data</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Secure access to client information</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Secure access requires client approval</p>
                 </div>
             </div>
 
-            <!-- Access Request -->
-            <div x-show="!hasAccess && !showCodeInput" class="text-center py-12">
+            <!-- Messages -->
+            <div x-show="message" class="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <p class="text-sm text-green-800 dark:text-green-300" x-text="message"></p>
+            </div>
+
+            <div x-show="error" class="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p class="text-sm text-red-800 dark:text-red-300" x-text="error"></p>
+            </div>
+
+            <!-- No Active Request - Show Request Button -->
+            <div x-show="accessStatus === 'none'" class="text-center py-12">
                 <div class="w-16 h-16 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                     <svg class="w-8 h-8 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                     </svg>
                 </div>
-                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Secure Access Required</h4>
-                <p class="text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                    To view client data, you need to verify your identity. A 6-digit code will be sent to your email.
+                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Client Approval Required</h4>
+                <p class="text-gray-500 dark:text-gray-400 mb-4 max-w-md mx-auto">
+                    To view client data, you need their permission. An email will be sent to the account owner for approval.
                 </p>
+                @if($owner)
+                    <p class="text-sm text-gray-400 dark:text-gray-500 mb-6">
+                        Request will be sent to: <strong class="text-gray-600 dark:text-gray-300">{{ $owner->email }}</strong>
+                    </p>
+                @endif
+
+                <!-- Reason Input -->
+                <div class="max-w-md mx-auto mb-6">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-left">Reason for access (optional)</label>
+                    <textarea
+                        x-model="requestReason"
+                        rows="2"
+                        placeholder="e.g., Support ticket #123, account recovery assistance"
+                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    ></textarea>
+                </div>
+
                 <button
-                    @click="requestCode()"
+                    @click="requestAccess()"
                     :disabled="loading"
                     class="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
                 >
-                    <span x-show="!loading">Request Access Code</span>
-                    <span x-show="loading" class="flex items-center gap-2">
-                        <svg class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Sending...
-                    </span>
+                    <template x-if="!loading">
+                        <span>Request Permission</span>
+                    </template>
+                    <template x-if="loading">
+                        <span class="inline-flex items-center gap-2">
+                            <svg class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Sending...
+                        </span>
+                    </template>
                 </button>
             </div>
 
-            <!-- Code Input -->
-            <div x-show="showCodeInput && !hasAccess" x-cloak class="max-w-md mx-auto py-8">
-                <div x-show="debugCode" class="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                    <p class="text-sm text-yellow-800 dark:text-yellow-300">
-                        <strong>Debug Mode:</strong> Your code is <span class="font-mono font-bold" x-text="debugCode"></span>
-                    </p>
+            <!-- Pending Request -->
+            <div x-show="accessStatus === 'pending'" x-cloak class="text-center py-12">
+                <div class="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-blue-600 dark:text-blue-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
                 </div>
-
-                <div x-show="message" class="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                    <p class="text-sm text-green-800 dark:text-green-300" x-text="message"></p>
-                </div>
-
-                <div x-show="error" class="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                    <p class="text-sm text-red-800 dark:text-red-300" x-text="error"></p>
-                </div>
-
-                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">Enter Security Code</h4>
-                <p class="text-gray-500 dark:text-gray-400 mb-6 text-center text-sm">
-                    Enter the 6-digit code sent to your email
+                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Awaiting Client Approval</h4>
+                <p class="text-gray-500 dark:text-gray-400 mb-4 max-w-md mx-auto" x-text="statusMessage"></p>
+                <p class="text-sm text-gray-400 dark:text-gray-500">
+                    This page will automatically update when the client responds.
                 </p>
-
-                <div class="flex gap-2 justify-center mb-6">
-                    <template x-for="(digit, index) in 6" :key="index">
-                        <input
-                            type="text"
-                            maxlength="1"
-                            class="w-12 h-14 text-center text-2xl font-bold border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                            :data-view-code-input="index"
-                            @input="handleCodeInput($event, index)"
-                            @keydown="handleCodeKeydown($event, index)"
-                            @paste="handleCodePaste($event)"
-                            inputmode="numeric"
-                            pattern="[0-9]*"
-                        >
-                    </template>
-                </div>
-
-                <div class="flex gap-3 justify-center">
-                    <button
-                        @click="verifyCode()"
-                        :disabled="loading || code.length !== 6"
-                        class="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
-                    >
-                        <span x-show="!loading">Verify Code</span>
-                        <span x-show="loading">Verifying...</span>
-                    </button>
-                    <button
-                        @click="requestCode()"
-                        :disabled="loading"
-                        class="px-6 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-                    >
-                        Resend Code
-                    </button>
-                </div>
             </div>
 
-            <!-- Access Granted - View Data Button -->
-            <div x-show="hasAccess" x-cloak class="text-center py-8">
+            <!-- Access Granted -->
+            <div x-show="accessStatus === 'approved'" x-cloak class="text-center py-8">
                 <div class="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                     <svg class="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                     </svg>
                 </div>
                 <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Access Granted</h4>
-                <p class="text-gray-500 dark:text-gray-400 mb-6">
-                    You have temporary access to view client data. Access will expire when you leave this page.
+                <p class="text-gray-500 dark:text-gray-400 mb-2" x-text="statusMessage"></p>
+                <p class="text-sm text-gray-400 dark:text-gray-500 mb-6">
+                    Time remaining: <span class="font-semibold text-green-600 dark:text-green-400" x-text="timeRemaining"></span>
                 </p>
                 <a href="{{ route('backoffice.clients.data', $client) }}" class="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -215,6 +204,25 @@
                     </svg>
                     View Client Data
                 </a>
+            </div>
+
+            <!-- Access Denied -->
+            <div x-show="accessStatus === 'denied'" x-cloak class="text-center py-12">
+                <div class="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </div>
+                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Access Denied</h4>
+                <p class="text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
+                    The client has denied your access request. You may submit a new request if needed.
+                </p>
+                <button
+                    @click="accessStatus = 'none'"
+                    class="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors"
+                >
+                    Submit New Request
+                </button>
             </div>
         </div>
 
@@ -399,36 +407,114 @@
 @push('scripts')
 <script>
 function clientViewAccess() {
+    @php
+        $initialStatus = 'none';
+        if ($activeRequest && $activeRequest->hasValidAccess()) {
+            $initialStatus = 'approved';
+        } elseif ($activeRequest && $activeRequest->isPending()) {
+            $initialStatus = 'pending';
+        }
+    @endphp
+
     return {
-        hasAccess: {{ $hasViewAccess ? 'true' : 'false' }},
-        showCodeInput: false,
-        code: '',
-        debugCode: '',
+        accessStatus: '{{ $initialStatus }}',
+        statusMessage: '',
+        timeRemaining: '',
+        expiresAt: null,
+        requestReason: '',
         loading: false,
         message: '',
         error: '',
+        pollInterval: null,
 
         init() {
-            // Revoke access when leaving the page
-            window.addEventListener('beforeunload', () => {
-                if (this.hasAccess) {
-                    navigator.sendBeacon('{{ route('backoffice.clients.revokeAccess', $client) }}', new URLSearchParams({
-                        _token: '{{ csrf_token() }}'
-                    }));
-                }
-            });
+            console.log('clientViewAccess initialized, status:', this.accessStatus);
+            // Set initial status message
+            @if($activeRequest && $activeRequest->hasValidAccess())
+                this.expiresAt = new Date('{{ $activeRequest->access_expires_at->toIso8601String() }}');
+                this.statusMessage = 'Access granted until {{ $activeRequest->access_expires_at->format("M j, Y g:i A") }}';
+                this.updateTimeRemaining();
+                setInterval(() => this.updateTimeRemaining(), 1000);
+            @elseif($activeRequest && $activeRequest->isPending())
+                this.statusMessage = 'Waiting for client approval. Request expires {{ $activeRequest->expires_at->format("M j, Y g:i A") }}';
+                this.startPolling();
+            @endif
         },
 
-        async requestCode() {
+        updateTimeRemaining() {
+            if (!this.expiresAt) return;
+
+            const now = new Date();
+            const diff = this.expiresAt - now;
+
+            if (diff <= 0) {
+                this.timeRemaining = 'Expired';
+                this.accessStatus = 'none';
+                return;
+            }
+
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            if (hours > 0) {
+                this.timeRemaining = `${hours}h ${minutes}m ${seconds}s`;
+            } else if (minutes > 0) {
+                this.timeRemaining = `${minutes}m ${seconds}s`;
+            } else {
+                this.timeRemaining = `${seconds}s`;
+            }
+        },
+
+        startPolling() {
+            // Poll every 10 seconds to check status
+            this.pollInterval = setInterval(() => this.checkStatus(), 10000);
+        },
+
+        stopPolling() {
+            if (this.pollInterval) {
+                clearInterval(this.pollInterval);
+                this.pollInterval = null;
+            }
+        },
+
+        async requestAccess() {
             this.loading = true;
             this.error = '';
             this.message = '';
 
             try {
-                const response = await fetch('{{ route('backoffice.clients.requestViewCode', $client) }}', {
+                const response = await fetch('{{ route("backoffice.clients.requestDataAccess", $client) }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ reason: this.requestReason })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    this.accessStatus = 'pending';
+                    this.message = data.message;
+                    this.statusMessage = 'Request sent. Waiting for client approval.';
+                    this.startPolling();
+                } else {
+                    this.error = data.message || 'Failed to send request';
+                }
+            } catch (err) {
+                this.error = 'An error occurred. Please try again.';
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async checkStatus() {
+            try {
+                const response = await fetch('{{ route("backoffice.clients.checkDataAccessStatus", $client) }}', {
+                    headers: {
                         'Accept': 'application/json',
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
                     }
@@ -436,102 +522,25 @@ function clientViewAccess() {
 
                 const data = await response.json();
 
-                if (data.success) {
-                    this.showCodeInput = true;
-                    this.message = data.message;
-                    this.debugCode = data.code_debug || '';
-
-                    // Focus first input
-                    this.$nextTick(() => {
-                        document.querySelector('[data-view-code-input="0"]')?.focus();
-                    });
-                } else {
-                    this.error = data.message || 'Failed to request code';
+                if (data.status === 'approved') {
+                    this.stopPolling();
+                    this.accessStatus = 'approved';
+                    this.statusMessage = data.message;
+                    this.expiresAt = new Date(data.expires_at);
+                    this.updateTimeRemaining();
+                    setInterval(() => this.updateTimeRemaining(), 1000);
+                } else if (data.status === 'denied') {
+                    this.stopPolling();
+                    this.accessStatus = 'denied';
+                    this.statusMessage = data.message;
+                } else if (data.status === 'expired' || data.status === 'none') {
+                    this.stopPolling();
+                    this.accessStatus = 'none';
+                    this.statusMessage = '';
                 }
             } catch (err) {
-                this.error = 'An error occurred. Please try again.';
-            } finally {
-                this.loading = false;
+                console.error('Failed to check status:', err);
             }
-        },
-
-        async verifyCode() {
-            this.loading = true;
-            this.error = '';
-
-            try {
-                const response = await fetch('{{ route('backoffice.clients.verifyViewCode', $client) }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify({ code: this.code })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    this.hasAccess = true;
-                } else {
-                    this.error = data.message || 'Invalid code';
-                }
-            } catch (err) {
-                this.error = 'An error occurred. Please try again.';
-            } finally {
-                this.loading = false;
-            }
-        },
-
-        handleCodeInput(event, index) {
-            const input = event.target;
-            const value = input.value.replace(/[^0-9]/g, '');
-            input.value = value;
-
-            if (value && index < 5) {
-                const next = document.querySelector(`[data-view-code-input="${index + 1}"]`);
-                if (next) next.focus();
-            }
-
-            this.updateCode();
-        },
-
-        handleCodeKeydown(event, index) {
-            if (event.key === 'Backspace' && !event.target.value && index > 0) {
-                const prev = document.querySelector(`[data-view-code-input="${index - 1}"]`);
-                if (prev) {
-                    prev.focus();
-                    prev.value = '';
-                }
-                this.updateCode();
-            }
-        },
-
-        handleCodePaste(event) {
-            event.preventDefault();
-            const paste = (event.clipboardData || window.clipboardData).getData('text');
-            const digits = paste.replace(/[^0-9]/g, '').slice(0, 6);
-
-            digits.split('').forEach((digit, i) => {
-                const input = document.querySelector(`[data-view-code-input="${i}"]`);
-                if (input) input.value = digit;
-            });
-
-            this.updateCode();
-
-            if (digits.length === 6) {
-                this.verifyCode();
-            }
-        },
-
-        updateCode() {
-            let code = '';
-            for (let i = 0; i < 6; i++) {
-                const input = document.querySelector(`[data-view-code-input="${i}"]`);
-                code += input ? input.value : '';
-            }
-            this.code = code;
         }
     };
 }

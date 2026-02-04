@@ -400,6 +400,10 @@ Route::middleware(['security.code', 'auth'])->group(function () {
         Route::post('/enter-mode', [CoparentingController::class, 'enterMode'])->name('enter-mode');
         Route::post('/exit-mode', [CoparentingController::class, 'exitMode'])->name('exit-mode');
 
+        // Child selection (for multi-child co-parenting)
+        Route::post('/select-child', [CoparentingController::class, 'selectChild'])->name('select-child');
+        Route::get('/child-picker-data', [CoparentingController::class, 'getChildPickerData'])->name('child-picker-data');
+
         // Invite flow
         Route::get('/invite', [CoparentingController::class, 'inviteForm'])->name('invite');
         Route::post('/invite', [CoparentingController::class, 'sendInvite'])->name('invite.send');
@@ -433,6 +437,12 @@ Route::middleware(['security.code', 'auth'])->group(function () {
         Route::post('/actual-time', [CoparentingController::class, 'storeActualTime'])->name('actual-time.store');
         Route::put('/actual-time/{checkin}', [CoparentingController::class, 'updateActualTime'])->name('actual-time.update');
         Route::delete('/actual-time/{checkin}', [CoparentingController::class, 'deleteActualTime'])->name('actual-time.delete');
+
+        // Daily Check-in
+        Route::get('/checkins', [CoparentingController::class, 'checkins'])->name('checkins');
+        Route::get('/daily-checkin/data', [CoparentingController::class, 'getDailyCheckinData'])->name('daily-checkin.data');
+        Route::post('/daily-checkin', [CoparentingController::class, 'storeDailyCheckin'])->name('daily-checkin.store');
+        Route::get('/daily-checkin/history', [CoparentingController::class, 'getCheckinHistory'])->name('daily-checkin.history');
 
         // Placeholder pages
         Route::get('/child-info', [CoparentingController::class, 'childInfo'])->name('child-info');
@@ -683,6 +693,20 @@ Route::middleware(['security.code', 'auth'])->group(function () {
     Route::post('/onboarding/verify-phone-code', [OnboardingController::class, 'verifyPhoneCode']);
     Route::post('/onboarding/generate-2fa-secret', [OnboardingController::class, 'generate2FASecret']);
     Route::post('/onboarding/verify-2fa-code', [OnboardingController::class, 'verify2FACode']);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Data Access Request Routes (Public - accessed from email links)
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('data-access')->name('data-access.')->group(function () {
+    Route::get('/{token}', [\App\Http\Controllers\DataAccessController::class, 'show'])->name('show');
+    Route::post('/{token}/approve', [\App\Http\Controllers\DataAccessController::class, 'approve'])->name('approve');
+    Route::post('/{token}/deny', [\App\Http\Controllers\DataAccessController::class, 'deny'])->name('deny');
+    Route::get('/{token}/approved', [\App\Http\Controllers\DataAccessController::class, 'approved'])->name('approved');
+    Route::get('/{token}/denied', [\App\Http\Controllers\DataAccessController::class, 'denied'])->name('denied');
 });
 
 /*

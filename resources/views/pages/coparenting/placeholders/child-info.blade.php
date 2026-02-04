@@ -3,10 +3,19 @@
 @section('page-name', 'Child Info')
 
 @section('content')
-<div class="p-4 lg:p-6">
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold text-slate-800">Child Information</h1>
-        <p class="text-slate-500">Quick access to shared children's information.</p>
+{{-- Child Picker Modal --}}
+@include('partials.coparent-child-picker')
+
+<div class="p-4 lg:p-6" x-data>
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-800">Child Information</h1>
+            <p class="text-slate-500">Quick access to shared children's information.</p>
+        </div>
+        <div class="flex items-center gap-3">
+            {{-- Child Switcher --}}
+            @include('partials.coparent-child-switcher')
+        </div>
     </div>
 
     @if($children->count() > 0)

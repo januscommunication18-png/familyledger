@@ -13,6 +13,13 @@
             </div>
         @endif
 
+        @if (session('dev_code') && app()->environment('local'))
+            <div class="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <p class="text-xs text-yellow-600 dark:text-yellow-400 mb-1 font-medium">LOCAL DEV ONLY</p>
+                <p class="text-2xl font-mono font-bold text-yellow-800 dark:text-yellow-300 tracking-widest">{{ session('dev_code') }}</p>
+            </div>
+        @endif
+
         @if ($errors->any())
             <div class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                 <ul class="text-sm text-red-800 dark:text-red-300 space-y-1">

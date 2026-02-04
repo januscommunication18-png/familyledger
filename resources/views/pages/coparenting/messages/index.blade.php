@@ -3,7 +3,10 @@
 @section('page-name', 'Messages')
 
 @section('content')
-<div class="p-4 lg:p-6">
+{{-- Child Picker Modal --}}
+@include('partials.coparent-child-picker')
+
+<div class="p-4 lg:p-6" x-data>
     {{-- Success Message --}}
     @if(session('success'))
     <div class="alert alert-success mb-6">
@@ -18,10 +21,15 @@
             <h1 class="text-2xl font-bold text-slate-800">Secure Messages</h1>
             <p class="text-slate-500">Child-focused, court-friendly communication</p>
         </div>
-        <a href="{{ route('coparenting.messages.create') }}" class="btn btn-primary gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
-            New Conversation
-        </a>
+        <div class="flex items-center gap-3">
+            {{-- Child Switcher --}}
+            @include('partials.coparent-child-switcher')
+
+            <a href="{{ route('coparenting.messages.create') }}" class="btn btn-primary gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                New Conversation
+            </a>
+        </div>
     </div>
 
     {{-- Info Banner --}}

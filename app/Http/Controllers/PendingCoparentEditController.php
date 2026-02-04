@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Collaborator;
 use App\Models\PendingCoparentEdit;
+use App\Services\CoparentChildSelector;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -42,6 +43,10 @@ class PendingCoparentEditController extends Controller
 
         $user = auth()->user();
 
+        // Get selected child for filtering
+        $selectedChild = CoparentChildSelector::getEffectiveChild($user);
+        $selectedChildId = $selectedChild?->id;
+
         // Check if user is viewing as owner or coparent
         $coparentTenantIds = $this->getCoparentTenantIds();
         $isOwner = true; // Default: viewing own tenant's edits
@@ -66,6 +71,11 @@ class PendingCoparentEditController extends Controller
                 });
             }
         });
+
+        // Filter by selected child
+        if ($selectedChildId) {
+            $query->where('family_member_id', $selectedChildId);
+        }
 
         $pendingEdits = $query->get()->groupBy('family_member_id');
 
@@ -260,6 +270,10 @@ class PendingCoparentEditController extends Controller
         $status = $request->get('status', 'all');
         $coparentTenantIds = $this->getCoparentTenantIds();
 
+        // Get selected child for filtering
+        $selectedChild = CoparentChildSelector::getEffectiveChild($user);
+        $selectedChildId = $selectedChild?->id;
+
         $query = PendingCoparentEdit::query()
             ->with(['familyMember', 'requester', 'reviewer'])
             ->orderBy('reviewed_at', 'desc');
@@ -278,6 +292,11 @@ class PendingCoparentEditController extends Controller
                 });
             }
         });
+
+        // Filter by selected child
+        if ($selectedChildId) {
+            $query->where('family_member_id', $selectedChildId);
+        }
 
         if ($status === 'approved') {
             $query->approved();

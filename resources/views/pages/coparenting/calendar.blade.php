@@ -3,7 +3,7 @@
 @section('page-name', 'Co-parenting Calendar')
 
 @section('content')
-<div class="p-4 lg:p-6">
+<div class="p-4 lg:p-6" x-data>
     {{-- Success Message --}}
     @if(session('success'))
     <div class="alert alert-success mb-6">
@@ -17,6 +17,26 @@
         <div>
             <h1 class="text-2xl font-bold text-slate-800">Co-parenting Calendar</h1>
             <p class="text-slate-500">Plan and visualize your custody schedule.</p>
+        </div>
+        <div class="flex items-center gap-3">
+            {{-- Child Switcher --}}
+            @include('partials.coparent-child-switcher')
+
+            {{-- Daily Check-in Button - Only show if user can check in today --}}
+            @if($canCheckin)
+                <button @click="$dispatch('open-daily-checkin')" class="btn btn-primary gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    Daily Check-in
+                </button>
+            @else
+                {{-- Show info that it's the other parent's day --}}
+                @if($custodyParent)
+                    <div class="badge badge-lg gap-2 py-3 px-4" style="background-color: {{ $custodyParent === 'mother' ? '#fce7f3' : '#dbeafe' }}; color: {{ $custodyParent === 'mother' ? '#be185d' : '#1d4ed8' }};">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                        Today is {{ ucfirst($custodyParent) }}'s day
+                    </div>
+                @endif
+            @endif
         </div>
     </div>
 
@@ -559,6 +579,12 @@
     });
 </script>
 @endpush
+
+{{-- Child Picker Modal --}}
+@include('partials.coparent-child-picker')
+
+{{-- Daily Check-in Modal --}}
+@include('partials.modals.daily-checkin-modal')
 
 <style>
     /* Calendar Customization */

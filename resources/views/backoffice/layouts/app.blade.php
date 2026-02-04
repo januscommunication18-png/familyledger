@@ -183,6 +183,14 @@ t    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.m
                     <span>Drip Campaigns</span>
                 </a>
 
+                <a href="{{ route('backoffice.email-logs.index') }}"
+                   class="flex items-center gap-3 px-4 py-3 rounded-lg {{ request()->routeIs('backoffice.email-logs.*') ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700' }} transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                    </svg>
+                    <span>Email Logs</span>
+                </a>
+
                 <div class="pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
                     <p class="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Settings</p>
 
@@ -288,7 +296,7 @@ t    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.m
     </div>
 
     <!-- Alpine.js via jsDelivr with SRI -->
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js" defer integrity="sha256-NTuMLF/sME9UZFNI4NeECGUuD/BQklDxKSXxPyrXCHM=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js" defer integrity="sha256-tgDjY9mdlURNtUrL+y3v/smueSqpmgkim82geOW1VkM=" crossorigin="anonymous"></script>
 
     {{-- Form Double Submit Prevention --}}
     <script>

@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Mail\CoparentInviteMail;
 use App\Models\Collaborator;
+use App\Services\CoparentChildSelector;
 use App\Models\CollaboratorInvite;
 use App\Models\CoparentChild;
 use App\Models\CoparentingActivity;
 use App\Models\CoparentingActualTime;
+use App\Models\CoparentingDailyCheckin;
 use App\Models\CoparentingSchedule;
 use App\Models\CoparentingScheduleBlock;
 use App\Models\FamilyCircle;
@@ -142,6 +144,45 @@ class CoparentingController extends Controller
         session()->forget('coparenting_mode');
 
         return redirect()->route('dashboard');
+    }
+
+    /**
+     * Select a child for co-parenting context.
+     */
+    public function selectChild(Request $request): JsonResponse
+    {
+        $request->validate([
+            'child_id' => 'required|integer|exists:family_members,id',
+        ]);
+
+        $user = auth()->user();
+        $children = CoparentChildSelector::getChildren($user);
+
+        // Verify the child belongs to user's co-parenting children
+        if (!$children->contains('id', $request->child_id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid child selection.',
+            ], 403);
+        }
+
+        CoparentChildSelector::setSelectedChild($request->child_id);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Child selected successfully.',
+        ]);
+    }
+
+    /**
+     * Get child picker data for the modal.
+     */
+    public function getChildPickerData(): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'data' => CoparentChildSelector::getPickerData(),
+        ]);
     }
 
     /**
@@ -310,18 +351,26 @@ class CoparentingController extends Controller
 
         $user = auth()->user();
 
+        // Get selected child for filtering
+        $selectedChild = CoparentChildSelector::getEffectiveChild($user);
+        $selectedChildId = $selectedChild?->id;
+
         // Get children with co-parenting enabled from user's own tenant
         $ownChildren = FamilyMember::forCurrentTenant()
             ->minors()
             ->where('co_parenting_enabled', true)
             ->with('coparents.user')
+            ->when($selectedChildId, fn($q) => $q->where('id', $selectedChildId))
             ->get();
 
         // Get children the user has co-parent access to (from other tenants)
         $coparentAccess = Collaborator::where('user_id', $user->id)
             ->where('coparenting_enabled', true)
-            ->with(['coparentChildren' => function($query) {
+            ->with(['coparentChildren' => function($query) use ($selectedChildId) {
                 $query->with(['coparents.user']);
+                if ($selectedChildId) {
+                    $query->where('family_member_id', $selectedChildId);
+                }
             }, 'inviter'])
             ->get();
 
@@ -431,12 +480,24 @@ class CoparentingController extends Controller
 
         $user = auth()->user();
 
+        // Get selected child (if any)
+        $selectedChild = CoparentChildSelector::getEffectiveChild($user);
+        $selectedChildId = $selectedChild?->id;
+
         // Get active schedules for this tenant
-        $schedules = CoparentingSchedule::forCurrentTenant()
+        $schedulesQuery = CoparentingSchedule::forCurrentTenant()
             ->active()
             ->with('children')
-            ->orderBy('created_at', 'desc')
-            ->get();
+            ->orderBy('created_at', 'desc');
+
+        // Filter by selected child - ONLY show schedules for the selected child
+        if ($selectedChildId) {
+            $schedulesQuery->whereHas('children', function ($subQ) use ($selectedChildId) {
+                $subQ->where('family_member_id', $selectedChildId);
+            });
+        }
+
+        $schedules = $schedulesQuery->get();
 
         // Get available template types
         $templateTypes = CoparentingSchedule::TEMPLATE_TYPES;
@@ -453,7 +514,12 @@ class CoparentingController extends Controller
             ->with('user')
             ->get();
 
-        return view('pages.coparenting.calendar', compact('schedules', 'templateTypes', 'children', 'coparents'));
+        // Check if user can do daily check-in today (based on custody schedule)
+        $tenantId = session('tenant_id', $user->tenant_id);
+        $canCheckin = CoparentingDailyCheckin::canUserCheckinToday($user, $tenantId, $selectedChildId);
+        $custodyParent = CoparentingDailyCheckin::getCustodyParentForDate($tenantId, now(), $selectedChildId);
+
+        return view('pages.coparenting.calendar', compact('schedules', 'templateTypes', 'children', 'coparents', 'selectedChild', 'canCheckin', 'custodyParent'));
     }
 
     /**
@@ -464,11 +530,23 @@ class CoparentingController extends Controller
         $start = Carbon::parse($request->get('start', now()->startOfMonth()));
         $end = Carbon::parse($request->get('end', now()->endOfMonth()));
 
+        $user = auth()->user();
+        $selectedChild = CoparentChildSelector::getEffectiveChild($user);
+        $selectedChildId = $selectedChild?->id;
+
         // Get active schedules
-        $schedules = CoparentingSchedule::forCurrentTenant()
+        $schedulesQuery = CoparentingSchedule::forCurrentTenant()
             ->active()
-            ->current()
-            ->get();
+            ->current();
+
+        // Filter by selected child - ONLY show schedules for the selected child
+        if ($selectedChildId) {
+            $schedulesQuery->whereHas('children', function ($subQ) use ($selectedChildId) {
+                $subQ->where('family_member_id', $selectedChildId);
+            });
+        }
+
+        $schedules = $schedulesQuery->get();
 
         $events = [];
 
@@ -515,10 +593,24 @@ class CoparentingController extends Controller
 
         $user = auth()->user();
 
-        // Deactivate any existing active schedules (only one active schedule allowed)
-        CoparentingSchedule::where('tenant_id', $user->tenant_id)
-            ->where('is_active', true)
-            ->update(['is_active' => false]);
+        // Get selected child - schedule will be for this child
+        $selectedChild = CoparentChildSelector::getEffectiveChild($user);
+        $childIds = !empty($validated['children']) ? $validated['children'] : ($selectedChild ? [$selectedChild->id] : []);
+
+        // Deactivate existing active schedules for the same child(ren) only
+        // Each child can have their own active schedule
+        if (!empty($childIds)) {
+            $existingScheduleIds = CoparentingSchedule::where('tenant_id', $user->tenant_id)
+                ->where('is_active', true)
+                ->whereHas('children', function ($q) use ($childIds) {
+                    $q->whereIn('family_member_id', $childIds);
+                })
+                ->pluck('id');
+
+            if ($existingScheduleIds->isNotEmpty()) {
+                CoparentingSchedule::whereIn('id', $existingScheduleIds)->update(['is_active' => false]);
+            }
+        }
 
         $hasEndDate = $request->boolean('has_end_date');
 
@@ -535,9 +627,9 @@ class CoparentingController extends Controller
             'primary_parent' => $validated['primary_parent'],
         ]);
 
-        // Attach children if provided
-        if (!empty($validated['children'])) {
-            $schedule->children()->attach($validated['children']);
+        // Attach children - use selected child if none provided
+        if (!empty($childIds)) {
+            $schedule->children()->attach($childIds);
         }
 
         if ($request->wantsJson()) {
@@ -670,10 +762,25 @@ class CoparentingController extends Controller
 
         $user = auth()->user();
 
+        // Get selected child for filtering
+        $selectedChild = CoparentChildSelector::getEffectiveChild($user);
+        $selectedChildId = $selectedChild?->id;
+
         // Get activities from user's own tenant
-        $ownActivities = CoparentingActivity::forCurrentTenant()
-            ->with('children')
-            ->get();
+        $ownActivitiesQuery = CoparentingActivity::forCurrentTenant()
+            ->with('children');
+
+        // Filter by selected child - show activities with no children linked OR with the selected child
+        if ($selectedChildId) {
+            $ownActivitiesQuery->where(function ($q) use ($selectedChildId) {
+                $q->whereDoesntHave('children') // No children linked (legacy/global activities)
+                  ->orWhereHas('children', function ($subQ) use ($selectedChildId) {
+                      $subQ->where('family_member_id', $selectedChildId);
+                  });
+            });
+        }
+
+        $ownActivities = $ownActivitiesQuery->get();
 
         // Get activities from tenants where user is a co-parent (viewing owner's activities)
         $coparentAccess = Collaborator::where('user_id', $user->id)
@@ -682,9 +789,20 @@ class CoparentingController extends Controller
 
         $sharedActivities = collect();
         if ($coparentAccess->isNotEmpty()) {
-            $sharedActivities = CoparentingActivity::whereIn('tenant_id', $coparentAccess)
-                ->with('children')
-                ->get();
+            $sharedActivitiesQuery = CoparentingActivity::whereIn('tenant_id', $coparentAccess)
+                ->with('children');
+
+            // Filter by selected child - show activities with no children linked OR with the selected child
+            if ($selectedChildId) {
+                $sharedActivitiesQuery->where(function ($q) use ($selectedChildId) {
+                    $q->whereDoesntHave('children') // No children linked (legacy/global activities)
+                      ->orWhereHas('children', function ($subQ) use ($selectedChildId) {
+                          $subQ->where('family_member_id', $selectedChildId);
+                      });
+                });
+            }
+
+            $sharedActivities = $sharedActivitiesQuery->get();
         }
 
         // Get activities from co-parents' tenants (owner viewing co-parent's activities)
@@ -775,7 +893,23 @@ class CoparentingController extends Controller
         $start = Carbon::parse($request->get('start', now()->startOfMonth()));
         $end = Carbon::parse($request->get('end', now()->endOfMonth()));
 
-        $activities = CoparentingActivity::forCurrentTenant()->get();
+        $user = auth()->user();
+        $selectedChild = CoparentChildSelector::getEffectiveChild($user);
+        $selectedChildId = $selectedChild?->id;
+
+        $activitiesQuery = CoparentingActivity::forCurrentTenant()->with('children');
+
+        // Filter by selected child - show activities with no children linked OR with the selected child
+        if ($selectedChildId) {
+            $activitiesQuery->where(function ($q) use ($selectedChildId) {
+                $q->whereDoesntHave('children')
+                  ->orWhereHas('children', function ($subQ) use ($selectedChildId) {
+                      $subQ->where('family_member_id', $selectedChildId);
+                  });
+            });
+        }
+
+        $activities = $activitiesQuery->get();
         $events = [];
 
         foreach ($activities as $activity) {
@@ -962,33 +1096,17 @@ class CoparentingController extends Controller
         session(['coparenting_mode' => true]);
 
         $user = auth()->user();
-        $currentMonth = now();
-        $year = request('year', $currentMonth->year);
-        $month = request('month', $currentMonth->month);
 
-        // Get children with co-parenting enabled
-        $children = FamilyMember::forCurrentTenant()
-            ->minors()
-            ->where('co_parenting_enabled', true)
-            ->get();
+        // Get selected date from request, default to today
+        $selectedDate = request('date') ? Carbon::parse(request('date')) : now();
 
-        $selectedChildId = request('child_id', $children->first()?->id);
-
-        // Get actual time records for the month
-        $checkins = CoparentingActualTime::forCurrentTenant()
-            ->forMonth($year, $month)
-            ->when($selectedChildId, fn($q) => $q->forChild($selectedChildId))
-            ->with('child')
-            ->orderBy('date', 'asc')
-            ->get();
-
-        // Calculate statistics
-        $monthStart = Carbon::createFromDate($year, $month, 1)->startOfMonth();
-        $monthEnd = $monthStart->copy()->endOfMonth();
+        // Get month stats
+        $monthStart = $selectedDate->copy()->startOfMonth();
+        $monthEnd = $selectedDate->copy()->endOfMonth();
 
         $stats = CoparentingActualTime::calculateStats(
             $user->tenant_id,
-            $selectedChildId,
+            null, // No child filter
             $monthStart,
             $monthEnd
         );
@@ -1003,35 +1121,32 @@ class CoparentingController extends Controller
         // Compare actual vs planned
         $comparison = CoparentingActualTime::compareWithSchedule(
             $user->tenant_id,
-            $selectedChildId,
+            null, // No child filter
             $monthStart,
             $monthEnd,
             $plannedEvents
         );
 
-        // Generate calendar days for the month
-        $calendarDays = [];
-        $currentDate = $monthStart->copy();
-        while ($currentDate->lte($monthEnd)) {
-            $dayCheckin = $checkins->firstWhere('date', $currentDate->format('Y-m-d'));
-            $calendarDays[] = [
-                'date' => $currentDate->copy(),
-                'checkin' => $dayCheckin,
-                'is_today' => $currentDate->isToday(),
-                'is_past' => $currentDate->isPast() && !$currentDate->isToday(),
-            ];
-            $currentDate->addDay();
-        }
+        // Get check-ins for selected date with full details for listing
+        $dateCheckins = CoparentingDailyCheckin::forCurrentTenant()
+            ->whereDate('checkin_date', $selectedDate->toDateString())
+            ->with(['child', 'checkedBy'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Get all check-ins for the month (for calendar display)
+        $monthCheckins = CoparentingDailyCheckin::forCurrentTenant()
+            ->whereBetween('checkin_date', [$monthStart->format('Y-m-d'), $monthEnd->format('Y-m-d')])
+            ->with('child')
+            ->get()
+            ->groupBy(fn($c) => $c->checkin_date->format('Y-m-d'));
 
         return view('pages.coparenting.actual-time', compact(
-            'children',
-            'selectedChildId',
-            'checkins',
             'stats',
             'comparison',
-            'calendarDays',
-            'year',
-            'month',
+            'dateCheckins',
+            'monthCheckins',
+            'selectedDate',
             'monthStart',
             'monthEnd'
         ));
@@ -1045,7 +1160,10 @@ class CoparentingController extends Controller
         $user = auth()->user();
         $year = $request->get('year', now()->year);
         $month = $request->get('month', now()->month);
-        $childId = $request->get('child_id');
+
+        // Use selected child as default if no child_id provided
+        $selectedChild = CoparentChildSelector::getEffectiveChild($user);
+        $childId = $request->get('child_id', $selectedChild?->id);
 
         $monthStart = Carbon::createFromDate($year, $month, 1)->startOfMonth();
         $monthEnd = $monthStart->copy()->endOfMonth();
@@ -1184,16 +1302,25 @@ class CoparentingController extends Controller
 
         $user = auth()->user();
 
+        // Get selected child for filtering
+        $selectedChild = CoparentChildSelector::getEffectiveChild($user);
+        $selectedChildId = $selectedChild?->id;
+
         // Get children with co-parenting enabled from user's own tenant
         $ownChildren = FamilyMember::forCurrentTenant()
             ->minors()
             ->where('co_parenting_enabled', true)
+            ->when($selectedChildId, fn($q) => $q->where('id', $selectedChildId))
             ->get();
 
         // Get children the user has co-parent access to (from other tenants)
         $coparentAccess = Collaborator::where('user_id', $user->id)
             ->where('coparenting_enabled', true)
-            ->with('coparentChildren')
+            ->with(['coparentChildren' => function ($q) use ($selectedChildId) {
+                if ($selectedChildId) {
+                    $q->where('family_member_id', $selectedChildId);
+                }
+            }])
             ->get();
 
         $sharedChildren = collect();
@@ -1229,6 +1356,10 @@ class CoparentingController extends Controller
 
         $user = auth()->user();
 
+        // Get selected child for filtering
+        $selectedChild = CoparentChildSelector::getEffectiveChild($user);
+        $selectedChildId = $selectedChild?->id;
+
         // Get children with co-parenting enabled from user's own tenant
         $ownChildren = FamilyMember::forCurrentTenant()
             ->minors()
@@ -1252,8 +1383,8 @@ class CoparentingController extends Controller
         $children = $ownChildren->merge($sharedChildren)->unique('id');
         $childIds = $children->pluck('id')->toArray();
 
-        // Get filter parameter
-        $childFilter = $request->get('child_id', 'all');
+        // Get filter parameter - use selected child from session as default
+        $childFilter = $request->get('child_id', $selectedChildId ?? 'all');
 
         // Get shared budget transactions for these children
         $transactionsQuery = \App\Models\BudgetTransaction::where('is_shared', true)
@@ -1309,5 +1440,256 @@ class CoparentingController extends Controller
     {
         session(['coparenting_mode' => true]);
         return view('pages.coparenting.placeholders.actual-time');
+    }
+
+    // ==================== DAILY CHECK-IN ====================
+
+    /**
+     * Display the check-in history page.
+     */
+    public function checkins(): View
+    {
+        session(['coparenting_mode' => true]);
+
+        $user = auth()->user();
+        $tenantId = $user->tenant_id; // Use user's tenant consistently
+
+        // Get selected child
+        $selectedChild = CoparentChildSelector::getEffectiveChild($user);
+        $selectedChildId = $selectedChild?->id;
+
+        // Get check-ins for the selected child
+        $checkinsQuery = CoparentingDailyCheckin::where('tenant_id', $tenantId)
+            ->with(['checkedBy', 'child'])
+            ->orderBy('checkin_date', 'desc')
+            ->orderBy('created_at', 'desc');
+
+        if ($selectedChildId) {
+            $checkinsQuery->where('family_member_id', $selectedChildId);
+        }
+
+        $checkins = $checkinsQuery->paginate(20);
+
+        // Check if user can do check-in today
+        $canCheckin = CoparentingDailyCheckin::canUserCheckinToday($user, $tenantId, $selectedChildId);
+        $custodyParent = CoparentingDailyCheckin::getCustodyParentForDate($tenantId, now(), $selectedChildId);
+
+        // Get moods for reference
+        $moods = CoparentingDailyCheckin::MOODS;
+
+        return view('pages.coparenting.checkins', compact('checkins', 'selectedChild', 'canCheckin', 'custodyParent', 'moods'));
+    }
+
+    /**
+     * Get daily check-in data for the modal/partial.
+     */
+    public function getDailyCheckinData(): JsonResponse
+    {
+        $user = auth()->user();
+        $tenantId = $user->tenant_id; // Use user's tenant, not session
+
+        // Get selected child - only allow check-in for selected child
+        $selectedChild = CoparentChildSelector::getEffectiveChild($user);
+
+        // Use the same children source as CoparentChildSelector for consistency
+        $children = CoparentChildSelector::getChildren($user);
+
+        // Filter to only selected child if one is selected
+        if ($selectedChild) {
+            $children = $children->filter(fn($child) => $child->id === $selectedChild->id);
+        }
+
+        // Get custody parent for today (for the selected child's schedule)
+        $custodyParent = CoparentingDailyCheckin::getCustodyParentForDate($tenantId, now(), $selectedChild?->id);
+
+        // Check if user can do check-in today (based on selected child's schedule)
+        $canCheckin = CoparentingDailyCheckin::canUserCheckinToday($user, $tenantId, $selectedChild?->id);
+
+        // Get today's check-ins
+        $todayCheckins = CoparentingDailyCheckin::where('tenant_id', $tenantId)
+            ->whereDate('checkin_date', now()->toDateString())
+            ->get()
+            ->keyBy('family_member_id');
+
+        // Prepare children data with check-in status - use values() to ensure sequential array keys
+        $childrenData = $children->values()->map(function ($child) use ($todayCheckins) {
+            $checkin = $todayCheckins->get($child->id);
+            return [
+                'id' => $child->id,
+                'name' => $child->first_name ?? $child->name,
+                'full_name' => $child->full_name ?? $child->name,
+                'avatar' => $child->avatar_url ?? null,
+                'has_checkin' => $checkin !== null,
+                'checkin' => $checkin ? [
+                    'mood' => $checkin->mood,
+                    'mood_emoji' => $checkin->mood_emoji,
+                    'mood_label' => $checkin->mood_label,
+                    'notes' => $checkin->notes,
+                    'checked_by' => $checkin->checkedBy->name ?? 'Unknown',
+                    'time' => $checkin->created_at->format('g:i A'),
+                ] : null,
+            ];
+        })->values()->all(); // Convert to plain array
+
+        // Get user's parent role
+        $userParentRole = null;
+        $collaborator = Collaborator::where('user_id', $user->id)
+            ->where('tenant_id', $tenantId)
+            ->where('coparenting_enabled', true)
+            ->first();
+
+        if ($collaborator) {
+            $userParentRole = $collaborator->parent_role;
+        } elseif ($user->tenant_id === $tenantId) {
+            // Owner - determine role as OPPOSITE of co-parent's role
+            $coparentCollaborator = Collaborator::where('tenant_id', $tenantId)
+                ->where('coparenting_enabled', true)
+                ->whereNotNull('parent_role')
+                ->first();
+
+            if ($coparentCollaborator) {
+                $userParentRole = $coparentCollaborator->parent_role === 'mother' ? 'father' : 'mother';
+            } else {
+                $userParentRole = 'parent'; // No co-parent set up yet
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'children' => $childrenData,
+                'custody_parent' => $custodyParent,
+                'can_checkin' => $canCheckin,
+                'user_parent_role' => $userParentRole,
+                'moods' => CoparentingDailyCheckin::MOODS,
+                'date' => now()->format('l, F j, Y'),
+            ],
+        ]);
+    }
+
+    /**
+     * Store daily check-in.
+     */
+    public function storeDailyCheckin(Request $request): JsonResponse
+    {
+        $request->validate([
+            'child_id' => 'required|exists:family_members,id',
+            'mood' => 'required|string|max:50',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        $user = auth()->user();
+        $tenantId = $user->tenant_id; // Use user's tenant consistently
+
+        // Verify check-in is for the selected child
+        $selectedChild = CoparentChildSelector::getEffectiveChild($user);
+        if ($selectedChild && $request->child_id != $selectedChild->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Check-in must be for the selected child.',
+            ], 403);
+        }
+
+        // Verify user can check in (based on the child's schedule)
+        if (!CoparentingDailyCheckin::canUserCheckinToday($user, $tenantId, $request->child_id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You cannot do check-in today. It\'s not your custody day.',
+            ], 403);
+        }
+
+        // Get user's parent role
+        $parentRole = 'parent';
+        $collaborator = Collaborator::where('user_id', $user->id)
+            ->where('tenant_id', $tenantId)
+            ->where('coparenting_enabled', true)
+            ->first();
+
+        if ($collaborator) {
+            $parentRole = $collaborator->parent_role;
+        } else {
+            // Owner - determine role as OPPOSITE of co-parent's role
+            $coparentCollaborator = Collaborator::where('tenant_id', $tenantId)
+                ->where('coparenting_enabled', true)
+                ->whereNotNull('parent_role')
+                ->first();
+
+            if ($coparentCollaborator) {
+                $parentRole = $coparentCollaborator->parent_role === 'mother' ? 'father' : 'mother';
+            } else {
+                $parentRole = 'parent'; // No co-parent set up yet
+            }
+        }
+
+        // Create or update check-in
+        $checkin = CoparentingDailyCheckin::updateOrCreate(
+            [
+                'tenant_id' => $tenantId,
+                'family_member_id' => $request->child_id,
+                'checkin_date' => now()->toDateString(),
+            ],
+            [
+                'checked_by' => $user->id,
+                'parent_role' => $parentRole,
+                'mood' => $request->mood,
+                'notes' => $request->notes,
+            ]
+        );
+
+        $checkin->load('checkedBy', 'child');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Check-in saved successfully!',
+            'data' => [
+                'id' => $checkin->id,
+                'child_name' => $checkin->child->first_name ?? $checkin->child->name,
+                'mood' => $checkin->mood,
+                'mood_emoji' => $checkin->mood_emoji,
+                'mood_label' => $checkin->mood_label,
+                'notes' => $checkin->notes,
+                'checked_by' => $checkin->checkedBy->name,
+                'time' => $checkin->created_at->format('g:i A'),
+            ],
+        ]);
+    }
+
+    /**
+     * Get check-in history for a child.
+     */
+    public function getCheckinHistory(Request $request): JsonResponse
+    {
+        $request->validate([
+            'child_id' => 'required|exists:family_members,id',
+            'days' => 'nullable|integer|min:1|max:90',
+        ]);
+
+        $user = auth()->user();
+        $tenantId = $user->tenant_id; // Use user's tenant consistently
+        $days = $request->input('days', 30);
+
+        $history = CoparentingDailyCheckin::where('tenant_id', $tenantId)
+            ->where('family_member_id', $request->child_id)
+            ->where('checkin_date', '>=', now()->subDays($days))
+            ->with('checkedBy')
+            ->orderBy('checkin_date', 'desc')
+            ->get()
+            ->map(function ($checkin) {
+                return [
+                    'date' => $checkin->checkin_date->format('M j, Y'),
+                    'day' => $checkin->checkin_date->format('l'),
+                    'mood' => $checkin->mood,
+                    'mood_emoji' => $checkin->mood_emoji,
+                    'mood_label' => $checkin->mood_label,
+                    'notes' => $checkin->notes,
+                    'parent_role' => ucfirst($checkin->parent_role),
+                    'checked_by' => $checkin->checkedBy->name ?? 'Unknown',
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $history,
+        ]);
     }
 }
