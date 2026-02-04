@@ -12,6 +12,8 @@ class TenantResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $this->loadMissing('packagePlan');
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -23,6 +25,15 @@ class TenantResource extends JsonResource
             'onboarding_step' => $this->onboarding_step,
             'goals' => $this->goals,
             'created_at' => $this->created_at?->toISOString(),
+            // Subscription info
+            'subscription_expires_at' => $this->subscription_expires_at?->toISOString(),
+            'trial_ends_at' => $this->trial_ends_at?->toISOString(),
+            'billing_cycle' => $this->billing_cycle,
+            'package_plan' => $this->packagePlan ? [
+                'id' => $this->packagePlan->id,
+                'name' => $this->packagePlan->name,
+                'type' => $this->packagePlan->type,
+            ] : null,
         ];
     }
 }

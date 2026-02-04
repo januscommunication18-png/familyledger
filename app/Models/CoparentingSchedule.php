@@ -211,7 +211,7 @@ class CoparentingSchedule extends Model
     {
         $events = [];
         $current = $start->copy()->startOfWeek();
-        $weeksSinceStart = $scheduleStart->diffInWeeks($current);
+        $weeksSinceStart = (int) $scheduleStart->diffInWeeks($current);
         $isParentAWeek = ($weeksSinceStart % 2) === 0;
 
         while ($current->lte($end)) {
@@ -240,7 +240,7 @@ class CoparentingSchedule extends Model
         $events = [];
         $pattern = [2, 2, 3, 2, 2, 3]; // Pattern for a 2-week cycle
         $current = $start->copy();
-        $daysSinceStart = $scheduleStart->diffInDays($current);
+        $daysSinceStart = (int) $scheduleStart->diffInDays($current);
         $cycleDay = $daysSinceStart % 14;
 
         // Determine where we are in the pattern
@@ -285,7 +285,7 @@ class CoparentingSchedule extends Model
         $events = [];
         $pattern = [2, 2, 5, 5]; // 14-day cycle
         $current = $start->copy();
-        $daysSinceStart = $scheduleStart->diffInDays($current);
+        $daysSinceStart = (int) $scheduleStart->diffInDays($current);
         $cycleDay = $daysSinceStart % 14;
 
         $patternIndex = 0;
@@ -329,7 +329,7 @@ class CoparentingSchedule extends Model
         $events = [];
         $pattern = [3, 4, 4, 3]; // 14-day cycle
         $current = $start->copy();
-        $daysSinceStart = $scheduleStart->diffInDays($current);
+        $daysSinceStart = (int) $scheduleStart->diffInDays($current);
         $cycleDay = $daysSinceStart % 14;
 
         $patternIndex = 0;
@@ -423,7 +423,7 @@ class CoparentingSchedule extends Model
         $current = $start->copy();
         $primaryParent = $this->primary_parent;
         $otherParent = $this->getOtherParent();
-        $weeksSinceStart = $scheduleStart->diffInWeeks($current);
+        $weeksSinceStart = (int) $scheduleStart->diffInWeeks($current);
         $isOtherParentWeekend = ($weeksSinceStart % 2) === 0;
 
         while ($current->lte($end)) {

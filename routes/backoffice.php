@@ -8,6 +8,7 @@ use App\Http\Controllers\Backoffice\SettingsController;
 use App\Http\Controllers\Backoffice\PackagePlanController;
 use App\Http\Controllers\Backoffice\DiscountCodeController;
 use App\Http\Controllers\Backoffice\DripCampaignController;
+use App\Http\Controllers\Backoffice\EmailLogController;
 use App\Http\Controllers\Backoffice\InvoiceController;
 use Illuminate\Support\Facades\Route;
 
@@ -60,6 +61,8 @@ Route::middleware('auth:backoffice')->group(function () {
         Route::get('/', [ClientsController::class, 'index'])->name('index');
         Route::get('/{client}', [ClientsController::class, 'show'])->name('show');
         Route::post('/{client}/toggle-status', [ClientsController::class, 'toggleStatus'])->name('toggleStatus');
+        Route::post('/{client}/request-data-access', [ClientsController::class, 'requestDataAccess'])->name('requestDataAccess');
+        Route::get('/{client}/check-data-access', [ClientsController::class, 'checkDataAccessStatus'])->name('checkDataAccessStatus');
         Route::post('/{client}/request-view-code', [ClientsController::class, 'requestViewCode'])->name('requestViewCode');
         Route::post('/{client}/verify-view-code', [ClientsController::class, 'verifyViewCode'])->name('verifyViewCode');
         Route::get('/{client}/data', [ClientsController::class, 'showData'])->name('data');
@@ -124,6 +127,13 @@ Route::middleware('auth:backoffice')->group(function () {
         Route::put('/{campaign}/steps/{step}', [DripCampaignController::class, 'updateStep'])->name('steps.update');
         Route::delete('/{campaign}/steps/{step}', [DripCampaignController::class, 'deleteStep'])->name('steps.destroy');
         Route::post('/{campaign}/steps/reorder', [DripCampaignController::class, 'reorderSteps'])->name('steps.reorder');
+    });
+
+    // Email Logs
+    Route::prefix('email-logs')->name('backoffice.email-logs.')->group(function () {
+        Route::get('/', [EmailLogController::class, 'index'])->name('index');
+        Route::get('/drip', [EmailLogController::class, 'dripLogs'])->name('drip');
+        Route::get('/{emailLog}', [EmailLogController::class, 'show'])->name('show');
     });
 
     // Invoices

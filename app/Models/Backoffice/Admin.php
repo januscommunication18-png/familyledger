@@ -2,11 +2,13 @@
 
 namespace App\Models\Backoffice;
 
+use App\Notifications\Backoffice\ResetPasswordNotification;
+use Illuminate\Contracts\Auth\CanResetPassword;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Admin extends Authenticatable
+class Admin extends Authenticatable implements CanResetPassword
 {
     use Notifiable;
 
@@ -153,5 +155,21 @@ class Admin extends Authenticatable
             'ip_address' => request()->ip(),
             'user_agent' => request()->userAgent(),
         ]);
+    }
+
+    /**
+     * Send the password reset notification.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
+    }
+
+    /**
+     * Get the email address for password reset.
+     */
+    public function getEmailForPasswordReset(): string
+    {
+        return $this->email;
     }
 }

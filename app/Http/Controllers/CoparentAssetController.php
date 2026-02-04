@@ -7,6 +7,7 @@ use App\Models\Collaborator;
 use App\Models\CoparentChild;
 use App\Models\FamilyMember;
 use App\Models\PendingCoparentEdit;
+use App\Services\CoparentChildSelector;
 use App\Services\CoparentEditService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,6 +24,10 @@ class CoparentAssetController extends Controller
 
         $user = auth()->user();
         $isOwner = true;
+
+        // Get selected child for filtering
+        $selectedChild = CoparentChildSelector::getEffectiveChild($user);
+        $selectedChildId = $selectedChild?->id;
 
         // Get children with co-parenting enabled from user's own tenant
         $ownChildren = FamilyMember::forCurrentTenant()
@@ -64,6 +69,11 @@ class CoparentAssetController extends Controller
         foreach ($ownChildren as $child) {
             $child->can_edit_assets = true;
             $childrenWithAssetAccess->push($child);
+        }
+
+        // Filter to selected child only
+        if ($selectedChildId) {
+            $childrenWithAssetAccess = $childrenWithAssetAccess->filter(fn($c) => $c->id === $selectedChildId);
         }
 
         // Get assets owned by these children

@@ -8,11 +8,14 @@ use App\Models\User;
 use App\Models\FamilyMember;
 use App\Models\Backoffice\ViewCode;
 use App\Models\Backoffice\ActivityLog;
+use App\Models\Backoffice\DataAccessRequest;
+use App\Mail\DataAccessRequestMail;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 
 class ClientsController extends Controller
 {
@@ -67,10 +70,14 @@ class ClientsController extends Controller
             'family_members_count' => FamilyMember::where('tenant_id', $client->id)->count(),
         ];
 
-        // Check if admin has valid view access
-        $hasViewAccess = session('backoffice_view_access_' . $client->id, false);
+        // Check if admin has valid view access via approved data access request
+        $activeRequest = DataAccessRequest::findActiveForAdminAndTenant($admin->id, $client->id);
+        $hasViewAccess = $activeRequest && $activeRequest->hasValidAccess();
 
-        return view('backoffice.clients.show', compact('client', 'stats', 'hasViewAccess'));
+        // Get owner for sending access request email
+        $owner = User::where('tenant_id', $client->id)->orderBy('created_at')->first();
+
+        return view('backoffice.clients.show', compact('client', 'stats', 'hasViewAccess', 'activeRequest', 'owner'));
     }
 
     /**
@@ -94,7 +101,108 @@ class ClientsController extends Controller
     }
 
     /**
+     * Request data access permission from client.
+     */
+    public function requestDataAccess(Request $request, Tenant $client): JsonResponse
+    {
+        $admin = Auth::guard('backoffice')->user();
+
+        $request->validate([
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        // Check if there's already an active request
+        $existingRequest = DataAccessRequest::findActiveForAdminAndTenant($admin->id, $client->id);
+        if ($existingRequest) {
+            if ($existingRequest->hasValidAccess()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You already have active access to this client\'s data.',
+                ], 422);
+            }
+            if ($existingRequest->isPending()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'There is already a pending access request for this client.',
+                ], 422);
+            }
+        }
+
+        // Get the account owner
+        $owner = User::where('tenant_id', $client->id)->orderBy('created_at')->first();
+        if (!$owner || !$owner->email) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Could not find a valid email address for this client.',
+            ], 422);
+        }
+
+        // Create the access request
+        $accessRequest = DataAccessRequest::create([
+            'admin_id' => $admin->id,
+            'tenant_id' => $client->id,
+            'reason' => $request->reason,
+            'status' => DataAccessRequest::STATUS_PENDING,
+            'ip_address' => request()->ip(),
+        ]);
+
+        // Send email to client
+        Mail::to($owner->email)->send(new DataAccessRequestMail($accessRequest, $owner->name ?? 'Family Ledger User'));
+
+        $admin->logActivity(
+            ActivityLog::ACTION_REQUEST_VIEW_CODE,
+            $client->id,
+            'Sent data access request to ' . $owner->email
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Access request sent to ' . $owner->email . '. You will be notified when they respond.',
+            'request_id' => $accessRequest->id,
+        ]);
+    }
+
+    /**
+     * Check status of data access request.
+     */
+    public function checkDataAccessStatus(Tenant $client): JsonResponse
+    {
+        $admin = Auth::guard('backoffice')->user();
+
+        $activeRequest = DataAccessRequest::findActiveForAdminAndTenant($admin->id, $client->id);
+
+        if (!$activeRequest) {
+            return response()->json([
+                'status' => 'none',
+                'message' => 'No active request found.',
+            ]);
+        }
+
+        if ($activeRequest->hasValidAccess()) {
+            return response()->json([
+                'status' => 'approved',
+                'message' => 'Access granted until ' . $activeRequest->access_expires_at->format('M j, Y g:i A'),
+                'expires_at' => $activeRequest->access_expires_at->toIso8601String(),
+            ]);
+        }
+
+        if ($activeRequest->isPending()) {
+            return response()->json([
+                'status' => 'pending',
+                'message' => 'Waiting for client approval. Request expires ' . $activeRequest->expires_at->format('M j, Y g:i A'),
+                'expires_at' => $activeRequest->expires_at->toIso8601String(),
+            ]);
+        }
+
+        return response()->json([
+            'status' => $activeRequest->status,
+            'message' => 'Request status: ' . $activeRequest->status,
+        ]);
+    }
+
+    /**
      * Request view code for accessing client data.
+     * @deprecated Use requestDataAccess instead
      */
     public function requestViewCode(Tenant $client): JsonResponse
     {
@@ -164,25 +272,62 @@ class ClientsController extends Controller
     }
 
     /**
-     * Show client data (protected by view code).
+     * Show client data (protected by data access request approval).
      */
     public function showData(Tenant $client): View|RedirectResponse
     {
-        // Check if admin has view access
-        if (!session('backoffice_view_access_' . $client->id)) {
-            return redirect()->route('backoffice.clients.show', $client)
-                ->withErrors(['access' => 'You need to verify your identity to view client data.']);
-        }
-
         $admin = Auth::guard('backoffice')->user();
 
-        // Get client data
-        $users = User::where('tenant_id', $client->id)->get();
-        $familyMembers = FamilyMember::where('tenant_id', $client->id)->get();
+        // Check if admin has valid data access via approved request
+        $activeRequest = DataAccessRequest::findActiveForAdminAndTenant($admin->id, $client->id);
+
+        if (!$activeRequest || !$activeRequest->hasValidAccess()) {
+            return redirect()->route('backoffice.clients.show', $client)
+                ->withErrors(['access' => 'You need client approval to view their data. Please send an access request.']);
+        }
+
+        $tenantId = $client->id;
+
+        // Get all client data
+        $users = User::where('tenant_id', $tenantId)->get();
+        $familyMembers = FamilyMember::where('tenant_id', $tenantId)->get();
+        $pets = \App\Models\Pet::where('tenant_id', $tenantId)->get();
+        $assets = \App\Models\Asset::where('tenant_id', $tenantId)->get();
+        $insurancePolicies = \App\Models\InsurancePolicy::where('tenant_id', $tenantId)->get();
+        $legalDocuments = \App\Models\LegalDocument::where('tenant_id', $tenantId)->get();
+        $taxReturns = \App\Models\TaxReturn::where('tenant_id', $tenantId)->get();
+        $budgets = \App\Models\Budget::where('tenant_id', $tenantId)->get();
+        $goals = \App\Models\Goal::where('tenant_id', $tenantId)->get();
+        $persons = \App\Models\Person::where('tenant_id', $tenantId)->get();
+        $journalEntries = \App\Models\JournalEntry::where('tenant_id', $tenantId)->latest()->take(50)->get();
+        $familyCircles = \App\Models\FamilyCircle::where('tenant_id', $tenantId)->get();
+        $familyResources = \App\Models\FamilyResource::where('tenant_id', $tenantId)->get();
+        $shoppingLists = \App\Models\ShoppingList::where('tenant_id', $tenantId)->get();
+        $todoLists = \App\Models\TodoList::where('tenant_id', $tenantId)->get();
+        $invoices = \App\Models\Invoice::where('tenant_id', $tenantId)->latest()->get();
 
         $admin->logActivity(ActivityLog::ACTION_VIEW_CLIENT, $client->id, 'Viewed full client data');
 
-        return view('backoffice.clients.data', compact('client', 'users', 'familyMembers'));
+        return view('backoffice.clients.data', compact(
+            'client',
+            'activeRequest',
+            'users',
+            'familyMembers',
+            'pets',
+            'assets',
+            'insurancePolicies',
+            'legalDocuments',
+            'taxReturns',
+            'budgets',
+            'goals',
+            'persons',
+            'journalEntries',
+            'familyCircles',
+            'familyResources',
+            'shoppingLists',
+            'todoLists',
+            'invoices'
+        ));
     }
 
     /**

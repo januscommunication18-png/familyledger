@@ -7,6 +7,7 @@ use App\Events\CoparentMessageSent;
 use App\Models\Collaborator;
 use App\Models\CoparentChild;
 use App\Models\CoparentConversation;
+use App\Services\CoparentChildSelector;
 use App\Models\CoparentMessage;
 use App\Models\CoparentMessageAttachment;
 use App\Models\CoparentMessageReaction;
@@ -49,8 +50,17 @@ class CoparentMessagesController extends Controller
         // Merge all family_member IDs the user has access to
         $allFamilyMemberIds = array_unique(array_merge($ownChildrenIds, $sharedChildrenIds));
 
+        // Get selected child for filtering
+        $selectedChild = CoparentChildSelector::getEffectiveChild($user);
+        $selectedChildId = $selectedChild?->id;
+
+        // If a child is selected, filter to just that child's family_member_id
+        $filterFamilyMemberIds = $selectedChildId
+            ? [$selectedChildId]
+            : $allFamilyMemberIds;
+
         // Get ALL CoparentChild IDs for these family members (so user sees all conversations about these children)
-        $allCoparentChildIds = CoparentChild::whereIn('family_member_id', $allFamilyMemberIds)
+        $allCoparentChildIds = CoparentChild::whereIn('family_member_id', $filterFamilyMemberIds)
             ->pluck('id')
             ->toArray();
 
